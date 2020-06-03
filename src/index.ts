@@ -22,23 +22,3 @@ function createDoubleElimination(teams: string[]) {
         console.log(i);
     }
 }
-
-const ordering = {
-    natural: (array: any[]) => [...array],
-    reverse: (array: any[]) => array.reverse(),
-    half_shift: (array: any[]) => [...array.slice(array.length / 2), ...array.slice(0, array.length / 2)],
-    reverse_half_shift: (array: any[]) => [...array.slice(array.length / 2).reverse(), ...array.slice(0, array.length / 2).reverse()],
-    pair_flip: (array: any[]) => {
-        const result = [];
-        for (let i = 0; i < array.length; i += 2) result.push(array[i + 1], array[i]);
-        return result;
-    },
-}
-
-const defaultMinorOrdering: { [key: number]: OrderingType[] } = {
-    8: ['natural', 'reverse', 'natural'],
-    16: ['natural', 'reverse_half_shift', 'reverse', 'natural'],
-    32: ['natural', 'reverse', 'half_shift', 'natural', 'natural'],
-    64: ['natural', 'reverse', 'half_shift', 'reverse', 'natural', 'natural'],
-    128: ['natural', 'reverse', 'half_shift', 'pair_flip', 'pair_flip', 'pair_flip', 'natural'],
-}
