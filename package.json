@@ -1,0 +1,23 @@
+{
+  "name": "brackets-manager.js",
+  "version": "1.0.0",
+  "description": "A simple library to manage tournament brackets (pools, single elimination, double elimination)",
+  "main": "src/main.ts",
+  "dependencies": {
+    "node-json-db": "^1.0.3",
+    "typescript": "^3.9.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "javascript",
+    "tournament",
+    "brackets",
+    "manager",
+    "database"
+  ],
+  "author": "Corentin Girard",
+  "license": "ISC"
+}
