@@ -8,11 +8,14 @@
     "node-json-db": "^1.0.3"
   },
   "devDependencies": {
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^14.0.9",
+    "mocha": "^7.2.0",
     "ts-node": "^8.10.2",
     "typescript": "^3.9.3"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsc && npx mocha tests"
   },
   "keywords": [
     "javascript",
