@@ -2,9 +2,6 @@
     "compilerOptions": {
         "target": "ESNext",
         "module": "commonjs",
-        "types": [
-            "brackets-model"
-        ],
         "strict": true,
         "declaration": true,
         "declarationMap": true,

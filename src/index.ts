@@ -1,24 +1,36 @@
-create("double_elimination", [
-    "Team 1", "Team 2",
-    "Team 3", "Team 4",
-    "Team 5", "Team 6",
-    "Team 7", "Team 8",
-    "Team 9", "Team 10",
-    "Team 11", "Team 12",
-    "Team 13", "Team 14",
-    "Team 15", "Team 16",
-]);
+import { Tournament, Teams } from "brackets-model/dist/types"
 
-function create(type: TournamentType, teams: string[]) {
-    if (type === "double_elimination") {
-        createDoubleElimination(teams);
+create({
+    name: "Example",
+    minorOrdering: ['reverse', 'pair_flip', 'reverse', 'natural'],
+    type: "double_elimination",
+    teams: [
+        "Team 1", "Team 2",
+        "Team 3", "Team 4",
+        "Team 5", "Team 6",
+        "Team 7", "Team 8",
+        "Team 9", "Team 10",
+        "Team 11", "Team 12",
+        "Team 13", "Team 14",
+        "Team 15", "Team 16",
+    ],
+});
+
+function create(tournament: Tournament) {
+    if (tournament.type === "double_elimination") {
+        createDoubleElimination(tournament.teams);
     }
 }
 
-function createDoubleElimination(teams: string[]) {
+function createDoubleElimination(teams: Teams) {
     const roundCount = Math.log2(teams.length);
 
-    for (let i = 0; i < roundCount; i++) {
-        console.log(i);
+    for (let i = roundCount - 1; i >= 0; i--) {
+        const matchCount = Math.pow(2, i);
+        createRound(matchCount, teams);
     }
+}
+
+function createRound(count: number, teams: Teams) {
+    console.log(count, teams);
 }

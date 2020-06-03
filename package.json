@@ -4,7 +4,7 @@
   "description": "A simple library to manage tournament brackets (pools, single elimination, double elimination)",
   "main": "src/main.ts",
   "dependencies": {
-    "brackets-model": "^0.1.4",
+    "brackets-model": "^0.1.8",
     "node-json-db": "^1.0.3",
     "typescript": "^3.9.3"
   },
