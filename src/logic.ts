@@ -16,6 +16,7 @@ export function createStage(stage: Tournament) {
 function createDoubleElimination(stageId: number, teams: Teams) {
     createWinnerBracket(stageId, teams);
     createLoserBracket(stageId, teams);
+    createGrandFinal(stageId);
 }
 
 function createWinnerBracket(stageId: number, teams: Teams) {
@@ -25,13 +26,15 @@ function createWinnerBracket(stageId: number, teams: Teams) {
         name: 'Winner Bracket',
     });
 
+    let number = 1;
+
     for (let i = roundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
 
         if (i === roundCount - 1)
-            createRound(stageId, groupId, matchCount, teams);
+            createRound(stageId, groupId, number++, matchCount, teams);
         else
-            createRound(stageId, groupId, matchCount, []);
+            createRound(stageId, groupId, number++, matchCount, []);
     }
 }
 
@@ -43,20 +46,33 @@ function createLoserBracket(stageId: number, teams: Teams) {
         name: 'Loser Bracket',
     });
 
+    let number = 1;
+
     for (let i = majorRoundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
-        createRound(stageId, groupId, matchCount, []);
+        createRound(stageId, groupId, number++, matchCount, []);
+        createRound(stageId, groupId, number++, matchCount, []);
     }
 }
 
-function createRound(stageId: number, groupId: number, count: number, teams: Teams) {
+function createGrandFinal(stageId: number) {
+    const groupId = db.insert('group', {
+        stage_id: stageId,
+        name: 'Grand Final',
+    });
+
+    createRound(stageId, groupId, 1, 1, []);
+}
+
+function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, teams: Teams) {
     const allOpponents = makePairs(teams);
     const roundId = db.insert('round', {
         stage_id: stageId,
         group_id: groupId,
+        number: roundNumber,
     });
 
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < matchCount; i++) {
         createMatch(stageId, groupId, roundId, allOpponents[i]);
     }
 }
