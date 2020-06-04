@@ -1,6 +1,7 @@
-import { createStage } from './logic';
+import { createStage, exportToViewer } from './logic';
 import { db } from './database';
 import { Tournament } from 'brackets-model/dist/types';
+import { makeViewer } from './helpers';
 
 const example: Tournament = {
     name: 'Amateur',
@@ -21,3 +22,6 @@ const example: Tournament = {
 db.reset();
 
 createStage(example);
+
+const exported = exportToViewer(0);
+makeViewer(exported);
