@@ -88,6 +88,10 @@ class Database {
     public all(table: string): any[] {
         return this.internal.getData(this.makePath(table));
     }
+
+    public update(table: string, key: number, property: string, value: any) {
+        this.internal.push(`${this.makeArrayAccessor(table, key)}/${property}`, value, false);
+    }
 }
 
 export const db = new Database();
