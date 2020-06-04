@@ -84,6 +84,10 @@ class Database {
     public isIn(id: number, array: { id: number }[]): boolean {
         return array.find(element => element.id === id) !== undefined;
     }
+
+    public all(table: string): any[] {
+        return this.internal.getData(this.makePath(table));
+    }
 }
 
 export const db = new Database();
