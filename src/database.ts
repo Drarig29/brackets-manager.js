@@ -43,8 +43,9 @@ class Database {
      * @param value What to insert.
      */
     public insert(key: string, value: any): number {
-        this.internal.push(this.makeArrayKey(key), value);
-        return this.internal.getData(this.makeKey(key)).length - 1;
+        const id = this.internal.getData(this.makeKey(key)).length;
+        this.internal.push(this.makeArrayKey(key), { id, ...value });
+        return id;
     }
 }
 

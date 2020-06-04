@@ -1,9 +1,9 @@
-import { create } from './logic';
+import { createStage } from './logic';
 import { db } from './database';
 import { Tournament } from 'brackets-model/dist/types';
 
 const example: Tournament = {
-    name: 'Example',
+    name: 'Amateur',
     minorOrdering: ['reverse', 'pair_flip', 'reverse', 'natural'],
     type: 'double_elimination',
     teams: [
@@ -20,4 +20,4 @@ const example: Tournament = {
 
 db.reset();
 
-create(example);
+createStage(example);

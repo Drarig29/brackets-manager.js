@@ -1,7 +1,7 @@
 const { create } = require('../dist/logic');
 
 const example = {
-    name: 'Example',
+    name: 'Amateur',
     minorOrdering: ['reverse', 'pair_flip', 'reverse', 'natural'],
     type: 'double_elimination',
     teams: [
