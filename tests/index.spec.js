@@ -1,4 +1,4 @@
-const { create } = require('../dist/index');
+const { create } = require('../dist/logic');
 
 const example = {
     name: 'Example',
