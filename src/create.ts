@@ -67,18 +67,19 @@ function createGrandFinal(stageId: number) {
 function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, teams: Teams) {
     const allOpponents = makePairs(teams);
     const roundId = db.insert('round', {
+        number: roundNumber,
         stage_id: stageId,
         group_id: groupId,
-        number: roundNumber,
     });
 
     for (let i = 0; i < matchCount; i++) {
-        createMatch(stageId, groupId, roundId, allOpponents[i]);
+        createMatch(stageId, groupId, roundId, i + 1, allOpponents[i]);
     }
 }
 
-function createMatch(stageId: number, groupId: number, roundId: number, opponents?: Teams) {
+function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents?: Teams) {
     db.insert('match', {
+        number: matchNumber,
         stage_id: stageId,
         group_id: groupId,
         round_id: roundId,

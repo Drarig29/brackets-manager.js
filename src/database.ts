@@ -67,7 +67,7 @@ class Database {
      * @param table Where to get from.
      * @param pred A predicate to filter data.
      */
-    public select(table: string, pred: FindCallback): any[];
+    public select(table: string, pred: FindCallback): any[] | undefined;
 
     public select(table: string, arg: any): any {
         if (typeof arg === "number")
@@ -89,8 +89,15 @@ class Database {
         return this.internal.getData(this.makePath(table));
     }
 
-    public update(table: string, key: number, property: string, value: any) {
-        this.internal.push(`${this.makeArrayAccessor(table, key)}/${property}`, value, false);
+    public update(table: string, key: number, property: string, value: any): void;
+    public update(table: string, key: number, value: any): void;
+
+    public update(table: string, key: number, arg1: any, arg2?: any): void {
+        if (arg2) {
+            this.internal.push(`${this.makeArrayAccessor(table, key)}/${arg1}`, arg2, false);
+        } else {
+            this.internal.push(this.makeArrayAccessor(table, key), arg1, false);
+        }
     }
 }
 

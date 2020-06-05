@@ -35,25 +35,105 @@ describe('Create tournament', () => {
 });
 
 describe('Update matches', () => {
-    it('should update the status of a match', () => {
-        assert.equal(db.select('match', 0).status, 'pending');
+    it('should start a match', () => {
+        const before = db.select('match', 0);
+        assert.equal(before.status, 'pending');
+
         updateMatch({
             id: 0,
             status: 'running',
         });
-        assert.equal(db.select('match', 0).status, 'running');
+
+        const after = db.select('match', 0);
+        assert.equal(after.status, 'running');
     });
 
     it('should update the scores for a match', () => {
-        assert.equal(db.select('match', 0).team1.score, undefined);
+        const before = db.select('match', 0);
+        assert.equal(before.team1.score, undefined);
+
         updateMatch({
             id: 0,
             team1: { score: 2 },
             team2: { score: 1 },
         });
-        
+
+        const after = db.select('match', 0);
+        assert.equal(after.team1.score, 2);
+
         // Name should stay. It shouldn't be overwritten.
-        assert.equal(db.select('match', 0).team1.name, example.teams[0]);
-        assert.equal(db.select('match', 0).team1.score, 2);
+        assert.equal(after.team1.name, example.teams[0]);
+    });
+
+    it('should simply end the match here', () => {
+        updateMatch({
+            id: 0,
+            status: 'running',
+        });
+
+        const before = db.select('match', 0);
+        assert.equal(before.status, 'running');
+
+        updateMatch({
+            id: 0,
+            status: 'completed',
+        });
+
+        const after = db.select('match', 0);
+        assert.equal(after.status, 'completed');
+    });
+
+    it('should end the match by only setting the winner', () => {
+        const before = db.select('match', 0);
+        assert.equal(before.team1.result, undefined);
+
+        updateMatch({
+            id: 0,
+            team1: { result: 'win' },
+        });
+
+        const after = db.select('match', 0);
+        assert.equal(after.status, 'completed');
+        assert.equal(after.team1.result, 'win');
+        assert.equal(after.team2.result, 'loss');
+    });
+
+    it('should end the match by setting winner and loser', () => {
+        updateMatch({
+            id: 0,
+            status: 'running',
+        });
+
+        updateMatch({
+            id: 0,
+            team1: { result: 'win' },
+            team2: { result: 'loss' },
+        });
+
+        const after = db.select('match', 0);
+        assert.equal(after.status, 'completed');
+        assert.equal(after.team1.result, 'win');
+        assert.equal(after.team2.result, 'loss');
+    });
+
+    it('should end a match (round 1) and determine one team in next (round 2)', () => {
+        const before = db.select('match', 8); // First match of WB round 2
+        assert.equal(before.team2, null);
+
+        updateMatch({
+            id: 1, // Second match of WB round 1
+            team1: {
+                score: 13
+            },
+            team2: {
+                score: 16,
+                result: 'win',
+            },
+        });
+
+        assert.equal(
+            db.select('match', 8).team2.name,
+            db.select('match', 1).team2.name,
+        );
     });
 });
