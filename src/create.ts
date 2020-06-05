@@ -2,14 +2,44 @@ import { makePairs } from 'brackets-model';
 import { Tournament, Teams } from 'brackets-model/dist/types';
 import { db } from './database';
 
-export function createStage(stage: Tournament) {
-    if (stage.type === 'double_elimination') {
-        const stageId = db.insert('stage', {
-            name: stage.name,
-            type: stage.type,
-        });
+interface Team {
+    name: string | null,
+}
 
-        createDoubleElimination(stageId, stage.teams);
+export function createStage(stage: Tournament) {
+    const stageId = db.insert('stage', {
+        name: stage.name,
+        type: stage.type,
+    });
+
+    switch (stage.type) {
+        case 'single_elimination':
+            createSimpleElimination(stageId, stage.teams);
+            break;
+        case 'double_elimination':
+            createDoubleElimination(stageId, stage.teams);
+            break;
+        default:
+            throw Error('Unknown stage type.');
+    }
+}
+
+function createSimpleElimination(stageId: number, teams: Teams) {
+    const roundCount = Math.log2(teams.length);
+    const groupId = db.insert('group', {
+        stage_id: stageId,
+        name: 'Tournament',
+    });
+
+    let number = 1;
+
+    for (let i = roundCount - 1; i >= 0; i--) {
+        const matchCount = Math.pow(2, i);
+
+        if (i === roundCount - 1)
+            createRound(stageId, groupId, number++, matchCount, teams);
+        else
+            createRound(stageId, groupId, number++, matchCount, []);
     }
 }
 
@@ -73,22 +103,24 @@ function createRound(stageId: number, groupId: number, roundNumber: number, matc
     });
 
     for (let i = 0; i < matchCount; i++) {
-        createMatch(stageId, groupId, roundId, i + 1, allOpponents[i]);
+        createMatch(stageId, groupId, roundId, i + 1, allOpponents[i] || null);
     }
 }
 
-function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents?: Teams) {
+function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Teams | null) {
     db.insert('match', {
         number: matchNumber,
         stage_id: stageId,
         group_id: groupId,
         round_id: roundId,
         status: 'pending',
-        team1: opponents ? {
-            name: opponents[0]
-        } : null,
-        team2: opponents ? {
-            name: opponents[1]
-        } : null,
+        team1: createTeam(opponents, 0),
+        team2: createTeam(opponents, 1),
     });
+}
+
+function createTeam(opponents: Teams | null, index: number): Team | null {
+    if (!opponents) return { name: null }; // To be determined.
+    if (opponents[index] === null) return null; // BYE.
+    return { name: opponents[index] };
 }

@@ -153,7 +153,7 @@ describe('Update matches', () => {
 describe('Winner bracket', () => {
     it('should end a match (round 1) and determine one team in next (round 2)', () => {
         const before = db.select('match', 8); // First match of WB round 2
-        assert.equal(before.team2, null);
+        assert.equal(before.team2.name, null);
 
         updateMatch({
             id: 1, // Second match of WB round 1
