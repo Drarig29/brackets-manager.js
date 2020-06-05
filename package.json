@@ -16,7 +16,7 @@
     "typescript": "^3.9.3"
   },
   "scripts": {
-    "test": "npx mocha tests",
+    "test": "npx mocha test",
     "start": "tsc -watch"
   },
   "keywords": [

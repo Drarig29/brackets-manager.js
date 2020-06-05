@@ -7,7 +7,7 @@ interface Team {
     name: string,
     score: number,
     forfeit: boolean,
-    result: Result,
+    result: Result | null,
 }
 
 interface Match {
@@ -24,7 +24,7 @@ interface Match {
 export function updateMatch(match: Match) {
     if (match.id === undefined) throw Error('No match id given.');
 
-    const completed = (match.team1 && match.team1.result) || (match.team2 && match.team2.result);
+    const completed = isMatchCompleted(match);
     const updated = match;
 
     if (completed) {
@@ -39,27 +39,53 @@ export function updateMatch(match: Match) {
     }
 }
 
+function isMatchCompleted(match: Match): boolean {
+    return (match.team1 && (match.team1.result !== undefined || match.team1.forfeit !== undefined))
+        || (match.team2 && (match.team2.result !== undefined || match.team2.forfeit !== undefined));
+}
+
 function updateCompleted(input: Match, output: Match) {
     output.status = 'completed';
 
     updateResults(input, output, 'win', 'loss');
     updateResults(input, output, 'loss', 'win');
     updateResults(input, output, 'draw', 'draw');
+
+    updateForfeit(input, output);
+}
+
+function updateForfeit(input: Match, output: Match) {
+    if (input.team1 && input.team1.forfeit === true) {
+        if (output.team2) output.team2.result = 'win';
+        else output.team2 = { result: 'win' };
+    }
+
+    if (input.team2 && input.team2.forfeit === true) {
+        if (output.team1) output.team1.result = 'win';
+        else output.team1 = { result: 'win' };
+    }
 }
 
 function updateResults(input: Match, output: Match, check: Result, change: Result) {
+    if (input.team1 && input.team2) {
+        if ((input.team1.result === 'win' && input.team2.result === 'win') ||
+            (input.team1.result === 'loss' && input.team2.result === 'loss')) {
+            throw Error('There are two winners.');
+        }
+
+        if (input.team1.forfeit === true && input.team2.forfeit === true) {
+            throw Error('There are two forfaits.'); // TODO: handle this scenario.
+        }
+    }
+
     if (input.team1 && input.team1.result === check) {
-        if (output.team2)
-            output.team2.result = change;
-        else
-            output.team2 = { result: change };
+        if (output.team2) output.team2.result = change;
+        else output.team2 = { result: change };
     }
 
     if (input.team2 && input.team2.result === check) {
-        if (output.team1)
-            output.team1.result = change;
-        else
-            output.team1 = { result: change };
+        if (output.team1) output.team1.result = change;
+        else output.team1 = { result: change };
     }
 }
 
@@ -109,17 +135,21 @@ function findMatch(stage: number, group: number, roundNumber: number, matchNumbe
 }
 
 function getWinnerName(match: Match): string {
+    let winner = null;
+
     if (match.team1.result === 'win') {
         if (!match.team1.name) throw Error('Team1 has no name.');
-        return match.team1.name;
+        winner = match.team1.name;
     }
 
     if (match.team2.result === 'win') {
         if (!match.team2.name) throw Error('Team1 has no name.');
-        return match.team2.name;
+        if (winner !== null) throw Error('There are two winners.')
+        winner = match.team2.name;
     }
 
-    throw Error('No winner found.');
+    if (winner === null) throw Error('No winner found.');
+    return winner;
 }
 
 function getSide(match: Match): TeamSide {

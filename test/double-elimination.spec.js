@@ -101,6 +101,22 @@ describe('Update matches', () => {
         assert.equal(after.team2.result, 'loss');
     });
 
+    it('should end the match by only setting a forfeit', () => {
+        const before = db.select('match', 2);
+        assert.equal(before.team1.result, undefined);
+
+        updateMatch({
+            id: 2,
+            team1: { forfeit: true },
+        });
+
+        const after = db.select('match', 2);
+        assert.equal(after.status, 'completed');
+        assert.equal(after.team1.forfeit, true);
+        assert.equal(after.team1.result, null);
+        assert.equal(after.team2.result, 'win');
+    });
+
     it('should end the match by setting winner and loser', () => {
         updateMatch({
             id: 0,
@@ -117,6 +133,20 @@ describe('Update matches', () => {
         assert.equal(after.status, 'completed');
         assert.equal(after.team1.result, 'win');
         assert.equal(after.team2.result, 'loss');
+    });
+
+    it('should fail if two winners', () => {
+        assert.throws(() => updateMatch({
+            id: 3,
+            team1: { result: 'win' },
+            team2: { result: 'win' },
+        }));
+
+        assert.throws(() => updateMatch({
+            id: 3,
+            team1: { result: 'loss' },
+            team2: { result: 'loss' },
+        }));
     });
 });
 
@@ -137,8 +167,8 @@ describe('Winner bracket', () => {
         });
 
         assert.equal(
-            db.select('match', 8).team2.name,
-            db.select('match', 1).team2.name,
+            db.select('match', 8).team2.name, // Determined opponent for round 2
+            db.select('match', 1).team2.name, // Winner of round 1
         );
     });
 });

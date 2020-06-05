@@ -3,15 +3,15 @@
     "configurations": [
         {
             "type": "node",
-            "name": "Launch Program",
             "request": "launch",
-            "protocol": "inspector",
-            "runtimeArgs": [
-                "-r",
-                "ts-node/register"
-            ],
+            "name": "Mocha Tests",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "args": [
-                "src/index.ts"
+                "--colors",
+            ],
+            "internalConsoleOptions": "openOnSessionStart",
+            "skipFiles": [
+                "<node_internals>/**"
             ]
         }
     ]
