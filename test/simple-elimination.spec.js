@@ -13,12 +13,12 @@ const example = {
         'Team 9', 'Team 10',
         'Team 11', 'Team 12',
         'Team 13', 'Team 14',
-        'Team 15', null, // null is a BYE
+        'Team 15', 'Team 16',
     ],
 };
 
 describe('Create single elimination stage', () => {
-    before(() => {
+    beforeEach(() => {
         db.reset();
     });
 
@@ -32,5 +32,25 @@ describe('Create single elimination stage', () => {
         assert.equal(db.all('group').length, 1);
         assert.equal(db.all('round').length, 4);
         assert.equal(db.all('match').length, 15);
+    });
+
+    it('should create a single elimination stage with BYEs', () => {
+        const withByes = {
+            name: 'Example with BYEs',
+            type: 'single_elimination',
+            teams: [
+                'Team 1', null,
+                'Team 3', 'Team 4',
+                null, null,
+                'Team 7', 'Team 8',
+            ],
+        };;
+
+        createStage(withByes);
+        
+        assert.equal(db.select('match', 4).team1.name, withByes.teams[0]); // Determined because of opponent's BYE.
+        assert.equal(db.select('match', 4).team2.name, null); // To be determined.
+        assert.equal(db.select('match', 5).team1, null); // BYE propagated.
+        assert.equal(db.select('match', 5).team2.name, null); // To be determined.
     });
 });

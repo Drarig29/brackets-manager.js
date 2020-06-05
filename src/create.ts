@@ -38,33 +38,37 @@ function createSimpleElimination(stageId: number, inputTeams: string[]) {
 
     for (let i = roundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
-        teams = spreadByes(teams, matchCount);
+        teams = propagateByes(teams, matchCount);
         createRound(stageId, groupId, number++, matchCount, teams);
     }
 }
 
-function spreadByes(prevTeams: Teams, currentMatchCount: number): Teams {
+function propagateByes(prevTeams: Teams, currentMatchCount: number): Teams {
     if (prevTeams.length === currentMatchCount) return prevTeams; // First round
 
     const currentTeams = Array(currentMatchCount);
 
-    function spreadInTeam(prevMatchId: number, currMatchId: number, side: number) {
-        if (prevTeams[prevMatchId + side][0] === null && prevTeams[prevMatchId + side][1] === null) { // Double BYE.
+    function propagateInTeam(prevMatchId: number, currMatchId: number, side: number) {
+        const opponents = prevTeams[prevMatchId + side];
+
+        if (opponents[0] === null && opponents[1] === null)  // Double BYE.
             currentTeams[currMatchId][side] = null; // BYE.
-        } else if (prevTeams[prevMatchId + side][0] !== null && prevTeams[prevMatchId + side][1] !== null) { // No BYE.
+
+        if (opponents[0] !== null && opponents[1] !== null)  // No BYE.
             currentTeams[currMatchId][side] = { name: null }; // Normal.
-        } else if (prevTeams[prevMatchId + side][0] === null && prevTeams[prevMatchId + side][1] !== null) { // team1 BYE.
-            currentTeams[currMatchId][side] = prevTeams[prevMatchId + side][1]!.name; // team2.
-        } else if (prevTeams[prevMatchId + side][0] !== null && prevTeams[prevMatchId + side][1] === null) { // team2 BYE.
-            currentTeams[currMatchId][side] = prevTeams[prevMatchId + side][0]!.name; // team1.
-        }
+
+        if (opponents[0] === null && opponents[1] !== null)  // team1 BYE.
+            currentTeams[currMatchId][side] = { name: opponents[1]!.name }; // team2.
+
+        if (opponents[0] !== null && opponents[1] === null)  // team2 BYE.
+            currentTeams[currMatchId][side] = { name: opponents[0]!.name };; // team1.
     }
 
     for (let matchId = 0; matchId < currentMatchCount; matchId++) {
         const prevRoundId = matchId * 2;
         currentTeams[matchId] = Array(2);
-        spreadInTeam(prevRoundId, matchId, 0); // team1
-        spreadInTeam(prevRoundId, matchId, 1); // team2
+        propagateInTeam(prevRoundId, matchId, 0); // team1
+        propagateInTeam(prevRoundId, matchId, 1); // team2
     }
 
     return currentTeams;
@@ -88,14 +92,13 @@ function createWinnerBracket(stageId: number, teams: Teams) {
 
     for (let i = roundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
-        teams = spreadByes(teams, matchCount);
+        teams = propagateByes(teams, matchCount);
         createRound(stageId, groupId, number++, matchCount, teams);
     }
 }
 
 function createLoserBracket(stageId: number, teams: Teams) {
     const majorRoundCount = Math.log2(teams.length * 2) - 1;
-
     const groupId = db.insert('group', {
         stage_id: stageId,
         name: 'Loser Bracket',
@@ -107,13 +110,13 @@ function createLoserBracket(stageId: number, teams: Teams) {
         const matchCount = Math.pow(2, i);
 
         // Major round.
-        teams = spreadByes(teams, matchCount);
+        teams = propagateByes(teams, matchCount);
         createRound(stageId, groupId, number++, matchCount, teams);
 
-        // TODO: Test BYE spreading with minor rounds...
+        // TODO: Test BYE propagation with minor rounds...
 
         // Minor round.
-        teams = spreadByes(teams, matchCount);
+        teams = propagateByes(teams, matchCount);
         createRound(stageId, groupId, number++, matchCount, teams);
     }
 }
@@ -124,7 +127,7 @@ function createGrandFinal(stageId: number) {
         name: 'Grand Final',
     });
 
-    // TODO: Also spread BYEs in Grand Final.
+    // TODO: Also propagation BYEs in Grand Final.
     createRound(stageId, groupId, 1, 1, [[{ name: null }, { name: null }]]);
 }
 
