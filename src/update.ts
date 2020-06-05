@@ -119,7 +119,7 @@ function getWinnerName(match: Match): string {
         return match.team2.name;
     }
 
-    throw Error('No winner found.')
+    throw Error('No winner found.');
 }
 
 function getSide(match: Match): TeamSide {

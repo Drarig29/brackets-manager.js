@@ -19,9 +19,12 @@ const example = {
     ],
 };
 
-describe('Create tournament', () => {
-    it('should create a tournament', () => {
+describe('Create double elimination stage', () => {
+    before(() => {
         db.reset();
+    });
+
+    it('should create a double elimination stage', () => {
         createStage(example);
 
         const stage = db.select('stage', 0);
@@ -115,7 +118,9 @@ describe('Update matches', () => {
         assert.equal(after.team1.result, 'win');
         assert.equal(after.team2.result, 'loss');
     });
+});
 
+describe('Winner bracket', () => {
     it('should end a match (round 1) and determine one team in next (round 2)', () => {
         const before = db.select('match', 8); // First match of WB round 2
         assert.equal(before.team2, null);
