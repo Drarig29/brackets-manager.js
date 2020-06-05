@@ -16,7 +16,7 @@ export function createStage(stage: Tournament) {
 
     switch (stage.type) {
         case 'single_elimination':
-            createSimpleElimination(stageId, (stage.teams as string[]));
+            createSingleElimination(stageId, (stage.teams as string[]));
             break;
         case 'double_elimination':
             createDoubleElimination(stageId, (stage.teams as string[]));
@@ -26,21 +26,91 @@ export function createStage(stage: Tournament) {
     }
 }
 
-function createSimpleElimination(stageId: number, inputTeams: string[]) {
-    const roundCount = Math.log2(inputTeams.length);
+function createSingleElimination(stageId: number, inputTeams: string[]) {
+    const teams = inputToTeams(inputTeams);
+    createStandardBracket('Bracket', stageId, teams);
+}
+
+function createDoubleElimination(stageId: number, inputTeams: string[]) {
+    // TODO: propagate BYEs through the different brackets.
+    const teams = inputToTeams(inputTeams);
+    createStandardBracket('Winner Bracket', stageId, teams);
+    createMajorMinorBracket('Loser Bracket', stageId, teams);
+    createConstantSizeBracket('Grand Final', stageId, [[{ name: null }, { name: null }]]);
+}
+
+function createStandardBracket(name: string, stageId: number, teams: Teams) {
+    const roundCount = Math.log2(teams.length * 2);
     const groupId = db.insert('group', {
         stage_id: stageId,
-        name: 'Tournament',
+        name,
     });
 
     let number = 1;
-    let teams: Teams = makePairs(inputTeams.map(team => team ? { name: team } : null));
 
     for (let i = roundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
         teams = propagateByes(teams, matchCount);
         createRound(stageId, groupId, number++, matchCount, teams);
     }
+}
+
+function createMajorMinorBracket(name: string, stageId: number, teams: Teams) {
+    const majorRoundCount = Math.log2(teams.length * 2) - 1;
+    const groupId = db.insert('group', {
+        stage_id: stageId,
+        name,
+    });
+
+    let number = 1;
+    
+    // TODO: Test BYE propagation with minor rounds...
+    
+    for (let i = majorRoundCount - 1; i >= 0; i--) {
+        const matchCount = Math.pow(2, i);
+
+        // Major round.
+        teams = propagateByes(teams, matchCount);
+        createRound(stageId, groupId, number++, matchCount, teams);
+
+        // Minor round.
+        teams = propagateByes(teams, matchCount);
+        createRound(stageId, groupId, number++, matchCount, teams);
+    }
+}
+
+function createConstantSizeBracket(name: string, stageId: number, teams: Teams) {
+    const groupId = db.insert('group', {
+        stage_id: stageId,
+        name,
+    });
+
+    // TODO: add double grand final.
+    createRound(stageId, groupId, 1, 1, teams);
+}
+
+function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, teams: Teams) {
+    const roundId = db.insert('round', {
+        number: roundNumber,
+        stage_id: stageId,
+        group_id: groupId,
+    });
+
+    for (let i = 0; i < matchCount; i++) {
+        createMatch(stageId, groupId, roundId, i + 1, teams[i]);
+    }
+}
+
+function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Opponents) {
+    db.insert('match', {
+        number: matchNumber,
+        stage_id: stageId,
+        group_id: groupId,
+        round_id: roundId,
+        status: 'pending',
+        team1: opponents[0],
+        team2: opponents[1],
+    });
 }
 
 function propagateByes(prevTeams: Teams, currentMatchCount: number): Teams {
@@ -74,83 +144,6 @@ function propagateByes(prevTeams: Teams, currentMatchCount: number): Teams {
     return currentTeams;
 }
 
-function createDoubleElimination(stageId: number, inputTeams: string[]) {
-    let teams: Teams = makePairs(inputTeams.map(team => ({ name: team })));
-    createWinnerBracket(stageId, teams);
-    createLoserBracket(stageId, teams);
-    createGrandFinal(stageId);
-}
-
-function createWinnerBracket(stageId: number, teams: Teams) {
-    const roundCount = Math.log2(teams.length * 2);
-    const groupId = db.insert('group', {
-        stage_id: stageId,
-        name: 'Winner Bracket',
-    });
-
-    let number = 1;
-
-    for (let i = roundCount - 1; i >= 0; i--) {
-        const matchCount = Math.pow(2, i);
-        teams = propagateByes(teams, matchCount);
-        createRound(stageId, groupId, number++, matchCount, teams);
-    }
-}
-
-function createLoserBracket(stageId: number, teams: Teams) {
-    const majorRoundCount = Math.log2(teams.length * 2) - 1;
-    const groupId = db.insert('group', {
-        stage_id: stageId,
-        name: 'Loser Bracket',
-    });
-
-    let number = 1;
-
-    for (let i = majorRoundCount - 1; i >= 0; i--) {
-        const matchCount = Math.pow(2, i);
-
-        // Major round.
-        teams = propagateByes(teams, matchCount);
-        createRound(stageId, groupId, number++, matchCount, teams);
-
-        // TODO: Test BYE propagation with minor rounds...
-
-        // Minor round.
-        teams = propagateByes(teams, matchCount);
-        createRound(stageId, groupId, number++, matchCount, teams);
-    }
-}
-
-function createGrandFinal(stageId: number) {
-    const groupId = db.insert('group', {
-        stage_id: stageId,
-        name: 'Grand Final',
-    });
-
-    // TODO: Also propagation BYEs in Grand Final.
-    createRound(stageId, groupId, 1, 1, [[{ name: null }, { name: null }]]);
-}
-
-function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, teams: Teams) {
-    const roundId = db.insert('round', {
-        number: roundNumber,
-        stage_id: stageId,
-        group_id: groupId,
-    });
-
-    for (let i = 0; i < matchCount; i++) {
-        createMatch(stageId, groupId, roundId, i + 1, teams[i]);
-    }
-}
-
-function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Opponents) {
-    db.insert('match', {
-        number: matchNumber,
-        stage_id: stageId,
-        group_id: groupId,
-        round_id: roundId,
-        status: 'pending',
-        team1: opponents[0],
-        team2: opponents[1],
-    });
+function inputToTeams(input: string[]): Teams {
+    return makePairs(input.map(team => team ? { name: team } : null));
 }
