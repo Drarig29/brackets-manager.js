@@ -19,10 +19,11 @@ It contains all the logic needed to manage tournaments.
 
 - Number of participants : 8, 16, 32, etc. (powers of two)
 - Optional Consolation Final : matches semi-final losers.
-- Handles up to 3 first places.
+- Handles up to 4 first places.
 
 ## Double elimination
 
+- Twice the number of matches.
 - Contains a Winner Bracket (WB) and a Loser Bracket (LB).
 - Number of participants : 8, 16, 32, etc. (powers of two)
 - Optional Grand Final : matches the WB winner against the LB winner.
@@ -34,7 +35,7 @@ It contains all the logic needed to manage tournaments.
 - This library doesn't come with a GUI to create and update tournaments. You need to create your own.
 - You can use [brackets-viewer.js](https://github.com/Drarig29/brackets-viewer.js) to display the current state of a stage.
 - It is designed to be used with any storage.
-- An example of JSON storage is given to run tests, but you can use it out of the box.
+- An example of JSON storage is given to run tests. You can use it out of the box.
 - It uses asynchronous calls to a storage interface to be able to handle asynchronous SQL requests.
 
 # Credits
