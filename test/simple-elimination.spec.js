@@ -44,10 +44,10 @@ describe('Create single elimination stage', () => {
                 null, null,
                 'Team 7', 'Team 8',
             ],
-        };;
+        };
 
         createStage(withByes);
-        
+
         assert.equal(db.select('match', 4).team1.name, withByes.teams[0]); // Determined because of opponent's BYE.
         assert.equal(db.select('match', 4).team2.name, null); // To be determined.
         assert.equal(db.select('match', 5).team1, null); // BYE propagated.

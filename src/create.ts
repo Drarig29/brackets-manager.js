@@ -32,14 +32,16 @@ function createSingleElimination(stageId: number, inputTeams: string[]) {
 }
 
 function createDoubleElimination(stageId: number, inputTeams: string[]) {
-    // TODO: propagate BYEs through the different brackets.
     const teams = inputToTeams(inputTeams);
-    createStandardBracket('Winner Bracket', stageId, teams);
-    createMajorMinorBracket('Loser Bracket', stageId, teams);
-    createConstantSizeBracket('Grand Final', stageId, [[{ name: null }, { name: null }]]);
+    const { losers: losersWb, winner: winnerWb } = createStandardBracket('Winner Bracket', stageId, teams);
+    const winnerLb = createMajorMinorBracket('Loser Bracket', stageId, losersWb);
+    createConstantSizeBracket('Grand Final', stageId, [[winnerWb, winnerLb]]);
 }
 
-function createStandardBracket(name: string, stageId: number, teams: Teams) {
+function createStandardBracket(name: string, stageId: number, teams: Teams): {
+    losers: Team[][],
+    winner: Team,
+} {
     const roundCount = Math.log2(teams.length * 2);
     const groupId = db.insert('group', {
         stage_id: stageId,
@@ -47,36 +49,43 @@ function createStandardBracket(name: string, stageId: number, teams: Teams) {
     });
 
     let number = 1;
+    const losers: Team[][] = [];
 
     for (let i = roundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
-        teams = propagateByes(teams, matchCount);
+        teams = getCurrentTeams(teams, matchCount);
         createRound(stageId, groupId, number++, matchCount, teams);
+        losers.push(teams.map(byePropagation));
     }
+
+    const winner = byeResult(teams[0]);
+    return { losers, winner };
 }
 
-function createMajorMinorBracket(name: string, stageId: number, teams: Teams) {
-    const majorRoundCount = Math.log2(teams.length * 2) - 1;
+function createMajorMinorBracket(name: string, stageId: number, losers: Team[][]): Team {
+    const majorRoundCount = losers.length - 1;
     const groupId = db.insert('group', {
         stage_id: stageId,
         name,
     });
 
+    let losersId = 0;
+    let teams = makePairs(losers[losersId++]);
     let number = 1;
-    
-    // TODO: Test BYE propagation with minor rounds...
-    
+
     for (let i = majorRoundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
 
         // Major round.
-        teams = propagateByes(teams, matchCount);
+        teams = getCurrentTeams(teams, matchCount, true);
         createRound(stageId, groupId, number++, matchCount, teams);
 
         // Minor round.
-        teams = propagateByes(teams, matchCount);
+        teams = getCurrentTeams(teams, matchCount, false, losers[losersId++]);
         createRound(stageId, groupId, number++, matchCount, teams);
     }
+
+    return byeResult(teams[0]); // Winner.
 }
 
 function createConstantSizeBracket(name: string, stageId: number, teams: Teams) {
@@ -113,32 +122,31 @@ function createMatch(stageId: number, groupId: number, roundId: number, matchNum
     });
 }
 
-function propagateByes(prevTeams: Teams, currentMatchCount: number): Teams {
-    if (prevTeams.length === currentMatchCount) return prevTeams; // First round
+function getCurrentTeams(prevTeams: Teams, currentMatchCount: number): Teams;
+function getCurrentTeams(prevTeams: Teams, currentMatchCount: number, major: true): Teams;
+function getCurrentTeams(prevTeams: Teams, currentMatchCount: number, major: false, losers: Team[]): Teams;
 
-    const currentTeams = Array(currentMatchCount);
+function getCurrentTeams(prevTeams: Teams, currentMatchCount: number, major?: boolean, losers?: Team[]): Teams {
+    if ((major === undefined || major === true) && prevTeams.length === currentMatchCount) return prevTeams; // First round.
 
-    function propagateInTeam(prevMatchId: number, currMatchId: number, side: number) {
-        const opponents = prevTeams[prevMatchId + side];
+    const currentTeams: Teams = [];
 
-        if (opponents[0] === null && opponents[1] === null)  // Double BYE.
-            currentTeams[currMatchId][side] = null; // BYE.
-
-        if (opponents[0] !== null && opponents[1] !== null)  // No BYE.
-            currentTeams[currMatchId][side] = { name: null }; // Normal.
-
-        if (opponents[0] === null && opponents[1] !== null)  // team1 BYE.
-            currentTeams[currMatchId][side] = { name: opponents[1]!.name }; // team2.
-
-        if (opponents[0] !== null && opponents[1] === null)  // team2 BYE.
-            currentTeams[currMatchId][side] = { name: opponents[0]!.name };; // team1.
-    }
-
-    for (let matchId = 0; matchId < currentMatchCount; matchId++) {
-        const prevRoundId = matchId * 2;
-        currentTeams[matchId] = Array(2);
-        propagateInTeam(prevRoundId, matchId, 0); // team1
-        propagateInTeam(prevRoundId, matchId, 1); // team2
+    if (major === undefined || major === true) { // From major to major (WB) or minor to major (LB).
+        for (let matchId = 0; matchId < currentMatchCount; matchId++) {
+            const prevMatchId = matchId * 2;
+            currentTeams.push([
+                byeResult(prevTeams[prevMatchId + 0]), // team1.
+                byeResult(prevTeams[prevMatchId + 1]), // team2.
+            ]);
+        }
+    } else { // From major to minor (LB).
+        for (let matchId = 0; matchId < currentMatchCount; matchId++) {
+            const prevMatchId = matchId;
+            currentTeams.push([
+                byeResult(prevTeams[prevMatchId]), // team1.
+                losers![prevMatchId], // team2.
+            ]);
+        }
     }
 
     return currentTeams;
@@ -146,4 +154,24 @@ function propagateByes(prevTeams: Teams, currentMatchCount: number): Teams {
 
 function inputToTeams(input: string[]): Teams {
     return makePairs(input.map(team => team ? { name: team } : null));
+}
+
+function byeResult(opponents: Opponents): Team {
+    if (opponents[0] === null && opponents[1] === null) // Double BYE.
+        return null; // BYE.
+
+    if (opponents[0] === null && opponents[1] !== null) // team1 BYE.
+        return { name: opponents[1]!.name }; // team2.
+
+    if (opponents[0] !== null && opponents[1] === null) // team2 BYE.
+        return { name: opponents[0]!.name }; // team1.
+
+    return { name: null }; // Normal.
+}
+
+function byePropagation(opponents: Opponents): Team {
+    if (opponents[0] === null || opponents[1] === null) // At least one BYE.
+        return null; // BYE.
+
+    return { name: null }; // Normal.
 }

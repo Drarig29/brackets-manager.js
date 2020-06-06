@@ -6,7 +6,8 @@ It contains all the logic needed to manage tournaments.
 
 # Features
 
-- [BYE](https://en.wikipedia.org/wiki/Bye_%28sports%29) and forfait supported.
+- [BYE](https://en.wikipedia.org/wiki/Bye_%28sports%29) supported: only during creation (for seeding and balancing).
+- Forfeit supported: only during updates.
 - Match status supported (pending, running, completed).
 
 ## Round-robin

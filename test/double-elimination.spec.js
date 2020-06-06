@@ -20,7 +20,7 @@ const example = {
 };
 
 describe('Create double elimination stage', () => {
-    before(() => {
+    beforeEach(() => {
         db.reset();
     });
 
@@ -35,9 +35,39 @@ describe('Create double elimination stage', () => {
         assert.equal(db.all('round').length, 4 + 6 + 1);
         assert.equal(db.all('match').length, 30);
     });
+
+    it('should propagate BYEs through the brackets', () => {
+        const withByes = {
+            name: 'Example with BYEs',
+            type: 'double_elimination',
+            teams: [
+                'Team 1', null,
+                null, null,
+            ],
+        };
+
+        createStage(withByes);
+
+        assert.equal(db.select('match', 2).team1.name, withByes.teams[0]);
+        assert.equal(db.select('match', 2).team2, null);
+
+        assert.equal(db.select('match', 3).team1, null);
+        assert.equal(db.select('match', 3).team2, null);
+
+        assert.equal(db.select('match', 4).team1, null);
+        assert.equal(db.select('match', 4).team2, null);
+
+        assert.equal(db.select('match', 5).team1.name, withByes.teams[0]);
+        assert.equal(db.select('match', 5).team2, null);
+    });
 });
 
 describe('Update matches', () => {
+    before(() => {
+        db.reset();
+        createStage(example);
+    });
+
     it('should start a match', () => {
         const before = db.select('match', 0);
         assert.equal(before.status, 'pending');
@@ -151,6 +181,11 @@ describe('Update matches', () => {
 });
 
 describe('Winner bracket', () => {
+    before(() => {
+        db.reset();
+        createStage(example);
+    });
+
     it('should end a match (round 1) and determine one team in next (round 2)', () => {
         const before = db.select('match', 8); // First match of WB round 2
         assert.equal(before.team2.name, null);

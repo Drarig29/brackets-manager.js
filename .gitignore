@@ -2,3 +2,5 @@ node_modules
 dist
 db.json
 viewer
+coverage
+.nyc_output

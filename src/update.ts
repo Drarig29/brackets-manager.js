@@ -74,7 +74,7 @@ function updateResults(input: Match, output: Match, check: Result, change: Resul
         }
 
         if (input.team1.forfeit === true && input.team2.forfeit === true) {
-            throw Error('There are two forfaits.'); // TODO: handle this scenario.
+            throw Error('There are two forfeits.'); // TODO: handle this scenario.
         }
     }
 
