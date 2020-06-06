@@ -20,22 +20,22 @@ export function makeViewer(data: TournamentData) {
 /**
  * Toornament's method to distribute seeds in the first round of single or double elimination.
  */
-export function innerOuterMethod(array: number[]): number[][] {
+export function innerOuterMethod(array: any[]): any[][] {
     const size = array.length / 4;
     const parts = {
         inner: [array.slice(size, 2 * size), array.slice(2 * size, 3 * size)],
         outer: [array.slice(0, size), array.slice(3 * size, 4 * size)]
     }
 
-    function inner(part: number[][]): number[] {
+    function inner(part: any[][]): any[] {
         return [part[0].pop()!, part[1].shift()!];
     }
 
-    function outer(part: number[][]): number[] {
+    function outer(part: any[][]): any[] {
         return [part[0].shift()!, part[1].pop()!];
     }
 
-    const result: number[][] = [];
+    const result: any[][] = [];
 
     for (let i = 0; i < size / 2; i++) {
         result.push(
@@ -47,4 +47,39 @@ export function innerOuterMethod(array: number[]): number[][] {
     }
 
     return result;
+}
+
+/**
+ * Creates an array of possible combinations of 2 elements.
+ */
+export function combinations(array: any[]): any[][] {
+    const result: any[][] = []
+
+    for (let i = 0; i < array.length - 1; i++)
+        for (let j = i + 1; j < array.length; j++)
+            result.push([array[i], array[j]]);
+
+    return result;
+}
+
+/**
+ * Gets divisors of n, without 1 and n.
+ */
+export function nonTrivialDivisors(n: number): number[] {
+    const result: number[] = [];
+    const limit = Math.sqrt(n);
+
+    for (let i = 2; i <= limit; i++)
+        if (n % i === 0)
+            result.splice(result.length / 2, 0, ...(i === n / i ? [i] : [i, n / i]));
+
+    return result;
+}
+
+/**
+ * Returns the divisor which is the upper middle of the given number's divisors.
+ */
+export function upperMedianDivisor(n: number): number {
+    const divisors = nonTrivialDivisors(n);
+    return divisors[Math.ceil(divisors.length / 2)] || n;
 }
