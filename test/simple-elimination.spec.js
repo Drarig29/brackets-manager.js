@@ -5,7 +5,7 @@ const assert = require('chai').assert;
 const example = {
     name: 'Example',
     type: 'single_elimination',
-    teams: [
+    participants: [
         'Team 1', 'Team 2',
         'Team 3', 'Team 4',
         'Team 5', 'Team 6',
@@ -38,7 +38,7 @@ describe('Create single elimination stage', () => {
         const withByes = {
             name: 'Example with BYEs',
             type: 'single_elimination',
-            teams: [
+            participants: [
                 'Team 1', null,
                 'Team 3', 'Team 4',
                 null, null,
@@ -48,7 +48,7 @@ describe('Create single elimination stage', () => {
 
         createStage(withByes);
 
-        assert.equal(db.select('match', 4).team1.name, withByes.teams[0]); // Determined because of opponent's BYE.
+        assert.equal(db.select('match', 4).team1.name, withByes.participants[0]); // Determined because of opponent's BYE.
         assert.equal(db.select('match', 4).team2.name, null); // To be determined.
         assert.equal(db.select('match', 5).team1, null); // BYE propagated.
         assert.equal(db.select('match', 5).team2.name, null); // To be determined.

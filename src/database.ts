@@ -16,7 +16,6 @@ class Database {
     }
 
     private init() {
-        this.ensureArrayExists('tournament');
         this.ensureArrayExists('stage');
         this.ensureArrayExists('group');
         this.ensureArrayExists('round');

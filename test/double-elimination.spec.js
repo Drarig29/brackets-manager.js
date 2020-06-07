@@ -5,9 +5,8 @@ const assert = require('chai').assert;
 
 const example = {
     name: 'Amateur',
-    minorOrdering: ['reverse', 'pair_flip', 'reverse', 'natural'],
     type: 'double_elimination',
-    teams: [
+    participants: [
         'Team 1', 'Team 2',
         'Team 3', 'Team 4',
         'Team 5', 'Team 6',
@@ -40,7 +39,7 @@ describe('Create double elimination stage', () => {
         const withByes = {
             name: 'Example with BYEs',
             type: 'double_elimination',
-            teams: [
+            participants: [
                 'Team 1', null,
                 null, null,
             ],
@@ -48,7 +47,7 @@ describe('Create double elimination stage', () => {
 
         createStage(withByes);
 
-        assert.equal(db.select('match', 2).team1.name, withByes.teams[0]);
+        assert.equal(db.select('match', 2).team1.name, withByes.participants[0]);
         assert.equal(db.select('match', 2).team2, null);
 
         assert.equal(db.select('match', 3).team1, null);
@@ -57,7 +56,7 @@ describe('Create double elimination stage', () => {
         assert.equal(db.select('match', 4).team1, null);
         assert.equal(db.select('match', 4).team2, null);
 
-        assert.equal(db.select('match', 5).team1.name, withByes.teams[0]);
+        assert.equal(db.select('match', 5).team1.name, withByes.participants[0]);
         assert.equal(db.select('match', 5).team2, null);
     });
 });
@@ -95,7 +94,7 @@ describe('Update matches', () => {
         assert.equal(after.team1.score, 2);
 
         // Name should stay. It shouldn't be overwritten.
-        assert.equal(after.team1.name, example.teams[0]);
+        assert.equal(after.team1.name, example.participants[0]);
     });
 
     it('should simply end the match here', () => {

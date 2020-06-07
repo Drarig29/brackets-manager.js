@@ -17,8 +17,8 @@ interface Match {
     group_id: number,
     round_id: number,
     status: 'pending' | 'running' | 'completed',
-    team1: Partial<Team>,
-    team2: Partial<Team>,
+    team1: Team,
+    team2: Team,
 }
 
 export function updateMatch(match: Match) {
@@ -57,12 +57,12 @@ function updateCompleted(input: Match, output: Match) {
 function updateForfeit(input: Match, output: Match) {
     if (input.team1 && input.team1.forfeit === true) {
         if (output.team2) output.team2.result = 'win';
-        else output.team2 = { result: 'win' };
+        else output.team2 = ({ result: 'win' } as any);
     }
 
     if (input.team2 && input.team2.forfeit === true) {
         if (output.team1) output.team1.result = 'win';
-        else output.team1 = { result: 'win' };
+        else output.team1 = ({ result: 'win' } as any);
     }
 }
 
@@ -80,19 +80,19 @@ function updateResults(input: Match, output: Match, check: Result, change: Resul
 
     if (input.team1 && input.team1.result === check) {
         if (output.team2) output.team2.result = change;
-        else output.team2 = { result: change };
+        else output.team2 = ({ result: change } as any);
     }
 
     if (input.team2 && input.team2.result === check) {
         if (output.team1) output.team1.result = change;
-        else output.team1 = { result: change };
+        else output.team1 = ({ result: change } as any);
     }
 }
 
 function updateNext(match: Match) {
     const next = findNextMatch(match);
     const winner = getWinnerName(match);
-    next[getSide(match)] = { name: winner };
+    next[getSide(match)] = ({ name: winner } as any);
     db.update('match', next.id, next);
 }
 

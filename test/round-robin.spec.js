@@ -4,8 +4,8 @@ const assert = require('chai').assert;
 
 const example = {
     name: 'Example',
-    type: 'pools',
-    teams: [
+    type: 'round_robin',
+    participants: [
         'Team 1', 'Team 2',
         'Team 3', 'Team 4',
         'Team 5', 'Team 6',

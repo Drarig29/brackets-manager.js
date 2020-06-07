@@ -1,50 +1,43 @@
-import { makePairs } from 'brackets-model';
-import { Tournament } from 'brackets-model/dist/types';
+import { Stage, InputParticipants, Participant, Duels, Duel } from 'brackets-model';
 import { db } from './database';
-import { combinations, upperMedianDivisor, makeGroups } from './helpers';
+import { combinations, upperMedianDivisor, makeGroups, makePairs } from './helpers';
 
-type Team = { name: string | null } | null;
-type Opponents = Team[];
-type Teams = Opponents[];
-
-export function createStage(stage: Tournament) {
+export function createStage(stage: Stage) {
     const stageId = db.insert('stage', {
         name: stage.name,
         type: stage.type,
     });
 
-    // TODO: correct the model to support null (BYE) in teams.
-
     switch (stage.type) {
-        case 'pools':
-            createRoundRobin(stageId, (stage.teams as string[]), 2);
+        case 'round_robin':
+            createRoundRobin(stageId, stage.participants, 2);
             break;
         case 'single_elimination':
-            createSingleElimination(stageId, (stage.teams as string[]));
+            createSingleElimination(stageId, stage.participants);
             break;
         case 'double_elimination':
-            createDoubleElimination(stageId, (stage.teams as string[]));
+            createDoubleElimination(stageId, stage.participants);
             break;
         default:
             throw Error('Unknown stage type.');
     }
 }
 
-function createRoundRobin(stageId: number, inputTeams: string[], groupCount: number) {
-    const teams: Team[] = inputTeams.map(team => team ? { name: team } : null);
+function createRoundRobin(stageId: number, inputTeams: InputParticipants, groupCount: number) {
+    const teams: Participant[] = inputTeams.map(team => team ? { name: team } : null);
     const groups = makeGroups(teams, groupCount);
 
     for (let i = 0; i < groups.length; i++)
         createGroup(`Group ${i + 1}`, stageId, groups[i]);
 }
 
-function createGroup(name: string, stageId: number, teams: Team[]) {
+function createGroup(name: string, stageId: number, teams: Participant[]) {
     const groupId = db.insert('group', {
         stage_id: stageId,
         name,
     });
 
-    const matches: Teams = combinations(teams);
+    const matches: Duels = combinations(teams);
     const matchCount = matches.length;
     const roundCount = upperMedianDivisor(matchCount);
     const matchesPerRound = matchCount / roundCount;
@@ -53,21 +46,21 @@ function createGroup(name: string, stageId: number, teams: Team[]) {
         createRound(stageId, groupId, i + 1, matchesPerRound, matches.slice(i * matchesPerRound, (i + 1) * matchesPerRound))
 }
 
-function createSingleElimination(stageId: number, inputTeams: string[]) {
+function createSingleElimination(stageId: number, inputTeams: InputParticipants) {
     const teams = inputToTeams(inputTeams);
     createStandardBracket('Bracket', stageId, teams);
 }
 
-function createDoubleElimination(stageId: number, inputTeams: string[]) {
+function createDoubleElimination(stageId: number, inputTeams: InputParticipants) {
     const teams = inputToTeams(inputTeams);
     const { losers: losersWb, winner: winnerWb } = createStandardBracket('Winner Bracket', stageId, teams);
     const winnerLb = createMajorMinorBracket('Loser Bracket', stageId, losersWb);
     createConstantSizeBracket('Grand Final', stageId, [[winnerWb, winnerLb]]);
 }
 
-function createStandardBracket(name: string, stageId: number, teams: Teams): {
-    losers: Team[][],
-    winner: Team,
+function createStandardBracket(name: string, stageId: number, teams: Duels): {
+    losers: Participant[][],
+    winner: Participant,
 } {
     const roundCount = Math.log2(teams.length * 2);
     const groupId = db.insert('group', {
@@ -76,7 +69,7 @@ function createStandardBracket(name: string, stageId: number, teams: Teams): {
     });
 
     let number = 1;
-    const losers: Team[][] = [];
+    const losers: Participant[][] = [];
 
     for (let i = roundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
@@ -89,7 +82,7 @@ function createStandardBracket(name: string, stageId: number, teams: Teams): {
     return { losers, winner };
 }
 
-function createMajorMinorBracket(name: string, stageId: number, losers: Team[][]): Team {
+function createMajorMinorBracket(name: string, stageId: number, losers: Participant[][]): Participant {
     const majorRoundCount = losers.length - 1;
     const groupId = db.insert('group', {
         stage_id: stageId,
@@ -115,7 +108,7 @@ function createMajorMinorBracket(name: string, stageId: number, losers: Team[][]
     return byeResult(teams[0]); // Winner.
 }
 
-function createConstantSizeBracket(name: string, stageId: number, teams: Teams) {
+function createConstantSizeBracket(name: string, stageId: number, teams: Duels) {
     const groupId = db.insert('group', {
         stage_id: stageId,
         name,
@@ -125,7 +118,7 @@ function createConstantSizeBracket(name: string, stageId: number, teams: Teams) 
     createRound(stageId, groupId, 1, 1, teams);
 }
 
-function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, teams: Teams) {
+function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, teams: Duels) {
     const roundId = db.insert('round', {
         number: roundNumber,
         stage_id: stageId,
@@ -137,7 +130,7 @@ function createRound(stageId: number, groupId: number, roundNumber: number, matc
     }
 }
 
-function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Opponents) {
+function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel) {
     db.insert('match', {
         number: matchNumber,
         stage_id: stageId,
@@ -149,14 +142,14 @@ function createMatch(stageId: number, groupId: number, roundId: number, matchNum
     });
 }
 
-function getCurrentTeams(prevTeams: Teams, currentMatchCount: number): Teams;
-function getCurrentTeams(prevTeams: Teams, currentMatchCount: number, major: true): Teams;
-function getCurrentTeams(prevTeams: Teams, currentMatchCount: number, major: false, losers: Team[]): Teams;
+function getCurrentTeams(prevTeams: Duels, currentMatchCount: number): Duels;
+function getCurrentTeams(prevTeams: Duels, currentMatchCount: number, major: true): Duels;
+function getCurrentTeams(prevTeams: Duels, currentMatchCount: number, major: false, losers: Participant[]): Duels;
 
-function getCurrentTeams(prevTeams: Teams, currentMatchCount: number, major?: boolean, losers?: Team[]): Teams {
+function getCurrentTeams(prevTeams: Duels, currentMatchCount: number, major?: boolean, losers?: Participant[]): Duels {
     if ((major === undefined || major === true) && prevTeams.length === currentMatchCount) return prevTeams; // First round.
 
-    const currentTeams: Teams = [];
+    const currentTeams: Duels = [];
 
     if (major === undefined || major === true) { // From major to major (WB) or minor to major (LB).
         for (let matchId = 0; matchId < currentMatchCount; matchId++) {
@@ -179,11 +172,11 @@ function getCurrentTeams(prevTeams: Teams, currentMatchCount: number, major?: bo
     return currentTeams;
 }
 
-function inputToTeams(input: string[]): Teams {
+function inputToTeams(input: InputParticipants): Duels {
     return makePairs(input.map(team => team ? { name: team } : null));
 }
 
-function byeResult(opponents: Opponents): Team {
+function byeResult(opponents: Duel): Participant {
     if (opponents[0] === null && opponents[1] === null) // Double BYE.
         return null; // BYE.
 
@@ -196,7 +189,7 @@ function byeResult(opponents: Opponents): Team {
     return { name: null }; // Normal.
 }
 
-function byePropagation(opponents: Opponents): Team {
+function byePropagation(opponents: Duel): Participant {
     if (opponents[0] === null || opponents[1] === null) // At least one BYE.
         return null; // BYE.
 

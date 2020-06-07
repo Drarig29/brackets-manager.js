@@ -1,9 +1,9 @@
-import { TournamentData } from "brackets-model/dist/types";
+import { Stage, SeedOrdering, OrderingMap } from "brackets-model";
 import * as fs from 'fs';
 
 const viewerRoot = 'https://cdn.jsdelivr.net/gh/Drarig29/brackets-viewer.js/dist';
 
-export function makeViewer(data: TournamentData) {
+export function makeViewer(data: Stage) {
     const html = `<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.slim.min.js"></script>
 
 <link rel="stylesheet" href="${viewerRoot}/brackets-viewer.min.css" />
@@ -84,7 +84,6 @@ export function upperMedianDivisor(n: number): number {
     return divisors[Math.ceil(divisors.length / 2)] || n;
 }
 
-// TODO: refactor this with makePairs
 // TODO: add generics everywhere... :)
 
 export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
@@ -99,4 +98,76 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
     }
 
     return result;
+}
+
+/**
+ * Makes pairs with each element and its next one.
+ * @example [1, 2, 3, 4] --> [[1, 2], [3, 4]]
+ */
+export function makePairs(array: any[]): any[][];
+
+/**
+ * Makes pairs with one element from `left` and the other from `right`.
+ * @example [1, 2] + [3, 4] --> [[1, 3], [2, 4]]
+ */
+export function makePairs(left: any[], right: any[]): any[][];
+
+export function makePairs(left: any[], right?: any[]): any[][] {
+    if (!right) {
+        ensureEvenSized(left);
+        return left.map((current, i) => (i % 2 === 0) ? [current, left[i + 1]] : [])
+            .filter(v => v.length > 0);
+    }
+
+    ensureEquallySized(left, right);
+    return left.map((current, i) => [current, right[i]]);
+}
+
+export function ensureEvenSized(array: any[]) {
+    if (array.length % 2 === 1) {
+        throw Error('Array size must be even.');
+    }
+}
+
+export function ensureEquallySized(left: any[], right: any[]) {
+    if (left.length !== right.length) {
+        throw Error('Arrays size must be equal.');
+    }
+}
+
+export function ensurePowerOfTwoSized(array: any[]) {
+    if (!Number.isInteger(Math.log2(array.length))) {
+        throw Error('Array size must be a power of 2.');
+    }
+}
+
+export function ensureNotTied(scores: number[]) {
+    if (scores[0] === scores[1]) {
+        throw Error(`${scores[0]} and ${scores[1]} are tied. It cannot be.`);
+    }
+}
+
+// https://web.archive.org/web/20200601102344/https://tl.net/forum/sc2-tournaments/202139-superior-double-elimination-losers-bracket-seeding
+
+export const ordering: OrderingMap = {
+    'natural': (array: any[]) => [...array],
+    'reverse': (array: any[]) => array.reverse(),
+    'half_shift': (array: any[]) => [...array.slice(array.length / 2), ...array.slice(0, array.length / 2)],
+    'reverse_half_shift': (array: any[]) => [...array.slice(array.length / 2).reverse(), ...array.slice(0, array.length / 2).reverse()],
+    'pair_flip': (array: any[]) => {
+        const result = [];
+        for (let i = 0; i < array.length; i += 2) result.push(array[i + 1], array[i]);
+        return result;
+    },
+    'groups.effort_balanced': () => { throw Error('Not implemented.') },
+    'groups.snake': () => { throw Error('Not implemented.') },
+    'groups.bracket_optimized': () => { throw Error('Not implemented.') },
+}
+
+export const defaultMinorOrdering: { [key: number]: SeedOrdering[] } = {
+    8: ['natural', 'reverse', 'natural'],
+    16: ['natural', 'reverse_half_shift', 'reverse', 'natural'],
+    32: ['natural', 'reverse', 'half_shift', 'natural', 'natural'],
+    64: ['natural', 'reverse', 'half_shift', 'reverse', 'natural', 'natural'],
+    128: ['natural', 'reverse', 'half_shift', 'pair_flip', 'pair_flip', 'pair_flip', 'natural'],
 }
