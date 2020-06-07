@@ -11,6 +11,7 @@ const example = {
         'Team 5', 'Team 6',
         'Team 7', 'Team 8',
     ],
+    settings: { groupCount: 2 },
 };
 
 describe('Create a round-robin stage', () => {

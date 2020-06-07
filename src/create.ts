@@ -1,34 +1,70 @@
-import { Stage, InputParticipants, Participant, Duels, Duel } from 'brackets-model';
+import { Stage, InputParticipants, Participant, Duels, Duel, GrandFinalType } from 'brackets-model';
 import { db } from './database';
 import { combinations, upperMedianDivisor, makeGroups, makePairs } from './helpers';
 
 export function createStage(stage: Stage) {
-    const stageId = db.insert('stage', {
-        name: stage.name,
-        type: stage.type,
-    });
-
     switch (stage.type) {
         case 'round_robin':
-            createRoundRobin(stageId, stage.participants, 2);
+            createRoundRobin(stage);
             break;
         case 'single_elimination':
-            createSingleElimination(stageId, stage.participants);
+            createSingleElimination(stage);
             break;
         case 'double_elimination':
-            createDoubleElimination(stageId, stage.participants);
+            createDoubleElimination(stage);
             break;
         default:
             throw Error('Unknown stage type.');
     }
 }
 
-function createRoundRobin(stageId: number, inputTeams: InputParticipants, groupCount: number) {
-    const teams: Participant[] = inputTeams.map(team => team ? { name: team } : null);
-    const groups = makeGroups(teams, groupCount);
+function createRoundRobin(stage: Stage) {
+    if (!stage.settings || !stage.settings.groupCount) throw Error('You must specify a group count for round-robin stages.');
+
+    const stageId = db.insert('stage', {
+        name: stage.name,
+        type: stage.type,
+    });
+
+    const teams: Participant[] = stage.participants.map(team => team ? { name: team } : null);
+    const groups = makeGroups(teams, stage.settings.groupCount);
 
     for (let i = 0; i < groups.length; i++)
         createGroup(`Group ${i + 1}`, stageId, groups[i]);
+}
+
+function createSingleElimination(stage: Stage) {
+    const stageId = db.insert('stage', {
+        name: stage.name,
+        type: stage.type,
+    });
+
+    const teams = inputToTeams(stage.participants);
+    createStandardBracket('Bracket', stageId, teams);
+
+    // TODO: handle BYEs
+    if (stage.settings && stage.settings.consolationFinal)
+        createConstantSizeBracket('Consolation Final', stageId, [[{ name: null }, { name: null }]]);
+}
+
+function createDoubleElimination(stage: Stage) {
+    const stageId = db.insert('stage', {
+        name: stage.name,
+        type: stage.type,
+    });
+
+    const teams = inputToTeams(stage.participants);
+    const { losers: losersWb, winner: winnerWb } = createStandardBracket('Winner Bracket', stageId, teams);
+    const winnerLb = createMajorMinorBracket('Loser Bracket', stageId, losersWb);
+
+    // Simple Grand Final by default.
+    const grandFinal = (stage.settings && stage.settings.grandFinal) || 'simple';
+
+    // TODO: handle BYEs
+    if (grandFinal === 'simple')
+        createConstantSizeBracket('Grand Final', stageId, [[winnerWb, winnerLb]]);
+    else if (grandFinal === 'double')
+        createConstantSizeBracket('Grand Final', stageId, [[winnerWb, winnerLb], [{ name: null }, { name: null }]]);
 }
 
 function createGroup(name: string, stageId: number, teams: Participant[]) {
@@ -44,18 +80,6 @@ function createGroup(name: string, stageId: number, teams: Participant[]) {
 
     for (let i = 0; i < roundCount; i++)
         createRound(stageId, groupId, i + 1, matchesPerRound, matches.slice(i * matchesPerRound, (i + 1) * matchesPerRound))
-}
-
-function createSingleElimination(stageId: number, inputTeams: InputParticipants) {
-    const teams = inputToTeams(inputTeams);
-    createStandardBracket('Bracket', stageId, teams);
-}
-
-function createDoubleElimination(stageId: number, inputTeams: InputParticipants) {
-    const teams = inputToTeams(inputTeams);
-    const { losers: losersWb, winner: winnerWb } = createStandardBracket('Winner Bracket', stageId, teams);
-    const winnerLb = createMajorMinorBracket('Loser Bracket', stageId, losersWb);
-    createConstantSizeBracket('Grand Final', stageId, [[winnerWb, winnerLb]]);
 }
 
 function createStandardBracket(name: string, stageId: number, teams: Duels): {
@@ -114,8 +138,7 @@ function createConstantSizeBracket(name: string, stageId: number, teams: Duels) 
         name,
     });
 
-    // TODO: add double grand final.
-    createRound(stageId, groupId, 1, 1, teams);
+    createRound(stageId, groupId, 1, teams.length, teams);
 }
 
 function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, teams: Duels) {
@@ -125,9 +148,8 @@ function createRound(stageId: number, groupId: number, roundNumber: number, matc
         group_id: groupId,
     });
 
-    for (let i = 0; i < matchCount; i++) {
+    for (let i = 0; i < matchCount; i++)
         createMatch(stageId, groupId, roundId, i + 1, teams[i]);
-    }
 }
 
 function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel) {
