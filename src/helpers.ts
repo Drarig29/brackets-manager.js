@@ -20,22 +20,22 @@ export function makeViewer(data: Stage) {
 /**
  * Toornament's method to distribute seeds in the first round of single or double elimination.
  */
-export function innerOuterMethod(array: any[]): any[][] {
+export function innerOuterMethod<T>(array: T[]): T[][] {
     const size = array.length / 4;
     const parts = {
         inner: [array.slice(size, 2 * size), array.slice(2 * size, 3 * size)],
         outer: [array.slice(0, size), array.slice(3 * size, 4 * size)]
     }
 
-    function inner(part: any[][]): any[] {
+    function inner(part: T[][]): T[] {
         return [part[0].pop()!, part[1].shift()!];
     }
 
-    function outer(part: any[][]): any[] {
+    function outer(part: T[][]): T[] {
         return [part[0].shift()!, part[1].pop()!];
     }
 
-    const result: any[][] = [];
+    const result: T[][] = [];
 
     for (let i = 0; i < size / 2; i++) {
         result.push(
@@ -52,8 +52,8 @@ export function innerOuterMethod(array: any[]): any[][] {
 /**
  * Creates an array of possible combinations of 2 elements.
  */
-export function combinations(array: any[]): any[][] {
-    const result: any[][] = []
+export function combinations<T>(array: T[]): T[][] {
+    const result: T[][] = []
 
     for (let i = 0; i < array.length - 1; i++)
         for (let j = i + 1; j < array.length; j++)
@@ -84,8 +84,6 @@ export function upperMedianDivisor(n: number): number {
     return divisors[Math.ceil(divisors.length / 2)] || n;
 }
 
-// TODO: add generics everywhere... :)
-
 export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
     const groupSize = Math.ceil(elements.length / groupCount);
     const result: T[][] = [];
@@ -104,15 +102,15 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
  * Makes pairs with each element and its next one.
  * @example [1, 2, 3, 4] --> [[1, 2], [3, 4]]
  */
-export function makePairs(array: any[]): any[][];
+export function makePairs<T>(array: T[]): T[][];
 
 /**
  * Makes pairs with one element from `left` and the other from `right`.
  * @example [1, 2] + [3, 4] --> [[1, 3], [2, 4]]
  */
-export function makePairs(left: any[], right: any[]): any[][];
+export function makePairs<T>(left: T[], right: T[]): T[][];
 
-export function makePairs(left: any[], right?: any[]): any[][] {
+export function makePairs<T>(left: T[], right?: T[]): T[][] {
     if (!right) {
         ensureEvenSized(left);
         return left.map((current, i) => (i % 2 === 0) ? [current, left[i + 1]] : [])
@@ -123,19 +121,19 @@ export function makePairs(left: any[], right?: any[]): any[][] {
     return left.map((current, i) => [current, right[i]]);
 }
 
-export function ensureEvenSized(array: any[]) {
+export function ensureEvenSized<T>(array: T[]) {
     if (array.length % 2 === 1) {
         throw Error('Array size must be even.');
     }
 }
 
-export function ensureEquallySized(left: any[], right: any[]) {
+export function ensureEquallySized<T>(left: T[], right: T[]) {
     if (left.length !== right.length) {
         throw Error('Arrays size must be equal.');
     }
 }
 
-export function ensurePowerOfTwoSized(array: any[]) {
+export function ensurePowerOfTwoSized<T>(array: T[]) {
     if (!Number.isInteger(Math.log2(array.length))) {
         throw Error('Array size must be a power of 2.');
     }
@@ -150,12 +148,12 @@ export function ensureNotTied(scores: number[]) {
 // https://web.archive.org/web/20200601102344/https://tl.net/forum/sc2-tournaments/202139-superior-double-elimination-losers-bracket-seeding
 
 export const ordering: OrderingMap = {
-    'natural': (array: any[]) => [...array],
-    'reverse': (array: any[]) => array.reverse(),
-    'half_shift': (array: any[]) => [...array.slice(array.length / 2), ...array.slice(0, array.length / 2)],
-    'reverse_half_shift': (array: any[]) => [...array.slice(array.length / 2).reverse(), ...array.slice(0, array.length / 2).reverse()],
-    'pair_flip': (array: any[]) => {
-        const result = [];
+    'natural': <T>(array: T[]) => [...array],
+    'reverse': <T>(array: T[]) => array.reverse(),
+    'half_shift': <T>(array: T[]) => [...array.slice(array.length / 2), ...array.slice(0, array.length / 2)],
+    'reverse_half_shift': <T>(array: T[]) => [...array.slice(array.length / 2).reverse(), ...array.slice(0, array.length / 2).reverse()],
+    'pair_flip': <T>(array: T[]) => {
+        const result: T[] = [];
         for (let i = 0; i < array.length; i += 2) result.push(array[i + 1], array[i]);
         return result;
     },

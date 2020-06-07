@@ -173,7 +173,7 @@ function getCurrentTeams(prevTeams: Duels, currentMatchCount: number, major?: bo
 }
 
 function inputToTeams(input: InputParticipants): Duels {
-    return makePairs(input.map(team => team ? { name: team } : null));
+    return makePairs(input.map<Participant>(team => team ? { name: team } : null));
 }
 
 function byeResult(opponents: Duel): Participant {
