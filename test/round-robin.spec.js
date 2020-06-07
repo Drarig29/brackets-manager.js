@@ -30,4 +30,7 @@ describe('Create a round-robin stage', () => {
         assert.equal(db.all('round').length, 6);
         assert.equal(db.all('match').length, 12);
     });
+
+    // TODO: add a test with BYEs
+    // TODO: add a test with tie-breakers
 });

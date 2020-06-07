@@ -59,6 +59,30 @@ describe('Create double elimination stage', () => {
         assert.equal(db.select('match', 5).team1.name, withByes.participants[0]);
         assert.equal(db.select('match', 5).team2, null);
     });
+
+    it('should create a tournament with a double grand final', () => {
+        const withDoubleGrandFinal = {
+            name: 'Example with double grand final',
+            type: 'double_elimination',
+            participants: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: { grandFinal: 'double' },
+        };
+
+        createStage(withDoubleGrandFinal);
+
+        const stage = db.select('stage', 0);
+        assert.equal(stage.name, withDoubleGrandFinal.name);
+        assert.equal(stage.type, withDoubleGrandFinal.type);
+
+        assert.equal(db.all('group').length, 3);
+        assert.equal(db.all('round').length, 3 + 4 + 2);
+        assert.equal(db.all('match').length, 15);
+    });
 });
 
 describe('Update matches', () => {
