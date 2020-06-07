@@ -1,5 +1,5 @@
 const assert = require('chai').assert;
-const { innerOuterMethod, combinations, nonTrivialDivisors, upperMedianDivisor } = require('../dist/helpers');
+const { innerOuterMethod, combinations, nonTrivialDivisors, upperMedianDivisor, makeGroups } = require('../dist/helpers');
 
 describe('Helpers', () => {
     it('should place 8 participants with inner-outer method', () => {
@@ -53,5 +53,11 @@ describe('Helpers', () => {
         assert.deepEqual(upperMedianDivisor(15), 5);
         assert.deepEqual(upperMedianDivisor(36), 9);
         assert.deepEqual(upperMedianDivisor(45), 9);
+    });
+
+    it('should place participants in groups', () => {
+        assert.deepEqual(makeGroups([1, 2, 3, 4, 5], 2), [[1, 2, 3], [4, 5]])
+        assert.deepEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 2), [[1, 2, 3, 4], [5, 6, 7, 8]])
+        assert.deepEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 3), [[1, 2, 3], [4, 5, 6], [7, 8]])
     });
 });

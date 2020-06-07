@@ -1,7 +1,7 @@
 import { makePairs } from 'brackets-model';
 import { Tournament } from 'brackets-model/dist/types';
 import { db } from './database';
-import { combinations, upperMedianDivisor } from './helpers';
+import { combinations, upperMedianDivisor, makeGroups } from './helpers';
 
 type Team = { name: string | null } | null;
 type Opponents = Team[];
@@ -17,7 +17,7 @@ export function createStage(stage: Tournament) {
 
     switch (stage.type) {
         case 'pools':
-            createRoundRobin(stageId, (stage.teams as string[]));
+            createRoundRobin(stageId, (stage.teams as string[]), 2);
             break;
         case 'single_elimination':
             createSingleElimination(stageId, (stage.teams as string[]));
@@ -30,12 +30,9 @@ export function createStage(stage: Tournament) {
     }
 }
 
-function createRoundRobin(stageId: number, inputTeams: string[]) {
-    const teamsPerGroup = 4;
-    const groupCount = inputTeams.length / teamsPerGroup;
-
-    const teams = inputTeams.map(team => team ? { name: team } : null);
-    const groups = distributeInGroups(teams, groupCount, teamsPerGroup);
+function createRoundRobin(stageId: number, inputTeams: string[], groupCount: number) {
+    const teams: Team[] = inputTeams.map(team => team ? { name: team } : null);
+    const groups = makeGroups(teams, groupCount);
 
     for (let i = 0; i < groups.length; i++)
         createGroup(`Group ${i + 1}`, stageId, groups[i]);
@@ -54,21 +51,6 @@ function createGroup(name: string, stageId: number, teams: Team[]) {
 
     for (let i = 0; i < roundCount; i++)
         createRound(stageId, groupId, i + 1, matchesPerRound, matches.slice(i * matchesPerRound, (i + 1) * matchesPerRound))
-}
-
-function distributeInGroups(teams: Team[], groupCount: number, teamsPerGroup: number): Team[][] {
-    // TODO: Implement other distribution methods.
-
-    const groups: Team[][] = [];
-
-    for (let group = 0; group < groupCount; group++) {
-        groups.push([]);
-
-        for (let team = 0; team < teamsPerGroup; team++)
-            groups[group].push(teams[teamsPerGroup * group + team]);
-    }
-
-    return groups;
 }
 
 function createSingleElimination(stageId: number, inputTeams: string[]) {

@@ -83,3 +83,20 @@ export function upperMedianDivisor(n: number): number {
     const divisors = nonTrivialDivisors(n);
     return divisors[Math.ceil(divisors.length / 2)] || n;
 }
+
+// TODO: refactor this with makePairs
+// TODO: add generics everywhere... :)
+
+export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
+    const groupSize = Math.ceil(elements.length / groupCount);
+    const result: T[][] = [];
+
+    for (let i = 0; i < elements.length; i++) {
+        if (i % groupSize === 0)
+            result.push([]);
+
+        result[result.length - 1].push(elements[i]);
+    }
+
+    return result;
+}
