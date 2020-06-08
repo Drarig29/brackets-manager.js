@@ -1,4 +1,6 @@
-import { JsonDB, FindCallback } from "node-json-db";
+import { JsonDB } from "node-json-db";
+
+declare type SelectCallback<T> = (entry: T, index: number) => boolean
 
 class Database {
     private internal: JsonDB;
@@ -49,7 +51,7 @@ class Database {
      * @param table Where to insert.
      * @param value What to insert.
      */
-    public insert(table: string, value: any): number {
+    public insert<T>(table: string, value: T): number {
         const id = this.internal.getData(this.makePath(table)).length;
         this.internal.push(this.makeArrayPath(table), { id, ...value });
         return id;
@@ -64,14 +66,14 @@ class Database {
      * @param table Where to get from.
      * @param key What to get.
      */
-    public select(table: string, key: number): any;
+    public select<T>(table: string, key: number): T;
 
     /**
      * Gets data from a table in the database.
      * @param table Where to get from.
      * @param pred A predicate to filter data.
      */
-    public select(table: string, pred: FindCallback): any[] | undefined;
+    public select<T>(table: string, pred: SelectCallback<T>): T[] | undefined;
 
     public select(table: string, arg: any): any {
         if (typeof arg === "number")
@@ -89,12 +91,12 @@ class Database {
         return array.find(element => element.id === id) !== undefined;
     }
 
-    public all(table: string): any[] {
+    public all<T>(table: string): T[] {
         return this.internal.getData(this.makePath(table));
     }
 
-    public update(table: string, key: number, property: string, value: any): void;
-    public update(table: string, key: number, value: any): void;
+    public update<T>(table: string, key: number, property: string, value: T): void;
+    public update<T>(table: string, key: number, value: T): void;
 
     public update(table: string, key: number, arg1: any, arg2?: any): void {
         if (arg2) {

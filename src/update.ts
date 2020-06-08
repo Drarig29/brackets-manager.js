@@ -1,7 +1,7 @@
 import { db } from "./database";
 import { Match, Result, Side } from "brackets-model";
 
-export function updateMatch(match: Partial<Match>) {
+export function updateMatch(match: Partial<Match>, updateNext: boolean) {
     if (match.id === undefined) throw Error('No match id given.');
 
     const completed = isMatchCompleted(match);
@@ -13,9 +13,9 @@ export function updateMatch(match: Partial<Match>) {
 
     db.update('match', match.id, updated);
 
-    if (completed) {
-        const merged = db.select('match', match.id);
-        updateNext(merged);
+    if (completed && updateNext) {
+        const merged = db.select<Match>('match', match.id);
+        updateNextMatch(merged);
     }
 }
 
@@ -69,7 +69,7 @@ function updateResults(input: Partial<Match>, output: Partial<Match>, check: Res
     }
 }
 
-function updateNext(match: Match) {
+function updateNextMatch(match: Match) {
     const next = findNextMatch(match);
     const winner = getWinner(match);
     next[getSide(match)] = ({ id: winner } as any);
@@ -91,11 +91,11 @@ function findNextMatch(match: Match): Match {
 }
 
 function getRoundNumber(roundId: number): number {
-    return db.select('round', roundId).number;
+    return db.select<any>('round', roundId).number;
 }
 
 function findMatch(stage: number, group: number, roundNumber: number, matchNumber: number): Match {
-    const round = db.select('round', round =>
+    const round = db.select<any>('round', round =>
         round.stage_id === stage &&
         round.group_id === group &&
         round.number === roundNumber

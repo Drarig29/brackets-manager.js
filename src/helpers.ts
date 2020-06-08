@@ -72,8 +72,8 @@ export function roundRobinMatches<T>(participants: T[]): T[][][] {
             if (matchId === 0 && n % 2 === 1) continue;
 
             const opponentsIds: number[] = [
-                matchId === 0 ? n1 - 1 : (roundId + matchId) % (n1 - 1),
                 (roundId - matchId - 1 + n1) % (n1 - 1),
+                matchId === 0 ? n1 - 1 : (roundId + matchId) % (n1 - 1),
             ]
 
             matches.push([

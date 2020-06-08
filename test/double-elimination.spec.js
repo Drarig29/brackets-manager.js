@@ -130,6 +130,9 @@ describe('Update matches', () => {
         const before = db.select('match', 0);
         assert.equal(before.status, 'running');
 
+        // TODO: should test for scores and notify if it's tied.
+        // TODO: in a case of a tied match, the admin should be able to set the winner manually or set a forfeit.
+
         updateMatch({
             id: 0,
             status: 'completed',
@@ -222,7 +225,7 @@ describe('Winner bracket', () => {
                 score: 16,
                 result: 'win',
             },
-        });
+        }, true);
 
         assert.equal(
             db.select('match', 8).opponent2.id, // Determined opponent for round 2
