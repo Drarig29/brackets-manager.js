@@ -1,6 +1,6 @@
-import { Stage, InputParticipants, Participant, Duels, Duel, GrandFinalType } from 'brackets-model';
+import { Stage, InputParticipants, Participant, Duels, Duel } from 'brackets-model';
 import { db } from './database';
-import { combinations, upperMedianDivisor, makeGroups, makePairs } from './helpers';
+import { makeGroups, makePairs, roundRobinMatches } from './helpers';
 
 export function createStage(stage: Stage) {
     switch (stage.type) {
@@ -79,13 +79,10 @@ function createGroup(name: string, stageId: number, teams: Participant[]) {
         name,
     });
 
-    const matches: Duels = combinations(teams);
-    const matchCount = matches.length;
-    const roundCount = upperMedianDivisor(matchCount);
-    const matchesPerRound = matchCount / roundCount;
+    const rounds = roundRobinMatches(teams);
 
-    for (let i = 0; i < roundCount; i++)
-        createRound(stageId, groupId, i + 1, matchesPerRound, matches.slice(i * matchesPerRound, (i + 1) * matchesPerRound))
+    for (let i = 0; i < rounds.length; i++)
+        createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i]);
 }
 
 function createStandardBracket(name: string, stageId: number, duels: Duels): {

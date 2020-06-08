@@ -1,5 +1,5 @@
 const assert = require('chai').assert;
-const { innerOuterMethod, combinations, nonTrivialDivisors, upperMedianDivisor, makeGroups } = require('../dist/helpers');
+const { innerOuterMethod, makeGroups, assertRoundRobin, roundRobinMatches } = require('../dist/helpers');
 
 describe('Helpers', () => {
     it('should place 8 participants with inner-outer method', () => {
@@ -28,36 +28,16 @@ describe('Helpers', () => {
         ]);
     });
 
-    it('should create all possible combinations of 2 elements', () => {
-        const teams = [1, 2, 3, 4];
-        const matches = combinations(teams);
-        assert.deepEqual(matches, [
-            [1, 2], [1, 3], [1, 4],
-            [2, 3], [2, 4], [3, 4],
-        ]);
-    });
-
-    it('should get non trivial divisors of numbers', () => {
-        assert.deepEqual(nonTrivialDivisors(1), []);
-        assert.deepEqual(nonTrivialDivisors(2), []);
-        assert.deepEqual(nonTrivialDivisors(4), [2]);
-        assert.deepEqual(nonTrivialDivisors(10), [2, 5]);
-        assert.deepEqual(nonTrivialDivisors(15), [3, 5]);
-        assert.deepEqual(nonTrivialDivisors(36), [2, 3, 4, 6, 9, 12, 18]);
-    });
-
-    it('should get median divisor of numbers', () => {
-        assert.deepEqual(upperMedianDivisor(2), 2);
-        assert.deepEqual(upperMedianDivisor(6), 3);
-        assert.deepEqual(upperMedianDivisor(10), 5);
-        assert.deepEqual(upperMedianDivisor(15), 5);
-        assert.deepEqual(upperMedianDivisor(36), 9);
-        assert.deepEqual(upperMedianDivisor(45), 9);
-    });
-
     it('should place participants in groups', () => {
         assert.deepEqual(makeGroups([1, 2, 3, 4, 5], 2), [[1, 2, 3], [4, 5]])
         assert.deepEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 2), [[1, 2, 3, 4], [5, 6, 7, 8]])
         assert.deepEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 3), [[1, 2, 3], [4, 5, 6], [7, 8]])
+    });
+
+    it('should make the rounds for a round-robin group', () => {
+        assertRoundRobin(['t1', 't2', 't3'], roundRobinMatches(['t1', 't2', 't3']));
+        assertRoundRobin([1, 2, 3, 4], roundRobinMatches([1, 2, 3, 4]));
+        assertRoundRobin([1, 2, 3, 4, 5], roundRobinMatches([1, 2, 3, 4, 5]));
+        assertRoundRobin([1, 2, 3, 4, 5, 6], roundRobinMatches([1, 2, 3, 4, 5, 6]));
     });
 });

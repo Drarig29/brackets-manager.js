@@ -1,4 +1,5 @@
 import { Stage, SeedOrdering, OrderingMap } from "brackets-model";
+import { assert } from "chai";
 import * as fs from 'fs';
 
 const viewerRoot = 'https://cdn.jsdelivr.net/gh/Drarig29/brackets-viewer.js/dist';
@@ -50,38 +51,82 @@ export function innerOuterMethod<T>(array: T[]): T[][] {
 }
 
 /**
- * Creates an array of possible combinations of 2 elements.
+ * Distribute participants in rounds of matches for a round-robin group.
+ * 
+ * Conditions:
+ *   - Each participant matches each other only once.
+ *   - Each participant plays once in each round.
  */
-export function combinations<T>(array: T[]): T[][] {
-    const result: T[][] = []
+export function roundRobinMatches<T>(participants: T[]): T[][][] {
+    const n = participants.length;
+    const n1 = n % 2 === 0 ? n : n + 1;
+    const roundCount = n1 - 1;
+    const matchPerRound = n1 / 2;
 
-    for (let i = 0; i < array.length - 1; i++)
-        for (let j = i + 1; j < array.length; j++)
-            result.push([array[i], array[j]]);
+    const rounds: T[][][] = [];
 
-    return result;
+    for (let roundId = 0; roundId < roundCount; roundId++) {
+        const matches = [];
+
+        for (let matchId = 0; matchId < matchPerRound; matchId++) {
+            if (matchId === 0 && n % 2 === 1) continue;
+
+            const opponentsIds: number[] = [
+                matchId === 0 ? n1 - 1 : (roundId + matchId) % (n1 - 1),
+                (roundId - matchId - 1 + n1) % (n1 - 1),
+            ]
+
+            matches.push([
+                participants[opponentsIds[0]],
+                participants[opponentsIds[1]],
+            ]);
+        }
+
+        rounds.push(matches);
+    }
+
+    return rounds;
 }
 
 /**
- * Gets divisors of n, without 1 and n.
+ * A helper to assert our generated round-robin is correct.
  */
-export function nonTrivialDivisors(n: number): number[] {
-    const result: number[] = [];
-    const limit = Math.sqrt(n);
+export function assertRoundRobin<T>(input: T[], output: T[][][]) {
+    try {
+        const n = input.length;
+        const matchPerRound = Math.floor(n / 2);
+        const roundCount = n % 2 === 0 ? n - 1 : n;
 
-    for (let i = 2; i <= limit; i++)
-        if (n % i === 0)
-            result.splice(result.length / 2, 0, ...(i === n / i ? [i] : [i, n / i]));
+        assert.equal(output.length, roundCount, 'Round count is wrong');
 
-    return result;
-}
+        assert.isTrue(output.every(round => round.length === matchPerRound),
+            'Not every round has the good number of matches');
 
-/**
- * Returns the divisor which is the upper middle of the given number's divisors.
- */
-export function upperMedianDivisor(n: number): number {
-    const divisors = nonTrivialDivisors(n);
-    return divisors[Math.ceil(divisors.length / 2)] || n;
+        const checkAllOpponents = Object.fromEntries(input.map(element => [element, new Set<T>()]));
+
+        for (const round of output) {
+            const checkUnique = new Set<T>();
+
+            for (const match of round) {
+                assert.equal(match.length, 2, 'One match is not a pair');
+
+                assert.isFalse(checkUnique.has(match[0]), 'This team is already playing');
+                checkUnique.add(match[0]);
+
+                assert.isFalse(checkUnique.has(match[1]), 'This team is already playing');
+                checkUnique.add(match[1]);
+
+                assert.isFalse(checkAllOpponents[match[0]].has(match[1]), 'The team has already matched this team');
+                checkAllOpponents[match[0]].add(match[1]);
+
+                assert.isFalse(checkAllOpponents[match[1]].has(match[0]), 'The team has already matched this team');
+                checkAllOpponents[match[1]].add(match[0]);
+            }
+        }
+    } catch (error) {
+        // Also print the output.
+        throw Error(`${error}\n${output.map(round => JSON.stringify(round)).join('\n')}`);
+    }
 }
 
 export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
