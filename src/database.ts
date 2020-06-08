@@ -110,9 +110,9 @@ class Database {
 
     public update(table: string, key: number, arg1: any, arg2?: any): void {
         if (arg2) {
-            this.internal.push(`${this.makeArrayAccessor(table, key)}/${arg1}`, arg2, false);
+            this.internal.push(`${this.makeArrayAccessor(table, key)}/${arg1}`, arg2);
         } else {
-            this.internal.push(this.makeArrayAccessor(table, key), arg1, false);
+            this.internal.push(this.makeArrayAccessor(table, key), arg1);
         }
     }
 }
