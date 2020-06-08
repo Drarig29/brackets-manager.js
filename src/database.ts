@@ -16,6 +16,7 @@ class Database {
     }
 
     private init() {
+        this.ensureArrayExists('team');
         this.ensureArrayExists('stage');
         this.ensureArrayExists('group');
         this.ensureArrayExists('round');
@@ -52,6 +53,10 @@ class Database {
         const id = this.internal.getData(this.makePath(table)).length;
         this.internal.push(this.makeArrayPath(table), { id, ...value });
         return id;
+    }
+
+    public insertAll(table: string, values: any[]) {
+        this.internal.push(this.makePath(table), values);
     }
 
     /**

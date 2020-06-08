@@ -48,10 +48,10 @@ describe('Create single elimination stage', () => {
 
         createStage(example);
 
-        assert.equal(db.select('match', 4).team1.name, example.participants[0]); // Determined because of opponent's BYE.
-        assert.equal(db.select('match', 4).team2.name, null); // To be determined.
-        assert.equal(db.select('match', 5).team1, null); // BYE propagated.
-        assert.equal(db.select('match', 5).team2.name, null); // To be determined.
+        assert.equal(db.select('match', 4).opponent1.id, 0); // Determined because of opponent's BYE.
+        assert.equal(db.select('match', 4).opponent2.id, null); // To be determined.
+        assert.equal(db.select('match', 5).opponent1, null); // BYE propagated.
+        assert.equal(db.select('match', 5).opponent2.id, null); // To be determined.
     });
 
     it('should create a single elimination stage with consolation final', () => {
@@ -93,11 +93,11 @@ describe('Create single elimination stage', () => {
 
         createStage(example);
 
-        assert.equal(db.select('match', 4).team1, null);
-        assert.equal(db.select('match', 4).team2.name, example.participants[3]);
+        assert.equal(db.select('match', 4).opponent1, null);
+        assert.equal(db.select('match', 4).opponent2.id, 0);
 
         // Consolation final
-        assert.equal(db.select('match', 7).team1, null);
-        assert.equal(db.select('match', 7).team2.name, null);
+        assert.equal(db.select('match', 7).opponent1, null);
+        assert.equal(db.select('match', 7).opponent2.id, null);
     });
 });

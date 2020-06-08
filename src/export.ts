@@ -14,8 +14,8 @@
 //     const teams: Teams = [];
 
 //     knownMatches.map(match => {
-//         teams.push(match.team1.name);
-//         teams.push(match.team2.name);
+//         teams.push(match.opponent1.name);
+//         teams.push(match.opponent2.name);
 //     });
 
 //     const results: TournamentResults = [];
@@ -29,8 +29,8 @@
 //             for (const match of matches.filter(m => m.round_id === round.id)) {
 //                 const matchScores: MatchScores = [
 //                     // TODO: change those hardcoded values!
-//                     match.team1 ? match.team1.score || 1 : 1,
-//                     match.team2 ? match.team2.score || 0 : 0,
+//                     match.opponent1 ? match.opponent1.score || 1 : 1,
+//                     match.opponent2 ? match.opponent2.score || 0 : 0,
 //                 ];
 //                 roundScores.push(matchScores);
 //             }

@@ -1,8 +1,12 @@
-import { Stage, InputParticipants, Participant, Duels, Duel } from 'brackets-model';
-import { db } from './database';
+import { InputParticipants, Participant, Duels, Duel, InputStage } from 'brackets-model';
 import { makeGroups, makePairs, roundRobinMatches } from './helpers';
+import { db } from './database';
 
-export function createStage(stage: Stage) {
+let actualTeams: { [name: string]: { id: number, name: string } } = {};
+
+export function createStage(stage: InputStage) {
+    actualTeams = Object.fromEntries(stage.participants.filter(name => name !== null).map((name, id) => [name, { id, name }]));
+
     switch (stage.type) {
         case 'round_robin':
             createRoundRobin(stage);
@@ -16,9 +20,11 @@ export function createStage(stage: Stage) {
         default:
             throw Error('Unknown stage type.');
     }
+
+    db.insertAll('team', Object.values(actualTeams));
 }
 
-function createRoundRobin(stage: Stage) {
+function createRoundRobin(stage: InputStage) {
     if (!stage.settings || !stage.settings.groupCount) throw Error('You must specify a group count for round-robin stages.');
 
     const stageId = db.insert('stage', {
@@ -26,14 +32,14 @@ function createRoundRobin(stage: Stage) {
         type: stage.type,
     });
 
-    const teams: Participant[] = stage.participants.map(team => team ? { name: team } : null);
+    const teams: Participant[] = stage.participants.map<Participant>(team => team ? { name: team } : null);
     const groups = makeGroups(teams, stage.settings.groupCount);
 
     for (let i = 0; i < groups.length; i++)
         createGroup(`Group ${i + 1}`, stageId, groups[i]);
 }
 
-function createSingleElimination(stage: Stage) {
+function createSingleElimination(stage: InputStage) {
     const stageId = db.insert('stage', {
         name: stage.name,
         type: stage.type,
@@ -47,7 +53,7 @@ function createSingleElimination(stage: Stage) {
         createUniqueMatchBracket('Consolation Final', stageId, [semiFinalLosers]);
 }
 
-function createDoubleElimination(stage: Stage) {
+function createDoubleElimination(stage: InputStage) {
     const stageId = db.insert('stage', {
         name: stage.name,
         type: stage.type,
@@ -159,15 +165,19 @@ function createRound(stageId: number, groupId: number, roundNumber: number, matc
         createMatch(stageId, groupId, roundId, i + 1, duels[i]);
 }
 
-function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, duels: Duel) {
+function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel) {
     db.insert('match', {
         number: matchNumber,
         stage_id: stageId,
         group_id: groupId,
         round_id: roundId,
         status: 'pending',
-        team1: duels[0],
-        team2: duels[1],
+        opponent1: opponents[0] ? {
+            id: opponents[0].name ? actualTeams[opponents[0].name].id : null
+        } : null,
+        opponent2: opponents[1] ? {
+            id: opponents[1].name ? actualTeams[opponents[1].name].id : null
+        } : null,
     });
 }
 
@@ -184,16 +194,16 @@ function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major?: bo
         for (let matchId = 0; matchId < currentMatchCount; matchId++) {
             const prevMatchId = matchId * 2;
             currentDuels.push([
-                byeResult(prevDuels[prevMatchId + 0]), // team1.
-                byeResult(prevDuels[prevMatchId + 1]), // team2.
+                byeResult(prevDuels[prevMatchId + 0]), // opponent1.
+                byeResult(prevDuels[prevMatchId + 1]), // opponent2.
             ]);
         }
     } else { // From major to minor (LB).
         for (let matchId = 0; matchId < currentMatchCount; matchId++) {
             const prevMatchId = matchId;
             currentDuels.push([
-                byeResult(prevDuels[prevMatchId]), // team1.
-                losers![prevMatchId], // team2.
+                byeResult(prevDuels[prevMatchId]), // opponent1.
+                losers![prevMatchId], // opponent2.
             ]);
         }
     }
@@ -209,11 +219,11 @@ function byeResult(opponents: Duel): Participant {
     if (opponents[0] === null && opponents[1] === null) // Double BYE.
         return null; // BYE.
 
-    if (opponents[0] === null && opponents[1] !== null) // team1 BYE.
-        return { name: opponents[1]!.name }; // team2.
+    if (opponents[0] === null && opponents[1] !== null) // opponent1 BYE.
+        return { name: opponents[1]!.name }; // opponent2.
 
-    if (opponents[0] !== null && opponents[1] === null) // team2 BYE.
-        return { name: opponents[0]!.name }; // team1.
+    if (opponents[0] !== null && opponents[1] === null) // opponent2 BYE.
+        return { name: opponents[0]!.name }; // opponent1.
 
     return { name: null }; // Normal.
 }

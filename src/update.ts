@@ -1,27 +1,7 @@
 import { db } from "./database";
+import { Match, Result, Side } from "brackets-model";
 
-type Result = 'win' | 'draw' | 'loss';
-type TeamSide = 'team1' | 'team2';
-
-interface Team {
-    name: string,
-    score: number,
-    forfeit: boolean,
-    result: Result | null,
-}
-
-interface Match {
-    id: number,
-    number: number,
-    stage_id: number,
-    group_id: number,
-    round_id: number,
-    status: 'pending' | 'running' | 'completed',
-    team1: Team,
-    team2: Team,
-}
-
-export function updateMatch(match: Match) {
+export function updateMatch(match: Partial<Match>) {
     if (match.id === undefined) throw Error('No match id given.');
 
     const completed = isMatchCompleted(match);
@@ -39,12 +19,12 @@ export function updateMatch(match: Match) {
     }
 }
 
-function isMatchCompleted(match: Match): boolean {
-    return (match.team1 && (match.team1.result !== undefined || match.team1.forfeit !== undefined))
-        || (match.team2 && (match.team2.result !== undefined || match.team2.forfeit !== undefined));
+function isMatchCompleted(match: Partial<Match>): boolean {
+    return (!!match.opponent1 && (match.opponent1.result !== undefined || match.opponent1.forfeit !== undefined))
+        || (!!match.opponent2 && (match.opponent2.result !== undefined || match.opponent2.forfeit !== undefined));
 }
 
-function updateCompleted(input: Match, output: Match) {
+function updateCompleted(input: Partial<Match>, output: Partial<Match>) {
     output.status = 'completed';
 
     updateResults(input, output, 'win', 'loss');
@@ -54,45 +34,45 @@ function updateCompleted(input: Match, output: Match) {
     updateForfeit(input, output);
 }
 
-function updateForfeit(input: Match, output: Match) {
-    if (input.team1 && input.team1.forfeit === true) {
-        if (output.team2) output.team2.result = 'win';
-        else output.team2 = ({ result: 'win' } as any);
+function updateForfeit(input: Partial<Match>, output: Partial<Match>) {
+    if (input.opponent1 && input.opponent1.forfeit === true) {
+        if (output.opponent2) output.opponent2.result = 'win';
+        else output.opponent2 = ({ result: 'win' } as any);
     }
 
-    if (input.team2 && input.team2.forfeit === true) {
-        if (output.team1) output.team1.result = 'win';
-        else output.team1 = ({ result: 'win' } as any);
+    if (input.opponent2 && input.opponent2.forfeit === true) {
+        if (output.opponent1) output.opponent1.result = 'win';
+        else output.opponent1 = ({ result: 'win' } as any);
     }
 }
 
-function updateResults(input: Match, output: Match, check: Result, change: Result) {
-    if (input.team1 && input.team2) {
-        if ((input.team1.result === 'win' && input.team2.result === 'win') ||
-            (input.team1.result === 'loss' && input.team2.result === 'loss')) {
+function updateResults(input: Partial<Match>, output: Partial<Match>, check: Result, change: Result) {
+    if (input.opponent1 && input.opponent2) {
+        if ((input.opponent1.result === 'win' && input.opponent2.result === 'win') ||
+            (input.opponent1.result === 'loss' && input.opponent2.result === 'loss')) {
             throw Error('There are two winners.');
         }
 
-        if (input.team1.forfeit === true && input.team2.forfeit === true) {
+        if (input.opponent1.forfeit === true && input.opponent2.forfeit === true) {
             throw Error('There are two forfeits.'); // TODO: handle this scenario.
         }
     }
 
-    if (input.team1 && input.team1.result === check) {
-        if (output.team2) output.team2.result = change;
-        else output.team2 = ({ result: change } as any);
+    if (input.opponent1 && input.opponent1.result === check) {
+        if (output.opponent2) output.opponent2.result = change;
+        else output.opponent2 = ({ result: change } as any);
     }
 
-    if (input.team2 && input.team2.result === check) {
-        if (output.team1) output.team1.result = change;
-        else output.team1 = ({ result: change } as any);
+    if (input.opponent2 && input.opponent2.result === check) {
+        if (output.opponent1) output.opponent1.result = change;
+        else output.opponent1 = ({ result: change } as any);
     }
 }
 
 function updateNext(match: Match) {
     const next = findNextMatch(match);
-    const winner = getWinnerName(match);
-    next[getSide(match)] = ({ name: winner } as any);
+    const winner = getWinner(match);
+    next[getSide(match)] = ({ id: winner } as any);
     db.update('match', next.id, next);
 }
 
@@ -134,24 +114,22 @@ function findMatch(stage: number, group: number, roundNumber: number, matchNumbe
     return match[0];
 }
 
-function getWinnerName(match: Match): string {
-    let winner = null;
+function getWinner(match: Match): number {
+    let winner: number | null = null;
 
-    if (match.team1.result === 'win') {
-        if (!match.team1.name) throw Error('Team1 has no name.');
-        winner = match.team1.name;
+    if (match.opponent1 && match.opponent1.result === 'win') {
+        winner = match.opponent1.id;
     }
 
-    if (match.team2.result === 'win') {
-        if (!match.team2.name) throw Error('Team1 has no name.');
+    if (match.opponent2 && match.opponent2.result === 'win') {
         if (winner !== null) throw Error('There are two winners.')
-        winner = match.team2.name;
+        winner = match.opponent2.id;
     }
 
     if (winner === null) throw Error('No winner found.');
     return winner;
 }
 
-function getSide(match: Match): TeamSide {
-    return match.number % 2 === 1 ? 'team1' : 'team2';
+function getSide(match: Match): Side {
+    return match.number % 2 === 1 ? 'opponent1' : 'opponent2';
 }
