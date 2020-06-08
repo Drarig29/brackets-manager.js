@@ -247,7 +247,5 @@ function registerParticipants(participants: InputParticipants): ParticipantSlot[
 function toResult(opponent: ParticipantSlot): ParticipantResult | null {
     return opponent ? {
         id: opponent.id,
-        forfeit: false, // TODO: make forfeit and score optional
-        score: 0,
     } : null;
 }

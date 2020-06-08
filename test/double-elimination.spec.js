@@ -106,7 +106,7 @@ describe('Update matches', () => {
 
     it('should update the scores for a match', () => {
         const before = db.select('match', 0);
-        assert.equal(before.opponent1.score, 0);
+        assert.equal(before.opponent1.score, undefined);
 
         updateMatch({
             id: 0,
