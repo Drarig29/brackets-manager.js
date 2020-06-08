@@ -9,9 +9,9 @@ export function getRanking(groupId: number): string[] {
     const wins: { [key: number]: number } = Object.fromEntries(teams.map(team => [team.id, 0]));
 
     for (const match of matches) {
-        if (match.opponent1 && match.opponent1.result === 'win' && match.opponent1.id) {
+        if (match.opponent1 && match.opponent1.result === 'win' && match.opponent1.id !== null) {
             wins[match.opponent1.id]++;
-        } else if (match.opponent2 && match.opponent2.result === 'win' && match.opponent2.id) {
+        } else if (match.opponent2 && match.opponent2.result === 'win' && match.opponent2.id !== null) {
             wins[match.opponent2.id]++;
         }
     }
