@@ -1,12 +1,8 @@
-import { InputParticipants, Participant, Duels, Duel, InputStage } from 'brackets-model';
+import { InputParticipants, Participant, Duels, Duel, InputStage, ParticipantSlot, Match, ParticipantResult } from 'brackets-model';
 import { makeGroups, makePairs, roundRobinMatches } from './helpers';
 import { db } from './database';
 
-let actualTeams: { [name: string]: { id: number, name: string } } = {};
-
 export function createStage(stage: InputStage) {
-    actualTeams = Object.fromEntries(stage.participants.filter(name => name !== null).map((name, id) => [name, { id, name }]));
-
     switch (stage.type) {
         case 'round_robin':
             createRoundRobin(stage);
@@ -20,8 +16,6 @@ export function createStage(stage: InputStage) {
         default:
             throw Error('Unknown stage type.');
     }
-
-    db.insertAll('team', Object.values(actualTeams));
 }
 
 function createRoundRobin(stage: InputStage) {
@@ -32,8 +26,8 @@ function createRoundRobin(stage: InputStage) {
         type: stage.type,
     });
 
-    const teams: Participant[] = stage.participants.map<Participant>(team => team ? { name: team } : null);
-    const groups = makeGroups(teams, stage.settings.groupCount);
+    const slots = registerParticipants(stage.participants);
+    const groups = makeGroups(slots, stage.settings.groupCount);
 
     for (let i = 0; i < groups.length; i++)
         createGroup(`Group ${i + 1}`, stageId, groups[i]);
@@ -45,7 +39,8 @@ function createSingleElimination(stage: InputStage) {
         type: stage.type,
     });
 
-    const duels = inputToDuels(stage.participants);
+    const slots = registerParticipants(stage.participants);
+    const duels = makePairs(slots);
     const { losers } = createStandardBracket('Bracket', stageId, duels);
 
     const semiFinalLosers = losers[losers.length - 2];
@@ -59,7 +54,8 @@ function createDoubleElimination(stage: InputStage) {
         type: stage.type,
     });
 
-    const duels = inputToDuels(stage.participants);
+    const slots = registerParticipants(stage.participants);
+    const duels = makePairs(slots);
     const { losers: losersWb, winner: winnerWb } = createStandardBracket('Winner Bracket', stageId, duels);
     const winnerLb = createMajorMinorBracket('Loser Bracket', stageId, losersWb);
 
@@ -70,30 +66,29 @@ function createDoubleElimination(stage: InputStage) {
         createUniqueMatchBracket('Grand Final', stageId, [
             [winnerWb, winnerLb]
         ]);
-    }
-    else if (grandFinal === 'double') {
+    } else if (grandFinal === 'double') {
         createUniqueMatchBracket('Grand Final', stageId, [
             [winnerWb, winnerLb],
-            [{ name: null }, { name: null }] // Won't be shown if the WB winner wins the first time.
+            [{ id: null }, { id: null }] // Won't be shown if the WB winner wins the first time.
         ]);
     }
 }
 
-function createGroup(name: string, stageId: number, teams: Participant[]) {
+function createGroup(name: string, stageId: number, slots: ParticipantSlot[]) {
     const groupId = db.insert('group', {
         stage_id: stageId,
         name,
     });
 
-    const rounds = roundRobinMatches(teams);
+    const rounds = roundRobinMatches(slots);
 
     for (let i = 0; i < rounds.length; i++)
         createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i]);
 }
 
 function createStandardBracket(name: string, stageId: number, duels: Duels): {
-    losers: Participant[][],
-    winner: Participant,
+    losers: ParticipantSlot[][],
+    winner: ParticipantSlot,
 } {
     const roundCount = Math.log2(duels.length * 2);
     const groupId = db.insert('group', {
@@ -102,7 +97,7 @@ function createStandardBracket(name: string, stageId: number, duels: Duels): {
     });
 
     let number = 1;
-    const losers: Participant[][] = [];
+    const losers: ParticipantSlot[][] = [];
 
     for (let i = roundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
@@ -115,7 +110,7 @@ function createStandardBracket(name: string, stageId: number, duels: Duels): {
     return { losers, winner };
 }
 
-function createMajorMinorBracket(name: string, stageId: number, losers: Participant[][]): Participant {
+function createMajorMinorBracket(name: string, stageId: number, losers: ParticipantSlot[][]): ParticipantSlot {
     const majorRoundCount = losers.length - 1;
     const groupId = db.insert('group', {
         stage_id: stageId,
@@ -166,26 +161,22 @@ function createRound(stageId: number, groupId: number, roundNumber: number, matc
 }
 
 function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel) {
-    db.insert('match', {
+    db.insert<Partial<Match>>('match', {
         number: matchNumber,
         stage_id: stageId,
         group_id: groupId,
         round_id: roundId,
         status: 'pending',
-        opponent1: opponents[0] ? {
-            id: opponents[0].name ? actualTeams[opponents[0].name].id : null
-        } : null,
-        opponent2: opponents[1] ? {
-            id: opponents[1].name ? actualTeams[opponents[1].name].id : null
-        } : null,
+        opponent1: toResult(opponents[0]),
+        opponent2: toResult(opponents[1]),
     });
 }
 
 function getCurrentDuels(prevDuels: Duels, currentMatchCount: number): Duels;
 function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major: true): Duels;
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major: false, losers: Participant[]): Duels;
+function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major: false, losers: ParticipantSlot[]): Duels;
 
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major?: boolean, losers?: Participant[]): Duels {
+function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major?: boolean, losers?: ParticipantSlot[]): Duels {
     if ((major === undefined || major === true) && prevDuels.length === currentMatchCount) return prevDuels; // First round.
 
     const currentDuels: Duels = [];
@@ -211,26 +202,52 @@ function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major?: bo
     return currentDuels;
 }
 
-function inputToDuels(input: InputParticipants): Duels {
-    return makePairs(input.map<Participant>(team => team ? { name: team } : null));
-}
+// function inputToDuels(input: InputParticipants): Duels {
+//     return makePairs(input.map<Participant>(team => team ? { name: team } : null));
+// }
 
-function byeResult(opponents: Duel): Participant {
+function byeResult(opponents: Duel): ParticipantSlot {
     if (opponents[0] === null && opponents[1] === null) // Double BYE.
         return null; // BYE.
 
     if (opponents[0] === null && opponents[1] !== null) // opponent1 BYE.
-        return { name: opponents[1]!.name }; // opponent2.
+        return { id: opponents[1]!.id }; // opponent2.
 
     if (opponents[0] !== null && opponents[1] === null) // opponent2 BYE.
-        return { name: opponents[0]!.name }; // opponent1.
+        return { id: opponents[0]!.id }; // opponent1.
 
-    return { name: null }; // Normal.
+    return { id: null }; // Normal.
 }
 
-function byePropagation(opponents: Duel): Participant {
+function byePropagation(opponents: Duel): ParticipantSlot {
     if (opponents[0] === null || opponents[1] === null) // At least one BYE.
         return null; // BYE.
 
-    return { name: null }; // Normal.
+    return { id: null }; // Normal.
+}
+
+function registerParticipants(participants: InputParticipants): ParticipantSlot[] {
+    db.insert('participant', participants.filter(name => name !== null).map(name => ({ name }))); // Without BYEs.
+
+    const added = db.select<Participant>('participant', _ => true); // TODO: handle participants from different tournaments... (do not take all)
+    if (!added) throw Error('No participant added.');
+
+    const slots = participants.map<ParticipantSlot>(name => {
+        if (name === null) return null; // BYE.
+
+        const found = added.find(participant => participant.name === name);
+        if (!found) throw Error('Participant name not found in database.');
+
+        return { id: found.id };
+    });
+
+    return slots;
+}
+
+function toResult(opponent: ParticipantSlot): ParticipantResult | null {
+    return opponent ? {
+        id: opponent.id,
+        forfeit: false, // TODO: make forfeit and score optional
+        score: 0,
+    } : null;
 }

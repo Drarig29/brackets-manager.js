@@ -18,7 +18,7 @@ class Database {
     }
 
     private init() {
-        this.ensureArrayExists('team');
+        this.ensureArrayExists('participant');
         this.ensureArrayExists('stage');
         this.ensureArrayExists('group');
         this.ensureArrayExists('round');
@@ -47,18 +47,28 @@ class Database {
     }
 
     /**
-     * Inserts in database and returns the id.
+     * Inserts a value in the database and returns its id.
      * @param table Where to insert.
      * @param value What to insert.
      */
-    public insert<T>(table: string, value: T): number {
-        const id = this.internal.getData(this.makePath(table)).length;
-        this.internal.push(this.makeArrayPath(table), { id, ...value });
-        return id;
-    }
+    public insert<T>(table: string, value: T): number;
 
-    public insertAll(table: string, values: any[]) {
-        this.internal.push(this.makePath(table), values);
+    /**
+     * Inserts multiple values in the database.
+     * @param table Where to insert.
+     * @param values What to insert.
+     */
+    public insert<T>(table: string, values: T[]): void;
+
+    public insert(table: string, arg: any) {
+        let id = this.internal.getData(this.makePath(table)).length;
+
+        if (!Array.isArray(arg)) {
+            this.internal.push(this.makeArrayPath(table), { id, ...arg });
+            return id;
+        }
+
+        this.internal.push(this.makePath(table), arg.map(object => ({ id: id++, ...object })));
     }
 
     /**
