@@ -196,14 +196,37 @@ export const ordering: OrderingMap = {
     'natural': <T>(array: T[]) => [...array],
     'reverse': <T>(array: T[]) => array.reverse(),
     'half_shift': <T>(array: T[]) => [...array.slice(array.length / 2), ...array.slice(0, array.length / 2)],
-    'reverse_half_shift': <T>(array: T[]) => [...array.slice(array.length / 2).reverse(), ...array.slice(0, array.length / 2).reverse()],
+    'reverse_half_shift': <T>(array: T[]) => [...array.slice(0, array.length / 2).reverse(), ...array.slice(array.length / 2).reverse()],
     'pair_flip': <T>(array: T[]) => {
         const result: T[] = [];
         for (let i = 0; i < array.length; i += 2) result.push(array[i + 1], array[i]);
         return result;
     },
-    'groups.effort_balanced': () => { throw Error('Not implemented.') },
-    'groups.snake': () => { throw Error('Not implemented.') },
+    'groups.effort_balanced': <T>(array: T[], groupCount: number) => {
+        const result: T[] = [];
+        let i = 0, j = 0;
+        while (result.length < array.length) {
+            result.push(array[i]);
+            i += groupCount;
+            if (i >= array.length) i = ++j;
+        }
+        return result;
+    },
+    'groups.snake': <T>(array: T[], groupCount: number) => {
+        const groups = Array.from(Array(groupCount), (_): T[] => []);
+        for (let run = 0; run < array.length / groupCount; run++) {
+            if (run % 2 === 0) {
+                for (let group = 0; group < groupCount; group++) {
+                    groups[group].push(array[run * groupCount + group]);
+                }
+            } else {
+                for (let group = 0; group < groupCount; group++) {
+                    groups[groupCount - group - 1].push(array[run * groupCount + group]);
+                }
+            }
+        }
+        return groups.flat();
+    },
     'groups.bracket_optimized': () => { throw Error('Not implemented.') },
 }
 
