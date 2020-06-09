@@ -18,40 +18,6 @@ export function makeViewer(data: Stage) {
     fs.writeFileSync('viewer/viewer.html', html);
 }
 
-// TODO: move this into OrderingMap.
-
-/**
- * Toornament's method to distribute seeds in the first round of single or double elimination.
- */
-export function innerOuterMethod<T>(array: T[]): T[][] {
-    const size = array.length / 4;
-    const parts = {
-        inner: [array.slice(size, 2 * size), array.slice(2 * size, 3 * size)],
-        outer: [array.slice(0, size), array.slice(3 * size, 4 * size)]
-    }
-
-    function inner(part: T[][]): T[] {
-        return [part[0].pop()!, part[1].shift()!];
-    }
-
-    function outer(part: T[][]): T[] {
-        return [part[0].shift()!, part[1].pop()!];
-    }
-
-    const result: T[][] = [];
-
-    for (let i = 0; i < size / 2; i++) {
-        result.push(
-            outer(parts.outer), // Outer's outer
-            inner(parts.inner), // Inner's inner
-            inner(parts.outer), // Outer's inner
-            outer(parts.inner), // Inner's outer
-        );
-    }
-
-    return result;
-}
-
 /**
  * Distribute participants in rounds of matches for a round-robin group.
  * 
@@ -204,18 +170,49 @@ export const ordering: OrderingMap = {
         for (let i = 0; i < array.length; i += 2) result.push(array[i + 1], array[i]);
         return result;
     },
+    'inner_outer': <T>(array: T[]) => {
+        const size = array.length / 4;
+        const parts = {
+            inner: [array.slice(size, 2 * size), array.slice(2 * size, 3 * size)],
+            outer: [array.slice(0, size), array.slice(3 * size, 4 * size)]
+        }
+
+        function inner(part: T[][]): T[] {
+            return [part[0].pop()!, part[1].shift()!];
+        }
+
+        function outer(part: T[][]): T[] {
+            return [part[0].shift()!, part[1].pop()!];
+        }
+
+        const result: T[] = [];
+
+        for (let i = 0; i < size / 2; i++) {
+            result.push(
+                ...outer(parts.outer), // Outer's outer
+                ...inner(parts.inner), // Inner's inner
+                ...inner(parts.outer), // Outer's inner
+                ...outer(parts.inner), // Inner's outer
+            );
+        }
+
+        return result;
+    },
     'groups.effort_balanced': <T>(array: T[], groupCount: number) => {
         const result: T[] = [];
         let i = 0, j = 0;
+
         while (result.length < array.length) {
             result.push(array[i]);
             i += groupCount;
             if (i >= array.length) i = ++j;
         }
+
         return result;
     },
     'groups.snake': <T>(array: T[], groupCount: number) => {
         const groups = Array.from(Array(groupCount), (_): T[] => []);
+
         for (let run = 0; run < array.length / groupCount; run++) {
             if (run % 2 === 0) {
                 for (let group = 0; group < groupCount; group++) {
@@ -227,6 +224,7 @@ export const ordering: OrderingMap = {
                 }
             }
         }
+
         return groups.flat();
     },
     'groups.bracket_optimized': () => { throw Error('Not implemented.') },

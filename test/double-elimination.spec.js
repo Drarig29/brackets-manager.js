@@ -16,6 +16,7 @@ const example = {
         'Team 13', 'Team 14',
         'Team 15', 'Team 16',
     ],
+    settings: { seedOrdering: ['natural'] },
 };
 
 describe('Create double elimination stage', () => {
@@ -43,6 +44,7 @@ describe('Create double elimination stage', () => {
                 'Team 1', null,
                 null, null,
             ],
+            settings: { seedOrdering: ['natural'] },
         };
 
         createStage(withByes);
@@ -70,7 +72,7 @@ describe('Create double elimination stage', () => {
                 'Team 5', 'Team 6',
                 'Team 7', 'Team 8',
             ],
-            settings: { grandFinal: 'double' },
+            settings: { grandFinal: 'double', seedOrdering: ['natural'] },
         };
 
         createStage(withDoubleGrandFinal);
@@ -200,7 +202,7 @@ describe('Update matches', () => {
 
         const after = db.select('match', 1);
         assert.equal(after.status, 'completed');
-        
+
         assert.equal(after.opponent1.result, 'loss');
         assert.equal(after.opponent1.score, 6);
 

@@ -21,6 +21,7 @@ describe('Create single elimination stage', () => {
                 'Team 13', 'Team 14',
                 'Team 15', 'Team 16',
             ],
+            settings: { seedOrdering: ['natural'] },
         };
 
         createStage(example);
@@ -44,6 +45,7 @@ describe('Create single elimination stage', () => {
                 null, null,
                 'Team 7', 'Team 8',
             ],
+            settings: { seedOrdering: ['natural'] },
         };
 
         createStage(example);
@@ -64,7 +66,7 @@ describe('Create single elimination stage', () => {
                 'Team 5', 'Team 6',
                 'Team 7', 'Team 8',
             ],
-            settings: { consolationFinal: true },
+            settings: { consolationFinal: true, seedOrdering: ['natural'] },
         };
 
         createStage(example);
@@ -88,7 +90,7 @@ describe('Create single elimination stage', () => {
                 'Team 5', 'Team 6',
                 'Team 7', 'Team 8',
             ],
-            settings: { consolationFinal: true },
+            settings: { consolationFinal: true, seedOrdering: ['natural'] },
         };
 
         createStage(example);

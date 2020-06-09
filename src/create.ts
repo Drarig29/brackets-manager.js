@@ -44,9 +44,8 @@ function createSingleElimination(stage: InputStage) {
     if (stage.settings && Array.isArray(stage.settings.seedOrdering) &&
         stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
-    // Default method for single elimination: Natural.
-    // TODO: replace the default method by the inner outer one.
-    const method = getOrdering(stage.settings, 0, 'elimination') || 'natural';
+    // Default method for single elimination: Inner outer.
+    const method = getOrdering(stage.settings, 0, 'elimination') || 'inner_outer';
     const stageId = db.insert('stage', {
         name: stage.name,
         type: stage.type,
@@ -67,8 +66,8 @@ function createDoubleElimination(stage: InputStage) {
     if (stage.settings && Array.isArray(stage.settings.seedOrdering) &&
         stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
 
-    // Default method for WB: Natural.
-    const method = getOrdering(stage.settings, 0, 'elimination') || 'natural';
+    // Default method for WB: Inner outer.
+    const method = getOrdering(stage.settings, 0, 'elimination') || 'inner_outer';
     const stageId = db.insert('stage', {
         name: stage.name,
         type: stage.type,
@@ -274,7 +273,9 @@ function toResult(opponent: ParticipantSlot): ParticipantResult | null {
 
 function getOrdering(settings: StageSettings | undefined, index: number, checkType: 'elimination' | 'groups'): SeedOrdering | null {
     if (settings === undefined || settings.seedOrdering === undefined) return null;
+    
     const method = settings.seedOrdering[index];
+    if (!method) return null;
 
     if (checkType === 'elimination' && method.match(/^groups\./))
         throw Error('You must specify a seed ordering method without a \'groups\' prefix');
