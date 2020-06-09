@@ -1,5 +1,5 @@
 import { InputParticipants, Participant, Duels, Duel, InputStage, ParticipantSlot, Match, ParticipantResult } from 'brackets-model';
-import { makeGroups, makePairs, roundRobinMatches } from './helpers';
+import { makeGroups, makePairs, roundRobinMatches, ordering } from './helpers';
 import { db } from './database';
 
 export function createStage(stage: InputStage) {
@@ -21,13 +21,21 @@ export function createStage(stage: InputStage) {
 function createRoundRobin(stage: InputStage) {
     if (!stage.settings || !stage.settings.groupCount) throw Error('You must specify a group count for round-robin stages.');
 
+    if (Array.isArray(stage.settings.seedOrdering)) {
+        if (stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
+        if (!stage.settings.seedOrdering[0].match(/^groups\./)) throw Error('You must specify a seed ordering method with a \'groups\' prefix.');
+    }
+
     const stageId = db.insert('stage', {
         name: stage.name,
         type: stage.type,
     });
 
     const slots = registerParticipants(stage.participants);
-    const groups = makeGroups(slots, stage.settings.groupCount);
+    const method = stage.settings.seedOrdering && stage.settings.seedOrdering[0] || 'groups.effort_balanced';
+    const ordered: ParticipantSlot[] = ordering[method](slots, stage.settings.groupCount);
+
+    const groups = makeGroups(ordered, stage.settings.groupCount);
 
     for (let i = 0; i < groups.length; i++)
         createGroup(`Group ${i + 1}`, stageId, groups[i]);
@@ -201,10 +209,6 @@ function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major?: bo
 
     return currentDuels;
 }
-
-// function inputToDuels(input: InputParticipants): Duels {
-//     return makePairs(input.map<Participant>(team => team ? { name: team } : null));
-// }
 
 function byeResult(opponents: Duel): ParticipantSlot {
     if (opponents[0] === null && opponents[1] === null) // Double BYE.

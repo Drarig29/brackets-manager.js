@@ -32,6 +32,41 @@ describe('Create a round-robin stage', () => {
         assert.equal(db.all('round').length, 6);
         assert.equal(db.all('match').length, 12);
     });
+
+    it('should create a round-robin stage with effort balanced', () => {
+        const example = {
+            name: 'Example with effort balanced',
+            type: 'round_robin',
+            participants: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: {
+                groupCount: 2,
+                seedOrdering: ['groups.snake'],
+            },
+        };
+        
+        createStage(example);
+
+        assert.equal(db.select('match', 0).opponent1.id, 0);
+        assert.equal(db.select('match', 0).opponent2.id, 7);
+    });
+
+    it('should throw if no group count given', () => {
+        assert.throws(() => createStage({}));
+    });
+
+    it('should throw if seed ordering not correct', () => {
+        assert.throws(() => createStage({
+            settings: {
+                groupCount: 1,
+                seedOrdering: ['not_allowed'],
+            }
+        }))
+    });
 });
 
 // Example taken from here:
