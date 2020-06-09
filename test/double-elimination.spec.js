@@ -191,6 +191,23 @@ describe('Update matches', () => {
         assert.equal(after.opponent2.result, 'loss');
     });
 
+    it('should end the match by setting the winner and the scores', () => {
+        updateMatch({
+            id: 1,
+            opponent1: { score: 6 },
+            opponent2: { result: 'win', score: 3 },
+        });
+
+        const after = db.select('match', 1);
+        assert.equal(after.status, 'completed');
+        
+        assert.equal(after.opponent1.result, 'loss');
+        assert.equal(after.opponent1.score, 6);
+
+        assert.equal(after.opponent2.result, 'win');
+        assert.equal(after.opponent2.score, 3);
+    });
+
     it('should fail if two winners', () => {
         assert.throws(() => updateMatch({
             id: 3,

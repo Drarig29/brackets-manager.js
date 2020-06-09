@@ -9,10 +9,10 @@ export function updateMatch(match: Partial<Match>, updateNext: boolean) {
 
     // TODO: handle setting forfeit to false / removing complete status... etc.
 
+    updateGeneric(stored, match);
+
     if (completed) {
         updateCompleted(stored, match);
-    } else {
-        updateGeneric(stored, match);
     }
 
     db.update('match', match.id, stored);
