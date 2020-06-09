@@ -1,5 +1,5 @@
-import { InputParticipants, Participant, Duels, Duel, InputStage, ParticipantSlot, Match, ParticipantResult } from 'brackets-model';
-import { makeGroups, makePairs, roundRobinMatches, ordering } from './helpers';
+import { InputParticipants, Participant, Duels, Duel, InputStage, ParticipantSlot, Match, ParticipantResult, SeedOrdering, StageSettings } from 'brackets-model';
+import * as helpers from './helpers';
 import { db } from './database';
 
 export function createStage(stage: InputStage) {
@@ -21,34 +21,41 @@ export function createStage(stage: InputStage) {
 function createRoundRobin(stage: InputStage) {
     if (!stage.settings || !stage.settings.groupCount) throw Error('You must specify a group count for round-robin stages.');
 
-    if (Array.isArray(stage.settings.seedOrdering)) {
-        if (stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
-        if (!stage.settings.seedOrdering[0].match(/^groups\./)) throw Error('You must specify a seed ordering method with a \'groups\' prefix.');
-    }
+    if (Array.isArray(stage.settings.seedOrdering)
+        && stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
+    // Default method for groups: Effort balanced.
+    const method = getOrdering(stage.settings, 0, 'groups') || 'groups.effort_balanced';
     const stageId = db.insert('stage', {
         name: stage.name,
         type: stage.type,
     });
 
     const slots = registerParticipants(stage.participants);
-    const method = stage.settings.seedOrdering && stage.settings.seedOrdering[0] || 'groups.effort_balanced';
-    const ordered: ParticipantSlot[] = ordering[method](slots, stage.settings.groupCount);
+    const ordered: ParticipantSlot[] = helpers.ordering[method](slots, stage.settings.groupCount);
 
-    const groups = makeGroups(ordered, stage.settings.groupCount);
+    const groups = helpers.makeGroups(ordered, stage.settings.groupCount);
 
     for (let i = 0; i < groups.length; i++)
         createGroup(`Group ${i + 1}`, stageId, groups[i]);
 }
 
 function createSingleElimination(stage: InputStage) {
+    if (stage.settings && Array.isArray(stage.settings.seedOrdering) &&
+        stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
+
+    // Default method for single elimination: Natural.
+    // TODO: replace the default method by the inner outer one.
+    const method = getOrdering(stage.settings, 0, 'elimination') || 'natural';
     const stageId = db.insert('stage', {
         name: stage.name,
         type: stage.type,
     });
 
     const slots = registerParticipants(stage.participants);
-    const duels = makePairs(slots);
+    const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
+    const duels = helpers.makePairs(ordered);
+
     const { losers } = createStandardBracket('Bracket', stageId, duels);
 
     const semiFinalLosers = losers[losers.length - 2];
@@ -57,15 +64,22 @@ function createSingleElimination(stage: InputStage) {
 }
 
 function createDoubleElimination(stage: InputStage) {
+    if (stage.settings && Array.isArray(stage.settings.seedOrdering) &&
+        stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
+
+    // Default method for WB: Natural.
+    const method = getOrdering(stage.settings, 0, 'elimination') || 'natural';
     const stageId = db.insert('stage', {
         name: stage.name,
         type: stage.type,
     });
 
     const slots = registerParticipants(stage.participants);
-    const duels = makePairs(slots);
+    const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
+    const duels = helpers.makePairs(ordered);
+
     const { losers: losersWb, winner: winnerWb } = createStandardBracket('Winner Bracket', stageId, duels);
-    const winnerLb = createMajorMinorBracket('Loser Bracket', stageId, losersWb);
+    const winnerLb = createMajorMinorBracket('Loser Bracket', stageId, losersWb, stage.settings);
 
     // Simple Grand Final by default.
     const grandFinal = (stage.settings && stage.settings.grandFinal) || 'simple';
@@ -88,7 +102,7 @@ function createGroup(name: string, stageId: number, slots: ParticipantSlot[]) {
         name,
     });
 
-    const rounds = roundRobinMatches(slots);
+    const rounds = helpers.roundRobinMatches(slots);
 
     for (let i = 0; i < rounds.length; i++)
         createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i]);
@@ -109,7 +123,7 @@ function createStandardBracket(name: string, stageId: number, duels: Duels): {
 
     for (let i = roundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
-        duels = getCurrentDuels(duels, matchCount);
+        duels = getCurrentDuels(duels, matchCount, 'natural');
         createRound(stageId, groupId, number++, matchCount, duels);
         losers.push(duels.map(byePropagation));
     }
@@ -118,26 +132,30 @@ function createStandardBracket(name: string, stageId: number, duels: Duels): {
     return { losers, winner };
 }
 
-function createMajorMinorBracket(name: string, stageId: number, losers: ParticipantSlot[][]): ParticipantSlot {
-    const majorRoundCount = losers.length - 1;
+function createMajorMinorBracket(name: string, stageId: number, losers: ParticipantSlot[][], settings: StageSettings | undefined): ParticipantSlot {
     const groupId = db.insert('group', {
         stage_id: stageId,
         name,
     });
 
+    const majorRoundCount = losers.length - 1;
+    const participantCount = losers[0].length * 4;
+
     let losersId = 0;
-    let duels = makePairs(losers[losersId++]);
+    let duels = helpers.makePairs(losers[losersId++]);
     let number = 1;
 
-    for (let i = majorRoundCount - 1; i >= 0; i--) {
-        const matchCount = Math.pow(2, i);
+    for (let i = 0; i < majorRoundCount; i++) {
+        const matchCount = Math.pow(2, majorRoundCount - i - 1);
 
         // Major round.
-        duels = getCurrentDuels(duels, matchCount, true);
+        let majorOrdering = i === 0 ? getMajorOrdering(settings, participantCount) : null;
+        duels = getCurrentDuels(duels, matchCount, majorOrdering, true);
         createRound(stageId, groupId, number++, matchCount, duels);
 
         // Minor round.
-        duels = getCurrentDuels(duels, matchCount, false, losers[losersId++]);
+        let minorOrdering = getMinorOrdering(settings, i, participantCount);
+        duels = getCurrentDuels(duels, matchCount, minorOrdering, false, losers[losersId++]);
         createRound(stageId, groupId, number++, matchCount, duels);
     }
 
@@ -180,11 +198,11 @@ function createMatch(stageId: number, groupId: number, roundId: number, matchNum
     });
 }
 
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number): Duels;
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major: true): Duels;
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major: false, losers: ParticipantSlot[]): Duels;
+function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering): Duels;
+function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering | null, major: true): Duels;
+function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering, major: false, losers: ParticipantSlot[]): Duels;
 
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, major?: boolean, losers?: ParticipantSlot[]): Duels {
+function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering | null, major?: boolean, losers?: ParticipantSlot[]): Duels {
     if ((major === undefined || major === true) && prevDuels.length === currentMatchCount) return prevDuels; // First round.
 
     const currentDuels: Duels = [];
@@ -252,4 +270,27 @@ function toResult(opponent: ParticipantSlot): ParticipantResult | null {
     return opponent ? {
         id: opponent.id,
     } : null;
+}
+
+function getOrdering(settings: StageSettings | undefined, index: number, checkType: 'elimination' | 'groups'): SeedOrdering | null {
+    if (settings === undefined || settings.seedOrdering === undefined) return null;
+    const method = settings.seedOrdering[index];
+
+    if (checkType === 'elimination' && method.match(/^groups\./))
+        throw Error('You must specify a seed ordering method without a \'groups\' prefix');
+
+    if (checkType === 'groups' && !method.match(/^groups\./))
+        throw Error('You must specify a seed ordering method with a \'groups\' prefix');
+
+    return method;
+}
+
+function getMajorOrdering(settings: StageSettings | undefined, participantCount: number): SeedOrdering | null {
+    const ordering = getOrdering(settings, 1, 'elimination');
+    return ordering || helpers.defaultMinorOrdering[participantCount][0];
+}
+
+function getMinorOrdering(settings: StageSettings | undefined, index: number, participantCount: number): SeedOrdering {
+    const ordering = getOrdering(settings, 2 + index, 'elimination');
+    return ordering || helpers.defaultMinorOrdering[participantCount][1 + index];
 }

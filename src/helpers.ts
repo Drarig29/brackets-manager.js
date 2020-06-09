@@ -18,6 +18,8 @@ export function makeViewer(data: Stage) {
     fs.writeFileSync('viewer/viewer.html', html);
 }
 
+// TODO: move this into OrderingMap.
+
 /**
  * Toornament's method to distribute seeds in the first round of single or double elimination.
  */
