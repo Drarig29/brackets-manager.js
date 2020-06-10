@@ -102,4 +102,25 @@ describe('Create single elimination stage', () => {
         assert.equal(db.select('match', 7).opponent1, null);
         assert.equal(db.select('match', 7).opponent2.id, null);
     });
+
+    it('shoud create a single elimination stage with Bo3 matches', () => {
+        const example = {
+            name: 'Example with consolation final',
+            type: 'single_elimination',
+            participants: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: { seedOrdering: ['natural'], matchesChildCount: 3 },
+        };
+
+        createStage(example);
+
+        assert.equal(db.all('group').length, 1);
+        assert.equal(db.all('round').length, 3);
+        assert.equal(db.all('match').length, 7);
+        assert.equal(db.all('match_game').length, 7 * 3);
+    });
 });

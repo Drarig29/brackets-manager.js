@@ -1,6 +1,6 @@
-import { InputParticipants, Participant, Duels, Duel, InputStage, ParticipantSlot, Match, ParticipantResult, SeedOrdering, StageSettings } from 'brackets-model';
-import * as helpers from './helpers';
+import { InputParticipants, Participant, Duels, Duel, InputStage, ParticipantSlot, Match, ParticipantResult, SeedOrdering, StageSettings, MatchGame } from 'brackets-model';
 import { db } from './database';
+import * as helpers from './helpers';
 
 export function createStage(stage: InputStage) {
     switch (stage.type) {
@@ -37,7 +37,7 @@ function createRoundRobin(stage: InputStage) {
     const groups = helpers.makeGroups(ordered, stage.settings.groupCount);
 
     for (let i = 0; i < groups.length; i++)
-        createGroup(`Group ${i + 1}`, stageId, groups[i]);
+        createGroup(`Group ${i + 1}`, stageId, groups[i], stage.settings);
 }
 
 function createSingleElimination(stage: InputStage) {
@@ -55,11 +55,11 @@ function createSingleElimination(stage: InputStage) {
     const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
     const duels = helpers.makePairs(ordered);
 
-    const { losers } = createStandardBracket('Bracket', stageId, duels);
+    const { losers } = createStandardBracket('Bracket', stageId, duels, stage.settings);
 
     const semiFinalLosers = losers[losers.length - 2];
     if (stage.settings && stage.settings.consolationFinal)
-        createUniqueMatchBracket('Consolation Final', stageId, [semiFinalLosers]);
+        createUniqueMatchBracket('Consolation Final', stageId, [semiFinalLosers], stage.settings);
 }
 
 function createDoubleElimination(stage: InputStage) {
@@ -77,7 +77,7 @@ function createDoubleElimination(stage: InputStage) {
     const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
     const duels = helpers.makePairs(ordered);
 
-    const { losers: losersWb, winner: winnerWb } = createStandardBracket('Winner Bracket', stageId, duels);
+    const { losers: losersWb, winner: winnerWb } = createStandardBracket('Winner Bracket', stageId, duels, stage.settings);
     const winnerLb = createMajorMinorBracket('Loser Bracket', stageId, losersWb, stage.settings);
 
     // Simple Grand Final by default.
@@ -86,16 +86,16 @@ function createDoubleElimination(stage: InputStage) {
     if (grandFinal === 'simple') {
         createUniqueMatchBracket('Grand Final', stageId, [
             [winnerWb, winnerLb]
-        ]);
+        ], stage.settings);
     } else if (grandFinal === 'double') {
         createUniqueMatchBracket('Grand Final', stageId, [
             [winnerWb, winnerLb],
             [{ id: null }, { id: null }] // Won't be shown if the WB winner wins the first time.
-        ]);
+        ], stage.settings);
     }
 }
 
-function createGroup(name: string, stageId: number, slots: ParticipantSlot[]) {
+function createGroup(name: string, stageId: number, slots: ParticipantSlot[], settings: StageSettings | undefined) {
     const groupId = db.insert('group', {
         stage_id: stageId,
         name,
@@ -104,10 +104,10 @@ function createGroup(name: string, stageId: number, slots: ParticipantSlot[]) {
     const rounds = helpers.roundRobinMatches(slots);
 
     for (let i = 0; i < rounds.length; i++)
-        createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i]);
+        createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i], getMatchesChildCount(settings));
 }
 
-function createStandardBracket(name: string, stageId: number, duels: Duels): {
+function createStandardBracket(name: string, stageId: number, duels: Duels, settings: StageSettings | undefined): {
     losers: ParticipantSlot[][],
     winner: ParticipantSlot,
 } {
@@ -123,7 +123,7 @@ function createStandardBracket(name: string, stageId: number, duels: Duels): {
     for (let i = roundCount - 1; i >= 0; i--) {
         const matchCount = Math.pow(2, i);
         duels = getCurrentDuels(duels, matchCount, 'natural');
-        createRound(stageId, groupId, number++, matchCount, duels);
+        createRound(stageId, groupId, number++, matchCount, duels, getMatchesChildCount(settings));
         losers.push(duels.map(byePropagation));
     }
 
@@ -150,12 +150,12 @@ function createMajorMinorBracket(name: string, stageId: number, losers: Particip
         // Major round.
         let majorOrdering = i === 0 ? getMajorOrdering(settings, participantCount) : null;
         duels = getCurrentDuels(duels, matchCount, majorOrdering, true);
-        createRound(stageId, groupId, number++, matchCount, duels);
+        createRound(stageId, groupId, number++, matchCount, duels, getMatchesChildCount(settings));
 
         // Minor round.
         let minorOrdering = getMinorOrdering(settings, i, participantCount);
         duels = getCurrentDuels(duels, matchCount, minorOrdering, false, losers[losersId++]);
-        createRound(stageId, groupId, number++, matchCount, duels);
+        createRound(stageId, groupId, number++, matchCount, duels, getMatchesChildCount(settings));
     }
 
     return byeResult(duels[0]); // Winner.
@@ -164,17 +164,17 @@ function createMajorMinorBracket(name: string, stageId: number, losers: Particip
 /**
  * Creates a bracket with rounds that only have 1 match each.
  */
-function createUniqueMatchBracket(name: string, stageId: number, duels: Duels) {
+function createUniqueMatchBracket(name: string, stageId: number, duels: Duels, settings: StageSettings | undefined) {
     const groupId = db.insert('group', {
         stage_id: stageId,
         name,
     });
 
     for (let i = 0; i < duels.length; i++)
-        createRound(stageId, groupId, i + 1, 1, [duels[i]]);
+        createRound(stageId, groupId, i + 1, 1, [duels[i]], getMatchesChildCount(settings));
 }
 
-function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, duels: Duels) {
+function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, duels: Duels, matchesChildCount: number) {
     const roundId = db.insert('round', {
         number: roundNumber,
         stage_id: stageId,
@@ -182,19 +182,33 @@ function createRound(stageId: number, groupId: number, roundNumber: number, matc
     });
 
     for (let i = 0; i < matchCount; i++)
-        createMatch(stageId, groupId, roundId, i + 1, duels[i]);
+        createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
 }
 
-function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel) {
-    db.insert<Partial<Match>>('match', {
+function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number) {
+    const opponent1 = toResult(opponents[0]);
+    const opponent2 = toResult(opponents[1]);
+
+    const parentId = db.insert<Partial<Match>>('match', {
         number: matchNumber,
         stage_id: stageId,
         group_id: groupId,
         round_id: roundId,
         status: 'pending',
-        opponent1: toResult(opponents[0]),
-        opponent2: toResult(opponents[1]),
+        opponent1,
+        opponent2,
+        childCount,
     });
+
+    for (let i = 0; i < childCount; i++) {
+        db.insert<Partial<MatchGame>>('match_game', {
+            number: i + 1,
+            parent_id: parentId,
+            status: 'pending',
+            opponent1,
+            opponent2,
+        });
+    }
 }
 
 function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering): Duels;
@@ -271,9 +285,14 @@ function toResult(opponent: ParticipantSlot): ParticipantResult | null {
     } : null;
 }
 
+function getMatchesChildCount(settings?: StageSettings): number {
+    if (settings === undefined || settings.matchesChildCount === undefined) return 0;
+    return settings.matchesChildCount;
+}
+
 function getOrdering(settings: StageSettings | undefined, index: number, checkType: 'elimination' | 'groups'): SeedOrdering | null {
     if (settings === undefined || settings.seedOrdering === undefined) return null;
-    
+
     const method = settings.seedOrdering[index];
     if (!method) return null;
 
