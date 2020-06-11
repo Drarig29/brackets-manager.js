@@ -4,6 +4,7 @@ import { IStorage } from ".";
 export declare type SelectCallback<T> = (entry: T, index: number) => boolean
 
 class JsonDatabase implements IStorage {
+
     private internal: JsonDB;
 
     constructor() {
@@ -52,49 +53,58 @@ class JsonDatabase implements IStorage {
      * @param table Where to insert.
      * @param value What to insert.
      */
-    public insert<T>(table: string, value: T): number;
+    public insert<T>(table: string, value: T): Promise<number>;
 
     /**
      * Inserts multiple values in the database.
      * @param table Where to insert.
      * @param values What to insert.
      */
-    public insert<T>(table: string, values: T[]): void;
+    public insert<T>(table: string, values: T[]): Promise<boolean>;
 
-    public insert(table: string, arg: any) {
-        let id = this.internal.getData(this.makePath(table)).length;
+    public async insert(table: string, arg: any): Promise<number | boolean> {
+        let id: number = this.internal.getData(this.makePath(table)).length;
 
         if (!Array.isArray(arg)) {
             this.internal.push(this.makeArrayPath(table), { id, ...arg });
             return id;
         }
 
-        this.internal.push(this.makePath(table), arg.map(object => ({ id: id++, ...object })));
-    }
-
-    public select<T>(table: string): T[] | undefined
-    public select<T>(table: string, key: number): T | undefined;
-    public select<T>(table: string, pred: SelectCallback<T>): T[] | undefined;
-
-    public select(table: string, arg?: any): any {
-        if (arg === undefined)
-            return this.internal.getData(this.makePath(table));
-
-        if (typeof arg === "number")
-            return this.internal.getData(this.makeArrayAccessor(table, arg));
-
-        return this.internal.filter(this.makePath(table), arg);
-    }
-
-    public update<T>(table: string, key: number, property: string, value: T): void;
-    public update<T>(table: string, key: number, value: T): void;
-
-    public update(table: string, key: number, arg1: any, arg2?: any): void {
-        if (arg2) {
-            this.internal.push(`${this.makeArrayAccessor(table, key)}/${arg1}`, arg2);
-        } else {
-            this.internal.push(this.makeArrayAccessor(table, key), arg1);
+        try {
+            this.internal.push(this.makePath(table), arg.map(object => ({ id: id++, ...object })));
+        } catch (error) {
+            return false;
         }
+
+        return true;
+    }
+
+    public select<T>(table: string): Promise<T[] | undefined>;
+    public select<T>(table: string, key: number): Promise<T | undefined>;
+    public select<T>(table: string, pred: SelectCallback<T>): Promise<T[] | undefined>;
+
+    public async select<T>(table: string, arg?: any): Promise<T | T[] | undefined> {
+        try {
+            if (arg === undefined)
+                return this.internal.getData(this.makePath(table));
+
+            if (typeof arg === "number")
+                return this.internal.getData(this.makeArrayAccessor(table, arg));
+
+            return this.internal.filter(this.makePath(table), arg);
+        } catch (error) {
+            return undefined;
+        }
+    }
+
+    public async update<T>(table: string, key: number, value: T): Promise<boolean> {
+        try {
+            this.internal.push(this.makeArrayAccessor(table, key), value);
+        } catch (error) {
+            return false;
+        }
+        
+        return true;
     }
 }
 

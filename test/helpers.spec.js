@@ -2,6 +2,7 @@ const assert = require('chai').assert;
 const { makeGroups, assertRoundRobin, roundRobinMatches, ordering } = require('../dist/helpers');
 
 describe('Helpers', () => {
+    
     it('should place 8 participants with inner-outer method', () => {
         const teams = [1, 2, 3, 4, 5, 6, 7, 8];
         const placement = ordering['inner_outer'](teams);

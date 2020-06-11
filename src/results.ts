@@ -1,11 +1,11 @@
 import { Match, Participant } from "brackets-model";
 import { BracketsManager } from ".";
 
-export function getRanking(this: BracketsManager, groupId: number): string[] {
-    const matches = this.storage.select<Match>('match', match => match.group_id === groupId);
+export async function getRanking(this: BracketsManager, groupId: number): Promise<string[]> {
+    const matches = await this.storage.select<Match>('match', match => match.group_id === groupId);
     if (!matches) throw Error('No match found.');
 
-    const teams = this.storage.select<Participant>('participant');
+    const teams = await this.storage.select<Participant>('participant');
     if (!teams) throw Error('No teams found.');
 
     const wins: { [key: number]: number } = Object.fromEntries(teams.map(team => [team.id, 0]));

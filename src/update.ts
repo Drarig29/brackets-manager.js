@@ -3,13 +3,14 @@ import { IStorage } from "./storage";
 import { BracketsManager } from ".";
 import * as helpers from './helpers';
 
-export function updateMatch(this: BracketsManager, values: Partial<Match>, updateNext: boolean) {
+export async function updateMatch(this: BracketsManager, values: Partial<Match>, updateNext: boolean) {
     const update = new Update(this.storage);
-    update.match(values, updateNext);
+    await update.match(values, updateNext);
 }
 
 class Update {
-    storage: IStorage;
+
+    private storage: IStorage;
 
     constructor(storage: IStorage) {
         this.storage = storage;
@@ -17,30 +18,30 @@ class Update {
 
     // TODO: lock the match when it's not determined. Can't set the score, the result nor the forfeit.
 
-    match(match: Partial<Match>, updateNext: boolean) {
+    public async match(match: Partial<Match>, updateNext: boolean) {
         if (match.id === undefined) throw Error('No match id given.');
 
-        const stored = this.storage.select<Match>('match', match.id);
+        const stored = await this.storage.select<Match>('match', match.id);
         if (!stored) throw Error('Match not found.');
 
         const completed = helpers.isMatchCompleted(match);
 
         // TODO: handle setting forfeit to false / removing complete status... etc.
 
-        this.updateGeneric(stored, match);
+        this.setGeneric(stored, match);
 
         if (completed) {
-            this.updateCompleted(stored, match);
+            this.setCompleted(stored, match);
         }
 
-        this.storage.update('match', match.id, stored);
+        await this.storage.update('match', match.id, stored);
 
         if (completed && updateNext) {
-            this.updateNextMatch(stored);
+            await this.updateNextMatch(stored);
         }
     }
 
-    private updateGeneric(stored: Match, match: Partial<Match>) {
+    private setGeneric(stored: Match, match: Partial<Match>) {
         if (match.status) stored.status = match.status;
 
         if (match.opponent1 && match.opponent1.score) {
@@ -54,35 +55,17 @@ class Update {
         }
     }
 
-    private updateCompleted(stored: Match, match: Partial<Match>) {
+    private setCompleted(stored: Match, match: Partial<Match>) {
         stored.status = 'completed';
 
-        this.updateResults(stored, match, 'win', 'loss');
-        this.updateResults(stored, match, 'loss', 'win');
-        this.updateResults(stored, match, 'draw', 'draw');
+        this.setResults(stored, match, 'win', 'loss');
+        this.setResults(stored, match, 'loss', 'win');
+        this.setResults(stored, match, 'draw', 'draw');
 
-        this.updateForfeits(stored, match);
+        this.setForfeits(stored, match);
     }
 
-    private updateForfeits(stored: Match, match: Partial<Match>) {
-        // The forfeiter doesn't have a loss result.
-
-        if (match.opponent1 && match.opponent1.forfeit === true) {
-            if (stored.opponent1) stored.opponent1.forfeit = true;
-
-            if (stored.opponent2) stored.opponent2.result = 'win';
-            else stored.opponent2 = { id: null, result: 'win' };
-        }
-
-        if (match.opponent2 && match.opponent2.forfeit === true) {
-            if (stored.opponent2) stored.opponent2.forfeit = true;
-
-            if (stored.opponent1) stored.opponent1.result = 'win';
-            else stored.opponent1 = { id: null, result: 'win' };
-        }
-    }
-
-    private updateResults(stored: Match, match: Partial<Match>, check: Result, change: Result) {
+    private setResults(stored: Match, match: Partial<Match>, check: Result, change: Result) {
         if (match.opponent1 && match.opponent2) {
             if ((match.opponent1.result === 'win' && match.opponent2.result === 'win') ||
                 (match.opponent1.result === 'loss' && match.opponent2.result === 'loss')) {
@@ -113,25 +96,43 @@ class Update {
         }
     }
 
-    private updateNextMatch(match: Match) {
-        const next = this.findNextMatch(match);
+    private setForfeits(stored: Match, match: Partial<Match>) {
+        // The forfeiter doesn't have a loss result.
+
+        if (match.opponent1 && match.opponent1.forfeit === true) {
+            if (stored.opponent1) stored.opponent1.forfeit = true;
+
+            if (stored.opponent2) stored.opponent2.result = 'win';
+            else stored.opponent2 = { id: null, result: 'win' };
+        }
+
+        if (match.opponent2 && match.opponent2.forfeit === true) {
+            if (stored.opponent2) stored.opponent2.forfeit = true;
+
+            if (stored.opponent1) stored.opponent1.result = 'win';
+            else stored.opponent1 = { id: null, result: 'win' };
+        }
+    }
+
+    private async updateNextMatch(match: Match) {
+        const next = await this.findNextMatch(match);
         const winner = helpers.getWinner(match);
         next[helpers.getSide(match)] = { id: winner };
         this.storage.update('match', next.id, next);
     }
 
-    private findNextMatch(match: Match): Match {
-        return this.findMatch(match.stage_id, match.group_id, this.getRoundNumber(match.round_id) + 1, Math.ceil(match.number / 2));
+    private async findNextMatch(match: Match): Promise<Match> {
+        return this.findMatch(match.stage_id, match.group_id, await this.getRoundNumber(match.round_id) + 1, Math.ceil(match.number / 2));
     }
 
-    private getRoundNumber(roundId: number): number {
-        const round = this.storage.select<Round>('round', roundId);
+    private async getRoundNumber(roundId: number): Promise<number> {
+        const round = await this.storage.select<Round>('round', roundId);
         if (!round) throw Error('Round not found.');
         return round.number;
     }
 
-    private findMatch(stage: number, group: number, roundNumber: number, matchNumber: number): Match {
-        const round = this.storage.select<Round>('round', round =>
+    private async findMatch(stage: number, group: number, roundNumber: number, matchNumber: number): Promise<Match> {
+        const round = await this.storage.select<Round>('round', round =>
             round.stage_id === stage &&
             round.group_id === group &&
             round.number === roundNumber
@@ -139,7 +140,7 @@ class Update {
 
         if (!round) throw Error('This round does not exist.');
 
-        const match: Match[] | undefined = this.storage.select('match', match =>
+        const match = await this.storage.select<Match>('match', match =>
             match.stage_id === stage &&
             match.group_id === group &&
             match.round_id === round[0].id &&

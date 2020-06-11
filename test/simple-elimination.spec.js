@@ -5,11 +5,12 @@ const { storage } = require('../dist/storage/json');
 const manager = new BracketsManager(storage);
 
 describe('Create single elimination stage', () => {
+
     beforeEach(() => {
         storage.reset();
     });
 
-    it('should create a single elimination stage', () => {
+    it('should create a single elimination stage', async () => {
         const example = {
             name: 'Example',
             type: 'single_elimination',
@@ -26,18 +27,18 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'] },
         };
 
-        manager.createStage(example);
+        await manager.createStage(example);
 
-        const stage = storage.select('stage', 0);
+        const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
         assert.equal(stage.type, example.type);
 
-        assert.equal(storage.select('group').length, 1);
-        assert.equal(storage.select('round').length, 4);
-        assert.equal(storage.select('match').length, 15);
+        assert.equal((await storage.select('group')).length, 1);
+        assert.equal((await storage.select('round')).length, 4);
+        assert.equal((await storage.select('match')).length, 15);
     });
 
-    it('should create a single elimination stage with BYEs', () => {
+    it('should create a single elimination stage with BYEs', async () => {
         const example = {
             name: 'Example with BYEs',
             type: 'single_elimination',
@@ -50,15 +51,15 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'] },
         };
 
-        manager.createStage(example);
+        await manager.createStage(example);
 
-        assert.equal(storage.select('match', 4).opponent1.id, 0); // Determined because of opponent's BYE.
-        assert.equal(storage.select('match', 4).opponent2.id, null); // To be determined.
-        assert.equal(storage.select('match', 5).opponent1, null); // BYE propagated.
-        assert.equal(storage.select('match', 5).opponent2.id, null); // To be determined.
+        assert.equal((await storage.select('match', 4)).opponent1.id, 0); // Determined because of opponent's BYE.
+        assert.equal((await storage.select('match', 4)).opponent2.id, null); // To be determined.
+        assert.equal((await storage.select('match', 5)).opponent1, null); // BYE propagated.
+        assert.equal((await storage.select('match', 5)).opponent2.id, null); // To be determined.
     });
 
-    it('should create a single elimination stage with consolation final', () => {
+    it('should create a single elimination stage with consolation final', async () => {
         const example = {
             name: 'Example with consolation final',
             type: 'single_elimination',
@@ -71,18 +72,18 @@ describe('Create single elimination stage', () => {
             settings: { consolationFinal: true, seedOrdering: ['natural'] },
         };
 
-        manager.createStage(example);
+        await manager.createStage(example);
 
-        const stage = storage.select('stage', 0);
+        const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
         assert.equal(stage.type, example.type);
 
-        assert.equal(storage.select('group').length, 2);
-        assert.equal(storage.select('round').length, 4);
-        assert.equal(storage.select('match').length, 8);
+        assert.equal((await storage.select('group')).length, 2);
+        assert.equal((await storage.select('round')).length, 4);
+        assert.equal((await storage.select('match')).length, 8);
     });
 
-    it('should create a single elimination stage with consolation final and BYEs', () => {
+    it('should create a single elimination stage with consolation final and BYEs', async () => {
         const example = {
             name: 'Example with consolation final and BYEs',
             type: 'single_elimination',
@@ -95,17 +96,17 @@ describe('Create single elimination stage', () => {
             settings: { consolationFinal: true, seedOrdering: ['natural'] },
         };
 
-        manager.createStage(example);
+        await manager.createStage(example);
 
-        assert.equal(storage.select('match', 4).opponent1, null);
-        assert.equal(storage.select('match', 4).opponent2.id, 0);
+        assert.equal((await storage.select('match', 4)).opponent1, null);
+        assert.equal((await storage.select('match', 4)).opponent2.id, 0);
 
         // Consolation final
-        assert.equal(storage.select('match', 7).opponent1, null);
-        assert.equal(storage.select('match', 7).opponent2.id, null);
+        assert.equal((await storage.select('match', 7)).opponent1, null);
+        assert.equal((await storage.select('match', 7)).opponent2.id, null);
     });
 
-    it('shoud create a single elimination stage with Bo3 matches', () => {
+    it('shoud create a single elimination stage with Bo3 matches', async () => {
         const example = {
             name: 'Example with consolation final',
             type: 'single_elimination',
@@ -118,11 +119,11 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'], matchesChildCount: 3 },
         };
 
-        manager.createStage(example);
+        await manager.createStage(example);
 
-        assert.equal(storage.select('group').length, 1);
-        assert.equal(storage.select('round').length, 3);
-        assert.equal(storage.select('match').length, 7);
-        assert.equal(storage.select('match_game').length, 7 * 3);
+        assert.equal((await storage.select('group')).length, 1);
+        assert.equal((await storage.select('round')).length, 3);
+        assert.equal((await storage.select('match')).length, 7);
+        assert.equal((await storage.select('match_game')).length, 7 * 3);
     });
 });
