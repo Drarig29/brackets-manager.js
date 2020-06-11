@@ -1,6 +1,7 @@
-import { Match, Result, Side, Round } from "brackets-model";
+import { Match, Result, Round } from "brackets-model";
 import { IStorage } from "./storage";
 import { BracketsManager } from ".";
+import * as helpers from './helpers';
 
 export function updateMatch(this: BracketsManager, values: Partial<Match>, updateNext: boolean) {
     const update = new Update(this.storage);
@@ -22,7 +23,7 @@ class Update {
         const stored = this.storage.select<Match>('match', match.id);
         if (!stored) throw Error('Match not found.');
 
-        const completed = Update.isMatchCompleted(match);
+        const completed = helpers.isMatchCompleted(match);
 
         // TODO: handle setting forfeit to false / removing complete status... etc.
 
@@ -114,8 +115,8 @@ class Update {
 
     private updateNextMatch(match: Match) {
         const next = this.findNextMatch(match);
-        const winner = Update.getWinner(match);
-        next[Update.getSide(match)] = { id: winner };
+        const winner = helpers.getWinner(match);
+        next[helpers.getSide(match)] = { id: winner };
         this.storage.update('match', next.id, next);
     }
 
@@ -147,30 +148,5 @@ class Update {
 
         if (!match) throw Error('This match does not exist.');
         return match[0];
-    }
-
-    private static getWinner(match: Match): number {
-        let winner: number | null = null;
-
-        if (match.opponent1 && match.opponent1.result === 'win') {
-            winner = match.opponent1.id;
-        }
-
-        if (match.opponent2 && match.opponent2.result === 'win') {
-            if (winner !== null) throw Error('There are two winners.')
-            winner = match.opponent2.id;
-        }
-
-        if (winner === null) throw Error('No winner found.');
-        return winner;
-    }
-
-    private static getSide(match: Match): Side {
-        return match.number % 2 === 1 ? 'opponent1' : 'opponent2';
-    }
-
-    private static isMatchCompleted(match: Partial<Match>): boolean {
-        return (!!match.opponent1 && (match.opponent1.result !== undefined || match.opponent1.forfeit !== undefined))
-            || (!!match.opponent2 && (match.opponent2.result !== undefined || match.opponent2.forfeit !== undefined));
     }
 }

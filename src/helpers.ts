@@ -1,4 +1,4 @@
-import { Stage, SeedOrdering, OrderingMap } from "brackets-model";
+import { Stage, SeedOrdering, OrderingMap, ParticipantSlot, ParticipantResult, Duel, Match, Side } from "brackets-model";
 import { assert } from "chai";
 import * as fs from 'fs';
 
@@ -156,6 +156,57 @@ export function ensureNotTied(scores: number[]) {
     if (scores[0] === scores[1]) {
         throw Error(`${scores[0]} and ${scores[1]} are tied. It cannot be.`);
     }
+}
+
+export function toResult(opponent: ParticipantSlot): ParticipantResult | null {
+    return opponent ? {
+        id: opponent.id,
+    } : null;
+}
+
+export function byeResult(opponents: Duel): ParticipantSlot {
+    if (opponents[0] === null && opponents[1] === null) // Double BYE.
+        return null; // BYE.
+
+    if (opponents[0] === null && opponents[1] !== null) // opponent1 BYE.
+        return { id: opponents[1]!.id }; // opponent2.
+
+    if (opponents[0] !== null && opponents[1] === null) // opponent2 BYE.
+        return { id: opponents[0]!.id }; // opponent1.
+
+    return { id: null }; // Normal.
+}
+
+export function byePropagation(opponents: Duel): ParticipantSlot {
+    if (opponents[0] === null || opponents[1] === null) // At least one BYE.
+        return null; // BYE.
+
+    return { id: null }; // Normal.
+}
+
+export function getWinner(match: Match): number {
+    let winner: number | null = null;
+
+    if (match.opponent1 && match.opponent1.result === 'win') {
+        winner = match.opponent1.id;
+    }
+
+    if (match.opponent2 && match.opponent2.result === 'win') {
+        if (winner !== null) throw Error('There are two winners.')
+        winner = match.opponent2.id;
+    }
+
+    if (winner === null) throw Error('No winner found.');
+    return winner;
+}
+
+export function getSide(match: Match): Side {
+    return match.number % 2 === 1 ? 'opponent1' : 'opponent2';
+}
+
+export function isMatchCompleted(match: Partial<Match>): boolean {
+    return (!!match.opponent1 && (match.opponent1.result !== undefined || match.opponent1.forfeit !== undefined))
+        || (!!match.opponent2 && (match.opponent2.result !== undefined || match.opponent2.forfeit !== undefined));
 }
 
 // https://web.archive.org/web/20200601102344/https://tl.net/forum/sc2-tournaments/202139-superior-double-elimination-losers-bracket-seeding

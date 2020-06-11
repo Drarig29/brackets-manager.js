@@ -136,10 +136,10 @@ class Create {
             const matchCount = Math.pow(2, i);
             duels = this.getCurrentDuels(duels, matchCount, 'natural');
             this.createRound(stageId, groupId, number++, matchCount, duels, this.getMatchesChildCount());
-            losers.push(duels.map(Create.byePropagation));
+            losers.push(duels.map(helpers.byePropagation));
         }
 
-        const winner = Create.byeResult(duels[0]);
+        const winner = helpers.byeResult(duels[0]);
         return { losers, winner };
     }
 
@@ -170,7 +170,7 @@ class Create {
             this.createRound(stageId, groupId, number++, matchCount, duels, this.getMatchesChildCount());
         }
 
-        return Create.byeResult(duels[0]); // Winner.
+        return helpers.byeResult(duels[0]); // Winner.
     }
 
     /**
@@ -198,8 +198,8 @@ class Create {
     }
 
     private createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number) {
-        const opponent1 = Create.toResult(opponents[0]);
-        const opponent2 = Create.toResult(opponents[1]);
+        const opponent1 = helpers.toResult(opponents[0]);
+        const opponent2 = helpers.toResult(opponents[1]);
 
         const parentId = this.storage.insert<Partial<Match>>('match', {
             number: matchNumber,
@@ -236,15 +236,15 @@ class Create {
             for (let matchId = 0; matchId < currentMatchCount; matchId++) {
                 const prevMatchId = matchId * 2;
                 currentDuels.push([
-                    Create.byeResult(prevDuels[prevMatchId + 0]), // opponent1.
-                    Create.byeResult(prevDuels[prevMatchId + 1]), // opponent2.
+                    helpers.byeResult(prevDuels[prevMatchId + 0]), // opponent1.
+                    helpers.byeResult(prevDuels[prevMatchId + 1]), // opponent2.
                 ]);
             }
         } else { // From major to minor (LB).
             for (let matchId = 0; matchId < currentMatchCount; matchId++) {
                 const prevMatchId = matchId;
                 currentDuels.push([
-                    Create.byeResult(prevDuels[prevMatchId]), // opponent1.
+                    helpers.byeResult(prevDuels[prevMatchId]), // opponent1.
                     losers![prevMatchId], // opponent2.
                 ]);
             }
@@ -299,31 +299,5 @@ class Create {
     private getMinorOrdering(index: number, participantCount: number): SeedOrdering {
         const ordering = this.getOrdering(2 + index, 'elimination');
         return ordering || helpers.defaultMinorOrdering[participantCount][1 + index];
-    }
-
-    private static toResult(opponent: ParticipantSlot): ParticipantResult | null {
-        return opponent ? {
-            id: opponent.id,
-        } : null;
-    }
-
-    private static byeResult(opponents: Duel): ParticipantSlot {
-        if (opponents[0] === null && opponents[1] === null) // Double BYE.
-            return null; // BYE.
-
-        if (opponents[0] === null && opponents[1] !== null) // opponent1 BYE.
-            return { id: opponents[1]!.id }; // opponent2.
-
-        if (opponents[0] !== null && opponents[1] === null) // opponent2 BYE.
-            return { id: opponents[0]!.id }; // opponent1.
-
-        return { id: null }; // Normal.
-    }
-
-    private static byePropagation(opponents: Duel): ParticipantSlot {
-        if (opponents[0] === null || opponents[1] === null) // At least one BYE.
-            return null; // BYE.
-
-        return { id: null }; // Normal.
     }
 }
