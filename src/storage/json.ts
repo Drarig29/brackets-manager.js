@@ -1,8 +1,9 @@
 import { JsonDB } from "node-json-db";
+import { IStorage } from ".";
 
-declare type SelectCallback<T> = (entry: T, index: number) => boolean
+export declare type SelectCallback<T> = (entry: T, index: number) => boolean
 
-class Database {
+class JsonDatabase implements IStorage {
     private internal: JsonDB;
 
     constructor() {
@@ -71,38 +72,18 @@ class Database {
         this.internal.push(this.makePath(table), arg.map(object => ({ id: id++, ...object })));
     }
 
-    /**
-     * Gets data from a table in the database.
-     * @param table Where to get from.
-     * @param key What to get.
-     */
-    public select<T>(table: string, key: number): T;
-
-    /**
-     * Gets data from a table in the database.
-     * @param table Where to get from.
-     * @param pred A predicate to filter data.
-     */
+    public select<T>(table: string): T[] | undefined
+    public select<T>(table: string, key: number): T | undefined;
     public select<T>(table: string, pred: SelectCallback<T>): T[] | undefined;
 
-    public select(table: string, arg: any): any {
+    public select(table: string, arg?: any): any {
+        if (arg === undefined)
+            return this.internal.getData(this.makePath(table));
+
         if (typeof arg === "number")
             return this.internal.getData(this.makeArrayAccessor(table, arg));
 
         return this.internal.filter(this.makePath(table), arg);
-    }
-
-    /**
-     * Checks if an id is in an array of element with id property.
-     * @param id The id to find.
-     * @param array Elements to search in.
-     */
-    public isIn(id: number, array: { id: number }[]): boolean {
-        return array.find(element => element.id === id) !== undefined;
-    }
-
-    public all<T>(table: string): T[] {
-        return this.internal.getData(this.makePath(table));
     }
 
     public update<T>(table: string, key: number, property: string, value: T): void;
@@ -117,4 +98,4 @@ class Database {
     }
 }
 
-export const db = new Database();
+export const storage = new JsonDatabase();

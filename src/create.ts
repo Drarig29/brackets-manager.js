@@ -1,316 +1,329 @@
-import { InputParticipants, Participant, Duels, Duel, InputStage, ParticipantSlot, Match, ParticipantResult, SeedOrdering, StageSettings, MatchGame } from 'brackets-model';
-import { db } from './database';
+import { Participant, Duels, Duel, InputStage, ParticipantSlot, Match, ParticipantResult, SeedOrdering, MatchGame } from 'brackets-model';
+import { BracketsManager } from '.';
+import { IStorage } from './storage';
 import * as helpers from './helpers';
 
-export function createStage(stage: InputStage) {
+export function createStage(this: BracketsManager, stage: InputStage) {
+    const create = new Create(this.storage, stage);
+
     switch (stage.type) {
         case 'round_robin':
-            createRoundRobin(stage);
+            create.roundRobin();
             break;
         case 'single_elimination':
-            createSingleElimination(stage);
+            create.singleElimination();
             break;
         case 'double_elimination':
-            createDoubleElimination(stage);
+            create.doubleElimination();
             break;
         default:
             throw Error('Unknown stage type.');
     }
 }
 
-function createRoundRobin(stage: InputStage) {
-    if (!stage.settings || !stage.settings.groupCount) throw Error('You must specify a group count for round-robin stages.');
+class Create {
+    storage: IStorage;
+    stage: InputStage;
 
-    if (Array.isArray(stage.settings.seedOrdering)
-        && stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
-
-    // Default method for groups: Effort balanced.
-    const method = getOrdering(stage.settings, 0, 'groups') || 'groups.effort_balanced';
-    const stageId = db.insert('stage', {
-        name: stage.name,
-        type: stage.type,
-    });
-
-    const slots = registerParticipants(stage.participants);
-    const ordered: ParticipantSlot[] = helpers.ordering[method](slots, stage.settings.groupCount);
-
-    const groups = helpers.makeGroups(ordered, stage.settings.groupCount);
-
-    for (let i = 0; i < groups.length; i++)
-        createGroup(`Group ${i + 1}`, stageId, groups[i], stage.settings);
-}
-
-function createSingleElimination(stage: InputStage) {
-    if (stage.settings && Array.isArray(stage.settings.seedOrdering) &&
-        stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
-
-    // Default method for single elimination: Inner outer.
-    const method = getOrdering(stage.settings, 0, 'elimination') || 'inner_outer';
-    const stageId = db.insert('stage', {
-        name: stage.name,
-        type: stage.type,
-    });
-
-    const slots = registerParticipants(stage.participants);
-    const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
-    const duels = helpers.makePairs(ordered);
-
-    const { losers } = createStandardBracket('Bracket', stageId, duels, stage.settings);
-
-    const semiFinalLosers = losers[losers.length - 2];
-    if (stage.settings && stage.settings.consolationFinal)
-        createUniqueMatchBracket('Consolation Final', stageId, [semiFinalLosers], stage.settings);
-}
-
-function createDoubleElimination(stage: InputStage) {
-    if (stage.settings && Array.isArray(stage.settings.seedOrdering) &&
-        stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
-
-    // Default method for WB: Inner outer.
-    const method = getOrdering(stage.settings, 0, 'elimination') || 'inner_outer';
-    const stageId = db.insert('stage', {
-        name: stage.name,
-        type: stage.type,
-    });
-
-    const slots = registerParticipants(stage.participants);
-    const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
-    const duels = helpers.makePairs(ordered);
-
-    const { losers: losersWb, winner: winnerWb } = createStandardBracket('Winner Bracket', stageId, duels, stage.settings);
-    const winnerLb = createMajorMinorBracket('Loser Bracket', stageId, losersWb, stage.settings);
-
-    // Simple Grand Final by default.
-    const grandFinal = (stage.settings && stage.settings.grandFinal) || 'simple';
-
-    if (grandFinal === 'simple') {
-        createUniqueMatchBracket('Grand Final', stageId, [
-            [winnerWb, winnerLb]
-        ], stage.settings);
-    } else if (grandFinal === 'double') {
-        createUniqueMatchBracket('Grand Final', stageId, [
-            [winnerWb, winnerLb],
-            [{ id: null }, { id: null }] // Won't be shown if the WB winner wins the first time.
-        ], stage.settings);
-    }
-}
-
-function createGroup(name: string, stageId: number, slots: ParticipantSlot[], settings: StageSettings | undefined) {
-    const groupId = db.insert('group', {
-        stage_id: stageId,
-        name,
-    });
-
-    const rounds = helpers.roundRobinMatches(slots);
-
-    for (let i = 0; i < rounds.length; i++)
-        createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i], getMatchesChildCount(settings));
-}
-
-function createStandardBracket(name: string, stageId: number, duels: Duels, settings: StageSettings | undefined): {
-    losers: ParticipantSlot[][],
-    winner: ParticipantSlot,
-} {
-    const roundCount = Math.log2(duels.length * 2);
-    const groupId = db.insert('group', {
-        stage_id: stageId,
-        name,
-    });
-
-    let number = 1;
-    const losers: ParticipantSlot[][] = [];
-
-    for (let i = roundCount - 1; i >= 0; i--) {
-        const matchCount = Math.pow(2, i);
-        duels = getCurrentDuels(duels, matchCount, 'natural');
-        createRound(stageId, groupId, number++, matchCount, duels, getMatchesChildCount(settings));
-        losers.push(duels.map(byePropagation));
+    constructor(storage: IStorage, stage: InputStage) {
+        this.storage = storage;
+        this.stage = stage;
     }
 
-    const winner = byeResult(duels[0]);
-    return { losers, winner };
-}
+    public roundRobin() {
+        if (!this.stage.settings || !this.stage.settings.groupCount) throw Error('You must specify a group count for round-robin stages.');
 
-function createMajorMinorBracket(name: string, stageId: number, losers: ParticipantSlot[][], settings: StageSettings | undefined): ParticipantSlot {
-    const groupId = db.insert('group', {
-        stage_id: stageId,
-        name,
-    });
+        if (Array.isArray(this.stage.settings.seedOrdering)
+            && this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
-    const majorRoundCount = losers.length - 1;
-    const participantCount = losers[0].length * 4;
+        // Default method for groups: Effort balanced.
+        const method = this.getOrdering(0, 'groups') || 'groups.effort_balanced';
+        const stageId = this.storage.insert('stage', {
+            name: this.stage.name,
+            type: this.stage.type,
+        });
 
-    let losersId = 0;
-    let duels = helpers.makePairs(losers[losersId++]);
-    let number = 1;
+        const slots = this.registerParticipants();
+        const ordered: ParticipantSlot[] = helpers.ordering[method](slots, this.stage.settings.groupCount);
 
-    for (let i = 0; i < majorRoundCount; i++) {
-        const matchCount = Math.pow(2, majorRoundCount - i - 1);
+        const groups = helpers.makeGroups(ordered, this.stage.settings.groupCount);
 
-        // Major round.
-        let majorOrdering = i === 0 ? getMajorOrdering(settings, participantCount) : null;
-        duels = getCurrentDuels(duels, matchCount, majorOrdering, true);
-        createRound(stageId, groupId, number++, matchCount, duels, getMatchesChildCount(settings));
-
-        // Minor round.
-        let minorOrdering = getMinorOrdering(settings, i, participantCount);
-        duels = getCurrentDuels(duels, matchCount, minorOrdering, false, losers[losersId++]);
-        createRound(stageId, groupId, number++, matchCount, duels, getMatchesChildCount(settings));
+        for (let i = 0; i < groups.length; i++)
+            this.createGroup(`Group ${i + 1}`, stageId, groups[i]);
     }
 
-    return byeResult(duels[0]); // Winner.
-}
+    public singleElimination() {
+        if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
+            this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
-/**
- * Creates a bracket with rounds that only have 1 match each.
- */
-function createUniqueMatchBracket(name: string, stageId: number, duels: Duels, settings: StageSettings | undefined) {
-    const groupId = db.insert('group', {
-        stage_id: stageId,
-        name,
-    });
+        // Default method for single elimination: Inner outer.
+        const method = this.getOrdering(0, 'elimination') || 'inner_outer';
+        const stageId = this.storage.insert('stage', {
+            name: this.stage.name,
+            type: this.stage.type,
+        });
 
-    for (let i = 0; i < duels.length; i++)
-        createRound(stageId, groupId, i + 1, 1, [duels[i]], getMatchesChildCount(settings));
-}
+        const slots = this.registerParticipants();
+        const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
+        const duels = helpers.makePairs(ordered);
 
-function createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, duels: Duels, matchesChildCount: number) {
-    const roundId = db.insert('round', {
-        number: roundNumber,
-        stage_id: stageId,
-        group_id: groupId,
-    });
+        const { losers } = this.createStandardBracket('Bracket', stageId, duels);
 
-    for (let i = 0; i < matchCount; i++)
-        createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
-}
+        const semiFinalLosers = losers[losers.length - 2];
+        if (this.stage.settings && this.stage.settings.consolationFinal)
+            this.createUniqueMatchBracket('Consolation Final', stageId, [semiFinalLosers]);
+    }
 
-function createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number) {
-    const opponent1 = toResult(opponents[0]);
-    const opponent2 = toResult(opponents[1]);
+    public doubleElimination() {
+        if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
+            this.stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
 
-    const parentId = db.insert<Partial<Match>>('match', {
-        number: matchNumber,
-        stage_id: stageId,
-        group_id: groupId,
-        round_id: roundId,
-        status: 'pending',
-        opponent1,
-        opponent2,
-        childCount,
-    });
+        // Default method for WB: Inner outer.
+        const method = this.getOrdering(0, 'elimination') || 'inner_outer';
+        const stageId = this.storage.insert('stage', {
+            name: this.stage.name,
+            type: this.stage.type,
+        });
 
-    for (let i = 0; i < childCount; i++) {
-        db.insert<Partial<MatchGame>>('match_game', {
-            number: i + 1,
-            parent_id: parentId,
+        const slots = this.registerParticipants();
+        const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
+        const duels = helpers.makePairs(ordered);
+
+        const { losers: losersWb, winner: winnerWb } = this.createStandardBracket('Winner Bracket', stageId, duels);
+        const winnerLb = this.createMajorMinorBracket('Loser Bracket', stageId, losersWb);
+
+        // Simple Grand Final by default.
+        const grandFinal = (this.stage.settings && this.stage.settings.grandFinal) || 'simple';
+
+        if (grandFinal === 'simple') {
+            this.createUniqueMatchBracket('Grand Final', stageId, [
+                [winnerWb, winnerLb]
+            ]);
+        } else if (grandFinal === 'double') {
+            this.createUniqueMatchBracket('Grand Final', stageId, [
+                [winnerWb, winnerLb],
+                [{ id: null }, { id: null }] // Won't be shown if the WB winner wins the first time.
+            ]);
+        }
+    }
+
+    private createGroup(name: string, stageId: number, slots: ParticipantSlot[]) {
+        const groupId = this.storage.insert('group', {
+            stage_id: stageId,
+            name,
+        });
+
+        const rounds = helpers.roundRobinMatches(slots);
+
+        for (let i = 0; i < rounds.length; i++)
+            this.createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i], this.getMatchesChildCount());
+    }
+
+    private createStandardBracket(name: string, stageId: number, duels: Duels): {
+        losers: ParticipantSlot[][],
+        winner: ParticipantSlot,
+    } {
+        const roundCount = Math.log2(duels.length * 2);
+        const groupId = this.storage.insert('group', {
+            stage_id: stageId,
+            name,
+        });
+
+        let number = 1;
+        const losers: ParticipantSlot[][] = [];
+
+        for (let i = roundCount - 1; i >= 0; i--) {
+            const matchCount = Math.pow(2, i);
+            duels = this.getCurrentDuels(duels, matchCount, 'natural');
+            this.createRound(stageId, groupId, number++, matchCount, duels, this.getMatchesChildCount());
+            losers.push(duels.map(Create.byePropagation));
+        }
+
+        const winner = Create.byeResult(duels[0]);
+        return { losers, winner };
+    }
+
+    private createMajorMinorBracket(name: string, stageId: number, losers: ParticipantSlot[][]): ParticipantSlot {
+        const groupId = this.storage.insert('group', {
+            stage_id: stageId,
+            name,
+        });
+
+        const majorRoundCount = losers.length - 1;
+        const participantCount = losers[0].length * 4;
+
+        let losersId = 0;
+        let duels = helpers.makePairs(losers[losersId++]);
+        let number = 1;
+
+        for (let i = 0; i < majorRoundCount; i++) {
+            const matchCount = Math.pow(2, majorRoundCount - i - 1);
+
+            // Major round.
+            let majorOrdering = i === 0 ? this.getMajorOrdering(participantCount) : null;
+            duels = this.getCurrentDuels(duels, matchCount, majorOrdering, true);
+            this.createRound(stageId, groupId, number++, matchCount, duels, this.getMatchesChildCount());
+
+            // Minor round.
+            let minorOrdering = this.getMinorOrdering(i, participantCount);
+            duels = this.getCurrentDuels(duels, matchCount, minorOrdering, false, losers[losersId++]);
+            this.createRound(stageId, groupId, number++, matchCount, duels, this.getMatchesChildCount());
+        }
+
+        return Create.byeResult(duels[0]); // Winner.
+    }
+
+    /**
+     * Creates a bracket with rounds that only have 1 match each.
+     */
+    private createUniqueMatchBracket(name: string, stageId: number, duels: Duels) {
+        const groupId = this.storage.insert('group', {
+            stage_id: stageId,
+            name,
+        });
+
+        for (let i = 0; i < duels.length; i++)
+            this.createRound(stageId, groupId, i + 1, 1, [duels[i]], this.getMatchesChildCount());
+    }
+
+    private createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, duels: Duels, matchesChildCount: number) {
+        const roundId = this.storage.insert('round', {
+            number: roundNumber,
+            stage_id: stageId,
+            group_id: groupId,
+        });
+
+        for (let i = 0; i < matchCount; i++)
+            this.createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
+    }
+
+    private createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number) {
+        const opponent1 = Create.toResult(opponents[0]);
+        const opponent2 = Create.toResult(opponents[1]);
+
+        const parentId = this.storage.insert<Partial<Match>>('match', {
+            number: matchNumber,
+            stage_id: stageId,
+            group_id: groupId,
+            round_id: roundId,
             status: 'pending',
             opponent1,
             opponent2,
+            childCount,
         });
-    }
-}
 
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering): Duels;
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering | null, major: true): Duels;
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering, major: false, losers: ParticipantSlot[]): Duels;
-
-function getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering | null, major?: boolean, losers?: ParticipantSlot[]): Duels {
-    if ((major === undefined || major === true) && prevDuels.length === currentMatchCount) return prevDuels; // First round.
-
-    const currentDuels: Duels = [];
-
-    if (major === undefined || major === true) { // From major to major (WB) or minor to major (LB).
-        for (let matchId = 0; matchId < currentMatchCount; matchId++) {
-            const prevMatchId = matchId * 2;
-            currentDuels.push([
-                byeResult(prevDuels[prevMatchId + 0]), // opponent1.
-                byeResult(prevDuels[prevMatchId + 1]), // opponent2.
-            ]);
-        }
-    } else { // From major to minor (LB).
-        for (let matchId = 0; matchId < currentMatchCount; matchId++) {
-            const prevMatchId = matchId;
-            currentDuels.push([
-                byeResult(prevDuels[prevMatchId]), // opponent1.
-                losers![prevMatchId], // opponent2.
-            ]);
+        for (let i = 0; i < childCount; i++) {
+            this.storage.insert<Partial<MatchGame>>('match_game', {
+                number: i + 1,
+                parent_id: parentId,
+                status: 'pending',
+                opponent1,
+                opponent2,
+            });
         }
     }
 
-    return currentDuels;
-}
+    private getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering): Duels;
+    private getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering | null, major: true): Duels;
+    private getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering, major: false, losers: ParticipantSlot[]): Duels;
 
-function byeResult(opponents: Duel): ParticipantSlot {
-    if (opponents[0] === null && opponents[1] === null) // Double BYE.
-        return null; // BYE.
+    private getCurrentDuels(prevDuels: Duels, currentMatchCount: number, ordering: SeedOrdering | null, major?: boolean, losers?: ParticipantSlot[]): Duels {
+        if ((major === undefined || major === true) && prevDuels.length === currentMatchCount) return prevDuels; // First round.
 
-    if (opponents[0] === null && opponents[1] !== null) // opponent1 BYE.
-        return { id: opponents[1]!.id }; // opponent2.
+        const currentDuels: Duels = [];
 
-    if (opponents[0] !== null && opponents[1] === null) // opponent2 BYE.
-        return { id: opponents[0]!.id }; // opponent1.
+        if (major === undefined || major === true) { // From major to major (WB) or minor to major (LB).
+            for (let matchId = 0; matchId < currentMatchCount; matchId++) {
+                const prevMatchId = matchId * 2;
+                currentDuels.push([
+                    Create.byeResult(prevDuels[prevMatchId + 0]), // opponent1.
+                    Create.byeResult(prevDuels[prevMatchId + 1]), // opponent2.
+                ]);
+            }
+        } else { // From major to minor (LB).
+            for (let matchId = 0; matchId < currentMatchCount; matchId++) {
+                const prevMatchId = matchId;
+                currentDuels.push([
+                    Create.byeResult(prevDuels[prevMatchId]), // opponent1.
+                    losers![prevMatchId], // opponent2.
+                ]);
+            }
+        }
 
-    return { id: null }; // Normal.
-}
+        return currentDuels;
+    }
 
-function byePropagation(opponents: Duel): ParticipantSlot {
-    if (opponents[0] === null || opponents[1] === null) // At least one BYE.
-        return null; // BYE.
+    private registerParticipants(): ParticipantSlot[] {
+        this.storage.insert('participant', this.stage.participants.filter(name => name !== null).map(name => ({ name }))); // Without BYEs.
 
-    return { id: null }; // Normal.
-}
+        const added = this.storage.select<Participant>('participant'); // TODO: handle participants from different tournaments... (do not take all)
+        if (!added) throw Error('No participant added.');
 
-function registerParticipants(participants: InputParticipants): ParticipantSlot[] {
-    db.insert('participant', participants.filter(name => name !== null).map(name => ({ name }))); // Without BYEs.
+        const slots = this.stage.participants.map<ParticipantSlot>(name => {
+            if (name === null) return null; // BYE.
 
-    const added = db.select<Participant>('participant', _ => true); // TODO: handle participants from different tournaments... (do not take all)
-    if (!added) throw Error('No participant added.');
+            const found = added.find(participant => participant.name === name);
+            if (!found) throw Error('Participant name not found in database.');
 
-    const slots = participants.map<ParticipantSlot>(name => {
-        if (name === null) return null; // BYE.
+            return { id: found.id };
+        });
 
-        const found = added.find(participant => participant.name === name);
-        if (!found) throw Error('Participant name not found in database.');
+        return slots;
+    }
 
-        return { id: found.id };
-    });
+    private getMatchesChildCount(): number {
+        if (this.stage.settings === undefined || this.stage.settings.matchesChildCount === undefined) return 0;
+        return this.stage.settings.matchesChildCount;
+    }
 
-    return slots;
-}
+    private getOrdering(index: number, checkType: 'elimination' | 'groups'): SeedOrdering | null {
+        if (this.stage.settings === undefined || this.stage.settings.seedOrdering === undefined) return null;
 
-function toResult(opponent: ParticipantSlot): ParticipantResult | null {
-    return opponent ? {
-        id: opponent.id,
-    } : null;
-}
+        const method = this.stage.settings.seedOrdering[index];
+        if (!method) return null;
 
-function getMatchesChildCount(settings?: StageSettings): number {
-    if (settings === undefined || settings.matchesChildCount === undefined) return 0;
-    return settings.matchesChildCount;
-}
+        if (checkType === 'elimination' && method.match(/^groups\./))
+            throw Error('You must specify a seed ordering method without a \'groups\' prefix');
 
-function getOrdering(settings: StageSettings | undefined, index: number, checkType: 'elimination' | 'groups'): SeedOrdering | null {
-    if (settings === undefined || settings.seedOrdering === undefined) return null;
+        if (checkType === 'groups' && !method.match(/^groups\./))
+            throw Error('You must specify a seed ordering method with a \'groups\' prefix');
 
-    const method = settings.seedOrdering[index];
-    if (!method) return null;
+        return method;
+    }
 
-    if (checkType === 'elimination' && method.match(/^groups\./))
-        throw Error('You must specify a seed ordering method without a \'groups\' prefix');
+    private getMajorOrdering(participantCount: number): SeedOrdering | null {
+        const ordering = this.getOrdering(1, 'elimination');
+        return ordering || helpers.defaultMinorOrdering[participantCount][0];
+    }
 
-    if (checkType === 'groups' && !method.match(/^groups\./))
-        throw Error('You must specify a seed ordering method with a \'groups\' prefix');
+    private getMinorOrdering(index: number, participantCount: number): SeedOrdering {
+        const ordering = this.getOrdering(2 + index, 'elimination');
+        return ordering || helpers.defaultMinorOrdering[participantCount][1 + index];
+    }
 
-    return method;
-}
+    private static toResult(opponent: ParticipantSlot): ParticipantResult | null {
+        return opponent ? {
+            id: opponent.id,
+        } : null;
+    }
 
-function getMajorOrdering(settings: StageSettings | undefined, participantCount: number): SeedOrdering | null {
-    const ordering = getOrdering(settings, 1, 'elimination');
-    return ordering || helpers.defaultMinorOrdering[participantCount][0];
-}
+    private static byeResult(opponents: Duel): ParticipantSlot {
+        if (opponents[0] === null && opponents[1] === null) // Double BYE.
+            return null; // BYE.
 
-function getMinorOrdering(settings: StageSettings | undefined, index: number, participantCount: number): SeedOrdering {
-    const ordering = getOrdering(settings, 2 + index, 'elimination');
-    return ordering || helpers.defaultMinorOrdering[participantCount][1 + index];
+        if (opponents[0] === null && opponents[1] !== null) // opponent1 BYE.
+            return { id: opponents[1]!.id }; // opponent2.
+
+        if (opponents[0] !== null && opponents[1] === null) // opponent2 BYE.
+            return { id: opponents[0]!.id }; // opponent1.
+
+        return { id: null }; // Normal.
+    }
+
+    private static byePropagation(opponents: Duel): ParticipantSlot {
+        if (opponents[0] === null || opponents[1] === null) // At least one BYE.
+            return null; // BYE.
+
+        return { id: null }; // Normal.
+    }
 }
