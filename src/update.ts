@@ -25,6 +25,7 @@ class Update {
         if (!stored) throw Error('Match not found.');
 
         const completed = helpers.isMatchCompleted(match);
+        if (match.status === 'completed' && !completed) throw Error('The match is not really completed.');
 
         // TODO: handle setting forfeit to false / removing complete status... etc.
 
@@ -129,6 +130,19 @@ class Update {
         const round = await this.storage.select<Round>('round', roundId);
         if (!round) throw Error('Round not found.');
         return round.number;
+    }
+
+    // TODO: optimize the requests by getting previous and next rounds only once.
+
+    /**
+     * One of these situations may lock the match:
+     * 
+     * - One of the participants from the locked match has already played its following match.
+     * - The matches leading to the locked match have not been completed yet.
+     * @param match The match to check.
+     */
+    private async isMatchLocked(match: Match) {
+        
     }
 
     private async findMatch(stage: number, group: number, roundNumber: number, matchNumber: number): Promise<Match> {

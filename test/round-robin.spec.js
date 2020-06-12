@@ -8,7 +8,7 @@ const { storage } = require('../dist/storage/json');
 const manager = new BracketsManager(storage);
 
 describe('Create a round-robin stage', () => {
-    
+
     beforeEach(() => {
         storage.reset();
     });
@@ -59,12 +59,12 @@ describe('Create a round-robin stage', () => {
         assert.equal((await storage.select('match', 0)).opponent2.id, 7);
     });
 
-    it('should throw if no group count given', () => {
-        assert.isRejected(manager.createStage({}));
+    it('should throw if no group count given', async () => {
+        await assert.isRejected(manager.createStage({}));
     });
 
-    it('should throw if seed ordering not correct', () => {
-        assert.isRejected(manager.createStage({
+    it('should throw if seed ordering not correct', async () => {
+        await assert.isRejected(manager.createStage({
             settings: {
                 groupCount: 1,
                 seedOrdering: ['not_allowed'],
