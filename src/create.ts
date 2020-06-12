@@ -261,7 +261,7 @@ class Create {
             throw Error('Error registering the participants.');
         }
 
-        const added = await this.storage.select<Participant>('participant'); // TODO: handle participants from different tournaments... (do not take all)
+        const added = await this.storage.select<Participant>('participant');
         if (!added) throw Error('Could not find any registered participant.');
 
         const slots = this.stage.participants.map<ParticipantSlot>(name => {

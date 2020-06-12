@@ -16,8 +16,6 @@ class Update {
         this.storage = storage;
     }
 
-    // TODO: remove the update next boolean, the method should know by itself
-
     public async match(match: Partial<Match>, updateNext: boolean) {
         if (match.id === undefined) throw Error('No match id given.');
 
@@ -29,8 +27,6 @@ class Update {
 
         const completed = helpers.isMatchCompleted(match);
         if (match.status === 'completed' && !completed) throw Error('The match is not really completed.');
-
-        // TODO: handle setting forfeit to false / removing complete status... etc.
 
         this.setGeneric(stored, match);
 
@@ -77,7 +73,7 @@ class Update {
             }
 
             if (match.opponent1.forfeit === true && match.opponent2.forfeit === true) {
-                throw Error('There are two forfeits.'); // TODO: handle this scenario.
+                throw Error('There are two forfeits.');
             }
         }
 
@@ -118,8 +114,6 @@ class Update {
         }
     }
 
-    // TODO: refactor to handle LB and use getNextMatches().
-
     private async updateNextMatch(match: Match) {
         const next = await this.findNextMatch(match);
         const winner = helpers.getWinner(match);
@@ -137,19 +131,6 @@ class Update {
         return round.number;
     }
 
-    // TODO: optimize the requests by getting previous and next rounds only once. Maybe get all the info needed once,
-    // and give it to the Update class, removing the storage field. A needed state of the database.
-
-    /*
-        1 \
-            1
-        2 /
-        
-        3 \
-            2
-        4 /
-    */
-
     /**
      * One of these situations may lock the match:
      * 
@@ -158,10 +139,6 @@ class Update {
      * @param match The match to check.
      */
     private async isMatchLocked(match: Match): Promise<boolean> {
-        // TODO: depend on LB ordering, store ordering somewhere :
-        // either as a number in opponents in matches
-        // or as a setting somewhere in the database (but no, because it's recursive, we should be able to override at each level, etc.)
-
         const previousMatches = await this.getPreviousMatches(match);
 
         if (previousMatches.length === 2 &&
@@ -182,9 +159,6 @@ class Update {
 
         return false;
     }
-
-    // TODO: Handle multiple tournaments? Or just stage level?
-    // TODO: Add number property in stage and group. Could simplify getting relative data. No need for ids anymore.
 
     private async getPreviousMatches(match: Match): Promise<Match[]> {
         const inLoserBracket = await this.isInLoserBracket(match);
@@ -216,8 +190,6 @@ class Update {
             await this.findMatch(match.stage_id, match.group_id, roundNumber - 1, match.number * 2),
         ];
     }
-
-    // TODO: Add match status locked. Easier and less calculation. Must be default and updated with scores.
 
     private async getNextMatches(match: Match): Promise<Match[]> {
         const matches: Match[] = [];
@@ -273,9 +245,6 @@ class Update {
         if (!group) throw Error('Group not found.');
         return group.name === name;
     }
-
-    // TODO: correct storage.select() calls. Should either return falsey when error AND empty result,
-    // or calls should distinguish between the two.
 
     private async findMatch(stage: number, group: number, roundNumber: number, matchNumber: number): Promise<Match> {
         const round = await this.storage.select<Round>('round', round =>
