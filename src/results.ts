@@ -1,5 +1,6 @@
 import { Match, Participant } from "brackets-model";
 import { BracketsManager } from ".";
+import * as helpers from "./helpers";
 
 export async function getRanking(this: BracketsManager, groupId: number): Promise<string[]> {
     const matches = await this.storage.select<Match>('match', match => match.group_id === groupId);
@@ -11,11 +12,8 @@ export async function getRanking(this: BracketsManager, groupId: number): Promis
     const wins: { [key: number]: number } = Object.fromEntries(teams.map(team => [team.id, 0]));
 
     for (const match of matches) {
-        if (match.opponent1 && match.opponent1.result === 'win' && match.opponent1.id !== null) {
-            wins[match.opponent1.id]++;
-        } else if (match.opponent2 && match.opponent2.result === 'win' && match.opponent2.id !== null) {
-            wins[match.opponent2.id]++;
-        }
+        const { winner } = helpers.getMatchResults(match);
+        if (winner != null) wins[winner]++;
     }
 
     const entries = Object.entries(wins).sort((a, b) => b[1] - a[1]);

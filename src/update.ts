@@ -3,9 +3,9 @@ import { IStorage } from "./storage";
 import { BracketsManager } from ".";
 import * as helpers from './helpers';
 
-export async function updateMatch(this: BracketsManager, values: Partial<Match>, updateNext: boolean) {
+export async function updateMatch(this: BracketsManager, values: Partial<Match>) {
     const update = new Update(this.storage);
-    await update.match(values, updateNext);
+    await update.match(values);
 }
 
 class Update {
@@ -16,14 +16,14 @@ class Update {
         this.storage = storage;
     }
 
-    public async match(match: Partial<Match>, updateNext: boolean) {
+    public async match(match: Partial<Match>) {
         if (match.id === undefined) throw Error('No match id given.');
 
         const stored = await this.storage.select<Match>('match', match.id);
         if (!stored) throw Error('Match not found.');
 
-        if (!await this.isInRoundRobin(stored) &&
-            await this.isMatchLocked(stored)) throw Error('The match is locked.');
+        const inRoundRobin = await this.isInRoundRobin(stored);
+        if (!inRoundRobin && await this.isMatchLocked(stored)) throw Error('The match is locked.');
 
         const completed = helpers.isMatchCompleted(match);
         if (match.status === 'completed' && !completed) throw Error('The match is not really completed.');
@@ -38,8 +38,8 @@ class Update {
 
         await this.storage.update('match', match.id, stored);
 
-        if (completed && updateNext) {
-            await this.updateNextMatch(stored);
+        if (!inRoundRobin && completed) {
+            await this.updateNext(stored);
         }
     }
 
@@ -132,15 +132,18 @@ class Update {
         }
     }
 
-    private async updateNextMatch(match: Match) {
-        const next = await this.findNextMatch(match);
-        const winner = helpers.getWinner(match);
-        next[helpers.getSide(match)] = { id: winner };
-        this.storage.update('match', next.id, next);
-    }
+    private async updateNext(match: Match) {
+        const nextMatches = await this.getNextMatches(match);
+        if (nextMatches.length === 0) return;
 
-    private async findNextMatch(match: Match): Promise<Match> {
-        return this.findMatch(match.stage_id, match.group_id, await this.getRoundNumber(match.round_id) + 1, Math.ceil(match.number / 2));
+        const { winner, loser } = helpers.getMatchResults(match);
+        nextMatches[0][helpers.getSide(match)] = { id: winner };
+        this.storage.update('match', nextMatches[0].id, nextMatches[0]);
+
+        if (nextMatches.length === 2) {
+            nextMatches[1][helpers.getSide(match)] = { id: loser };
+            this.storage.update('match', nextMatches[1].id, nextMatches[1]);
+        }
     }
 
     private async getRoundNumber(roundId: number): Promise<number> {
@@ -213,11 +216,13 @@ class Update {
         const matches: Match[] = [];
 
         const roundNumber = await this.getRoundNumber(match.round_id);
-        const inLoserBracket = await this.isInLoserBracket(match);
+
+        // Not always the opposite of "inLoserBracket". Could be in simple elimination.
         const inWinnerBracket = await this.isInWinnerBracket(match);
+        const inLoserBracket = await this.isInLoserBracket(match);
 
         if (inLoserBracket && roundNumber % 2 === 1) { // Major rounds.
-            matches.push(await this.findMatch(match.stage_id, match.group_id, roundNumber + 1, match.number / 2));
+            matches.push(await this.findMatch(match.stage_id, match.group_id, roundNumber + 1, match.number));
         } else { // Upper bracket rounds or lower bracket minor rounds.
             matches.push(await this.findMatch(match.stage_id, match.group_id, roundNumber + 1, Math.ceil(match.number / 2)));
         }

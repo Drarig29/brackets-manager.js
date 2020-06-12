@@ -184,20 +184,28 @@ export function byePropagation(opponents: Duel): ParticipantSlot {
     return { id: null }; // Normal.
 }
 
-export function getWinner(match: Match): number {
-    let winner: number | null = null;
+export function getMatchResults(match: Match): {
+    winner: number | null,
+    loser: number | null
+} {
+    let winner: number | null | undefined = undefined;
+    let loser: number | null | undefined = undefined;
 
     if (match.opponent1 && match.opponent1.result === 'win') {
         winner = match.opponent1.id;
+        loser = match.opponent2 ? match.opponent2.id : null;
     }
 
     if (match.opponent2 && match.opponent2.result === 'win') {
-        if (winner !== null) throw Error('There are two winners.')
+        if (winner !== undefined) throw Error('There are two winners.')
         winner = match.opponent2.id;
+        loser = match.opponent1 ? match.opponent1.id : null;
     }
 
-    if (winner === null) throw Error('No winner found.');
-    return winner;
+    if (winner === undefined) throw Error('No winner found.');
+    if (loser === undefined) throw Error('No loser found.');
+
+    return { winner, loser };
 }
 
 export function getSide(match: Match): Side {

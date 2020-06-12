@@ -99,24 +99,46 @@ describe('Winner bracket', () => {
         await manager.createStage(example);
     });
 
-    it('should end a match (round 1) and determine one team in next (round 2)', async () => {
+    it('should end a match and determine next matches', async () => {
         const before = await storage.select('match', 8); // First match of WB round 2
         assert.equal(before.opponent2.id, null);
 
         await manager.updateMatch({
+            id: 0, // First match of WB round 1
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await manager.updateMatch({
             id: 1, // Second match of WB round 1
-            opponent1: {
-                score: 13
-            },
-            opponent2: {
-                score: 16,
-                result: 'win',
-            },
-        }, true);
+            opponent1: { score: 13 },
+            opponent2: { score: 16, result: 'win' },
+        });
+
+        await manager.updateMatch({
+            id: 15, // First match of LB round 1
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 10 },
+        });
 
         assert.equal(
-            (await storage.select('match', 8)).opponent2.id, // Determined opponent for round 2
-            (await storage.select('match', 1)).opponent2.id, // Winner of round 1
+            (await storage.select('match', 8)).opponent1.id, // Determined opponent for WB round 2
+            (await storage.select('match', 0)).opponent1.id, // Winner of first match round 1
+        );
+
+        assert.equal(
+            (await storage.select('match', 8)).opponent2.id, // Determined opponent for WB round 2
+            (await storage.select('match', 1)).opponent2.id, // Winner of second match round 1
+        );
+
+        assert.equal(
+            (await storage.select('match', 15)).opponent2.id, // Determined opponent for LB round 1
+            (await storage.select('match', 1)).opponent1.id, // Loser of second match round 1
+        );
+
+        assert.equal(
+            (await storage.select('match', 19)).opponent1.id, // Determined opponent for LB round 2
+            (await storage.select('match', 0)).opponent2.id, // Loser of second match round 1
         );
     });
 });
