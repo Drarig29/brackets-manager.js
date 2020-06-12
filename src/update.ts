@@ -32,6 +32,8 @@ class Update {
 
         if (completed) {
             this.setCompleted(stored, match);
+        } else if (helpers.isMatchCompleted(stored)) {
+            this.removeCompleted(stored);
         }
 
         await this.storage.update('match', match.id, stored);
@@ -63,6 +65,22 @@ class Update {
         this.setResults(stored, match, 'draw', 'draw');
 
         this.setForfeits(stored, match);
+    }
+
+    private removeCompleted(stored: Match) {
+        stored.status = 'running';
+
+        if (stored.opponent1) stored.opponent1.forfeit = undefined;
+        else stored.opponent1 = { id: null };
+
+        if (stored.opponent1) stored.opponent1.result = undefined;
+        else stored.opponent1 = { id: null };
+
+        if (stored.opponent2) stored.opponent2.forfeit = undefined;
+        else stored.opponent2 = { id: null };
+
+        if (stored.opponent2) stored.opponent2.result = undefined;
+        else stored.opponent2 = { id: null };
     }
 
     private setResults(stored: Match, match: Partial<Match>, check: Result, change: Result) {

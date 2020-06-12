@@ -262,7 +262,7 @@ class Create {
         }
 
         const added = await this.storage.select<Participant>('participant');
-        if (!added) throw Error('Could not find any registered participant.');
+        if (!added) throw Error('Error getting registered participant.');
 
         const slots = this.stage.participants.map<ParticipantSlot>(name => {
             if (name === null) return null; // BYE.
