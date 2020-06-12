@@ -1,33 +1,46 @@
 {
-  "name": "brackets-manager.js",
-  "version": "1.0.0",
-  "description": "A simple library to manage tournament brackets (pools, single elimination, double elimination)",
-  "main": "src/main.ts",
-  "dependencies": {
-    "brackets-model": "^0.2.5",
-    "node-json-db": "^1.0.3"
-  },
-  "devDependencies": {
-    "@types/chai": "^4.2.11",
-    "@types/mocha": "^7.0.2",
-    "@types/node": "^14.0.9",
-    "chai": "^4.2.0",
-    "chai-as-promised": "^7.1.1",
-    "mocha": "^7.2.0",
-    "ts-node": "^8.10.2",
-    "typescript": "^3.9.3"
-  },
-  "scripts": {
-    "test": "npx mocha test",
-    "start": "tsc -watch"
-  },
-  "keywords": [
-    "javascript",
-    "tournament",
-    "brackets",
-    "manager",
-    "database"
-  ],
-  "author": "Corentin Girard",
-  "license": "ISC"
+    "name": "brackets-manager",
+    "version": "0.1.0",
+    "description": "A simple library to manage tournament brackets (round-robin, single elimination, double elimination)",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "dependencies": {
+        "brackets-model": "^0.2.5",
+        "node-json-db": "^1.0.3"
+    },
+    "devDependencies": {
+        "@types/chai": "^4.2.11",
+        "@types/mocha": "^7.0.2",
+        "@types/node": "^14.0.9",
+        "chai": "^4.2.0",
+        "chai-as-promised": "^7.1.1",
+        "mocha": "^7.2.0",
+        "ts-node": "^8.10.2",
+        "typescript": "^3.9.3"
+    },
+    "scripts": {
+        "test": "npx mocha test",
+        "start": "tsc -watch"
+    },
+    "keywords": [
+        "javascript",
+        "typescript",
+        "tournament",
+        "brackets",
+        "manager",
+        "database"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Drarig29/brackets-manager.js.git"
+    },
+    "author": "Corentin Girard",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/Drarig29/brackets-manager.js/issues"
+    },
+    "homepage": "https://github.com/Drarig29/brackets-manager.js#readme"
 }
