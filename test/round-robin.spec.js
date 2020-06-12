@@ -60,16 +60,7 @@ describe('Create a round-robin stage', () => {
     });
 
     it('should throw if no group count given', async () => {
-        await assert.isRejected(manager.createStage({}));
-    });
-
-    it('should throw if seed ordering not correct', async () => {
-        await assert.isRejected(manager.createStage({
-            settings: {
-                groupCount: 1,
-                seedOrdering: ['not_allowed'],
-            }
-        }))
+        await assert.isRejected(manager.createStage({ type: 'round_robin' }), 'You must specify a group count for round-robin stages.');
     });
 });
 
