@@ -1,5 +1,4 @@
 import { Stage, SeedOrdering, OrderingMap, ParticipantSlot, ParticipantResult, Duel, Match, Side } from "brackets-model";
-import { assert } from "chai";
 import * as fs from 'fs';
 
 const viewerRoot = 'https://cdn.jsdelivr.net/gh/Drarig29/brackets-viewer.js/dist';
@@ -60,40 +59,33 @@ export function roundRobinMatches<T>(participants: T[]): T[][][] {
  * A helper to assert our generated round-robin is correct.
  */
 export function assertRoundRobin<T>(input: T[], output: T[][][]) {
-    try {
-        const n = input.length;
-        const matchPerRound = Math.floor(n / 2);
-        const roundCount = n % 2 === 0 ? n - 1 : n;
+    const n = input.length;
+    const matchPerRound = Math.floor(n / 2);
+    const roundCount = n % 2 === 0 ? n - 1 : n;
 
-        assert.equal(output.length, roundCount, 'Round count is wrong');
+    if (output.length !== roundCount) throw Error('Round count is wrong');
+    if (!output.every(round => round.length === matchPerRound)) throw Error('Not every round has the good number of matches');
 
-        assert.isTrue(output.every(round => round.length === matchPerRound),
-            'Not every round has the good number of matches');
+    const checkAllOpponents = Object.fromEntries(input.map(element => [element, new Set<T>()]));
 
-        const checkAllOpponents = Object.fromEntries(input.map(element => [element, new Set<T>()]));
+    for (const round of output) {
+        const checkUnique = new Set<T>();
 
-        for (const round of output) {
-            const checkUnique = new Set<T>();
+        for (const match of round) {
+            if (match.length !== 2) throw Error('One match is not a pair');
 
-            for (const match of round) {
-                assert.equal(match.length, 2, 'One match is not a pair');
+            if (checkUnique.has(match[0])) throw Error('This team is already playing');
+            checkUnique.add(match[0]);
 
-                assert.isFalse(checkUnique.has(match[0]), 'This team is already playing');
-                checkUnique.add(match[0]);
+            if (checkUnique.has(match[1])) throw Error('This team is already playing');
+            checkUnique.add(match[1]);
 
-                assert.isFalse(checkUnique.has(match[1]), 'This team is already playing');
-                checkUnique.add(match[1]);
+            if (checkAllOpponents[match[0]].has(match[1])) throw Error('The team has already matched this team');
+            checkAllOpponents[match[0]].add(match[1]);
 
-                assert.isFalse(checkAllOpponents[match[0]].has(match[1]), 'The team has already matched this team');
-                checkAllOpponents[match[0]].add(match[1]);
-
-                assert.isFalse(checkAllOpponents[match[1]].has(match[0]), 'The team has already matched this team');
-                checkAllOpponents[match[1]].add(match[0]);
-            }
+            if (checkAllOpponents[match[1]].has(match[0])) throw Error('The team has already matched this team');
+            checkAllOpponents[match[1]].add(match[0]);
         }
-    } catch (error) {
-        // Also print the output.
-        throw Error(`${error}\n${output.map(round => JSON.stringify(round)).join('\n')}`);
     }
 }
 
