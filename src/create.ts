@@ -22,7 +22,7 @@ export async function createStage(this: BracketsManager, stage: InputStage) {
 }
 
 class Create {
-    
+
     private storage: IStorage;
     private stage: InputStage;
 

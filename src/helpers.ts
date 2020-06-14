@@ -153,6 +153,7 @@ export function ensureNotTied(scores: number[]) {
 export function toResult(opponent: ParticipantSlot): ParticipantResult | null {
     return opponent ? {
         id: opponent.id,
+        position: null,
     } : null;
 }
 
