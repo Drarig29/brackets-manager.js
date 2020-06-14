@@ -221,7 +221,7 @@ class Create {
             stage_id: stageId,
             group_id: groupId,
             round_id: roundId,
-            childCount,
+            child_count: childCount,
             status: 'pending',
             opponent1,
             opponent2,
