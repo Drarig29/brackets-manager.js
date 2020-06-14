@@ -30,7 +30,7 @@ describe('Create double elimination stage', () => {
     });
 
     it('should create a double elimination stage', async () => {
-        await manager.createStage(example);
+        await manager.createStage(0, example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -52,7 +52,7 @@ describe('Create double elimination stage', () => {
             settings: { seedOrdering: ['natural'], grandFinal: 'simple' },
         };
 
-        await manager.createStage(withByes);
+        await manager.createStage(0, withByes);
 
         assert.equal((await storage.select('match', 2)).opponent1.id, 0);
         assert.equal((await storage.select('match', 2)).opponent2, null);
@@ -80,7 +80,7 @@ describe('Create double elimination stage', () => {
             settings: { grandFinal: 'double', seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(withDoubleGrandFinal);
+        await manager.createStage(0, withDoubleGrandFinal);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, withDoubleGrandFinal.name);
@@ -96,7 +96,7 @@ describe('Winner bracket', () => {
 
     before(async () => {
         storage.reset();
-        await manager.createStage(example);
+        await manager.createStage(0, example);
     });
 
     it('should end a match and determine next matches', async () => {

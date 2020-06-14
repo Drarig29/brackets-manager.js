@@ -26,7 +26,7 @@ describe('Create a round-robin stage', () => {
             settings: { groupCount: 2 },
         };
 
-        await manager.createStage(example);
+        await manager.createStage(0, example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -53,14 +53,14 @@ describe('Create a round-robin stage', () => {
             },
         };
 
-        await manager.createStage(example);
+        await manager.createStage(0, example);
 
         assert.equal((await storage.select('match', 0)).opponent1.id, 0);
         assert.equal((await storage.select('match', 0)).opponent2.id, 7);
     });
 
     it('should throw if no group count given', async () => {
-        await assert.isRejected(manager.createStage({ type: 'round_robin' }), 'You must specify a group count for round-robin stages.');
+        await assert.isRejected(manager.createStage(0, { type: 'round_robin' }), 'You must specify a group count for round-robin stages.');
     });
 });
 
@@ -80,7 +80,7 @@ describe('Update scores in a round-robin stage', () => {
 
     before(async () => {
         storage.reset();
-        await manager.createStage(example);
+        await manager.createStage(0, example);
     });
 
     it('should set all the scores', async () => {

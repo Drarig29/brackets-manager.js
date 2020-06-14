@@ -27,7 +27,7 @@ describe('Update matches', () => {
 
     before(async () => {
         storage.reset();
-        await manager.createStage(example);
+        await manager.createStage(0, example);
     });
 
     it('should start a match', async () => {
@@ -178,7 +178,7 @@ describe('Locked matches', () => {
 
     before(async () => {
         storage.reset();
-        await manager.createStage(example);
+        await manager.createStage(0, example);
     });
 
     it('shoud throw when the matches leading to the match have not been completed yet', async () => {

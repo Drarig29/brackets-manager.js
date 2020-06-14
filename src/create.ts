@@ -3,8 +3,8 @@ import { BracketsManager } from '.';
 import { IStorage } from './storage';
 import * as helpers from './helpers';
 
-export async function createStage(this: BracketsManager, stage: InputStage) {
-    const create = new Create(this.storage, stage);
+export async function createStage(this: BracketsManager, tournamentId: number, stage: InputStage) {
+    const create = new Create(this.storage, tournamentId, stage);
 
     switch (stage.type) {
         case 'round_robin':
@@ -24,10 +24,12 @@ export async function createStage(this: BracketsManager, stage: InputStage) {
 class Create {
 
     private storage: IStorage;
+    private tournamentId: number;
     private stage: InputStage;
 
-    constructor(storage: IStorage, stage: InputStage) {
+    constructor(storage: IStorage, tournamentId: number, stage: InputStage) {
         this.storage = storage;
+        this.tournamentId = tournamentId;
         this.stage = stage;
     }
 
@@ -40,6 +42,7 @@ class Create {
         // Default method for groups: Effort balanced.
         const method = this.getOrdering(0, 'groups') || 'groups.effort_balanced';
         const stageId = await this.storage.insert<Stage>('stage', {
+            tournament_id: this.tournamentId,
             name: this.stage.name,
             type: this.stage.type,
             number: 1,
@@ -58,12 +61,16 @@ class Create {
         if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
             this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
+        const stages = await this.storage.select<Stage>('stage', { tournament_id: this.tournamentId });
+        const stageCount = stages ? stages.length : 0;
+
         // Default method for single elimination: Inner outer.
         const method = this.getOrdering(0, 'elimination') || 'inner_outer';
         const stageId = await this.storage.insert<Stage>('stage', {
+            tournament_id: this.tournamentId,
+            number: stageCount + 1,
             name: this.stage.name,
             type: this.stage.type,
-            number: 1, // TODO: change that.
         });
 
         const slots = await this.registerParticipants();
@@ -84,6 +91,7 @@ class Create {
         // Default method for WB: Inner outer.
         const method = this.getOrdering(0, 'elimination') || 'inner_outer';
         const stageId = await this.storage.insert<Stage>('stage', {
+            tournament_id: this.tournamentId,
             name: this.stage.name,
             type: this.stage.type,
             number: 1,
@@ -264,15 +272,15 @@ class Create {
         const withoutByes: string[] = this.stage.participants.filter(name => name !== null) as any;
 
         const participants = withoutByes.map<Omit<Participant, 'id'>>(name => ({
+            tournament_id: this.tournamentId,
             name,
-            tournament_id: 0, // TODO: change that.
         }));
 
         if (!await this.storage.insert<Participant>('participant', participants)) {
             throw Error('Error registering the participants.');
         }
 
-        const added = await this.storage.select<Participant>('participant');
+        const added = await this.storage.select<Participant>('participant', { tournament_id: this.tournamentId });
         if (!added) throw Error('Error getting registered participant.');
 
         const slots = this.stage.participants.map<ParticipantSlot>(name => {

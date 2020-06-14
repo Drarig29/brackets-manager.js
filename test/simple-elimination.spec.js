@@ -27,7 +27,7 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(example);
+        await manager.createStage(0, example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -51,7 +51,7 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(example);
+        await manager.createStage(0, example);
 
         assert.equal((await storage.select('match', 4)).opponent1.id, 0); // Determined because of opponent's BYE.
         assert.equal((await storage.select('match', 4)).opponent2.id, null); // To be determined.
@@ -72,7 +72,7 @@ describe('Create single elimination stage', () => {
             settings: { consolationFinal: true, seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(example);
+        await manager.createStage(0, example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -96,7 +96,7 @@ describe('Create single elimination stage', () => {
             settings: { consolationFinal: true, seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(example);
+        await manager.createStage(0, example);
 
         assert.equal((await storage.select('match', 4)).opponent1, null);
         assert.equal((await storage.select('match', 4)).opponent2.id, 0);
@@ -119,7 +119,7 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'], matchesChildCount: 3 },
         };
 
-        await manager.createStage(example);
+        await manager.createStage(0, example);
 
         assert.equal((await storage.select('group')).length, 1);
         assert.equal((await storage.select('round')).length, 3);

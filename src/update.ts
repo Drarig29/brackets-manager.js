@@ -92,18 +92,18 @@ class Update {
 
         if (match.opponent1 && match.opponent1.result === check) {
             if (stored.opponent1) stored.opponent1.result = check;
-            else stored.opponent1 = { id: null, position: null, result: check };
+            else stored.opponent1 = { id: null, result: check };
 
             if (stored.opponent2) stored.opponent2.result = change;
-            else stored.opponent2 = { id: null, position: null, result: change };
+            else stored.opponent2 = { id: null, result: change };
         }
 
         if (match.opponent2 && match.opponent2.result === check) {
             if (stored.opponent2) stored.opponent2.result = check;
-            else stored.opponent2 = { id: null, position: null, result: check };
+            else stored.opponent2 = { id: null, result: check };
 
             if (stored.opponent1) stored.opponent1.result = change;
-            else stored.opponent1 = { id: null, position: null, result: change };
+            else stored.opponent1 = { id: null, result: change };
         }
     }
 
@@ -114,14 +114,14 @@ class Update {
             if (stored.opponent1) stored.opponent1.forfeit = true;
 
             if (stored.opponent2) stored.opponent2.result = 'win';
-            else stored.opponent2 = { id: null, position: null, result: 'win' };
+            else stored.opponent2 = { id: null, result: 'win' };
         }
 
         if (match.opponent2 && match.opponent2.forfeit === true) {
             if (stored.opponent2) stored.opponent2.forfeit = true;
 
             if (stored.opponent1) stored.opponent1.result = 'win';
-            else stored.opponent1 = { id: null, position: null, result: 'win' };
+            else stored.opponent1 = { id: null, result: 'win' };
         }
     }
 
@@ -130,11 +130,11 @@ class Update {
         if (nextMatches.length === 0) return;
 
         const { winner, loser } = helpers.getMatchResults(match);
-        nextMatches[0][helpers.getSide(match)] = { id: winner, position: null };
+        nextMatches[0][helpers.getSide(match)] = { id: winner };
         this.storage.update('match', nextMatches[0].id, nextMatches[0]);
 
         if (nextMatches.length === 2) {
-            nextMatches[1][helpers.getSide(match)] = { id: loser, position: null };
+            nextMatches[1][helpers.getSide(match)] = { id: loser };
             this.storage.update('match', nextMatches[1].id, nextMatches[1]);
         }
     }

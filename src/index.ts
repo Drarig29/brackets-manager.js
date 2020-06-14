@@ -15,7 +15,18 @@ export class BracketsManager {
         this.getRanking = getRanking;
     }
 
-    public createStage: (stage: InputStage) => Promise<void>;
-    public updateMatch: (match: Partial<Match>, updateNext: boolean) => Promise<void>;
+    /** 
+     * Creates a stage for an existing tournament. The tournament won't be created.
+     */
+    public createStage: (tournamentdId: number, stage: InputStage) => Promise<void>;
+
+    /**
+     * Updates a match's values.
+     */
+    public updateMatch: (values: Partial<Match>) => Promise<void>;
+
+    /**
+     * Returns the ranking for a round-robin group.
+     */
     public getRanking: (groupId: number) => Promise<string[]>;
 }
