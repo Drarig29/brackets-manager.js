@@ -1,8 +1,6 @@
 import { JsonDB } from "node-json-db";
 import { IStorage } from ".";
 
-export declare type SelectCallback<T> = (entry: T, index: number) => boolean
-
 class JsonDatabase implements IStorage {
 
     private internal: JsonDB;
@@ -38,6 +36,18 @@ class JsonDatabase implements IStorage {
 
     private makeArrayAccessor(table: string, index: number): string {
         return `/${table}[${index}]`;
+    }
+
+    private makeFilter(partial: any) {
+        return (entry: any): boolean => {
+            let result = true;
+
+            for (const [key, value] of Object.entries(partial)) {
+                result = result && entry[key] === value;
+            }
+
+            return result;
+        };
     }
 
     /**
@@ -81,7 +91,7 @@ class JsonDatabase implements IStorage {
 
     public select<T>(table: string): Promise<T[] | null>;
     public select<T>(table: string, key: number): Promise<T | null>;
-    public select<T>(table: string, pred: SelectCallback<T>): Promise<T[] | null>;
+    public select<T>(table: string, filter: Partial<T>): Promise<T[] | null>
 
     public async select<T>(table: string, arg?: any): Promise<T | T[] | null> {
         try {
@@ -91,7 +101,7 @@ class JsonDatabase implements IStorage {
             if (typeof arg === "number")
                 return this.internal.getData(this.makeArrayAccessor(table, arg));
 
-            return this.internal.filter(this.makePath(table), arg) || null;
+            return this.internal.filter(this.makePath(table), this.makeFilter(arg)) || null;
         } catch (error) {
             return null;
         }
@@ -103,7 +113,7 @@ class JsonDatabase implements IStorage {
         } catch (error) {
             return false;
         }
-        
+
         return true;
     }
 }

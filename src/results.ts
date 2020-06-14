@@ -3,7 +3,7 @@ import { BracketsManager } from ".";
 import * as helpers from "./helpers";
 
 export async function getRanking(this: BracketsManager, groupId: number): Promise<string[]> {
-    const matches = await this.storage.select<Match>('match', match => match.group_id === groupId);
+    const matches = await this.storage.select<Match>('match', { group_id: groupId });
     if (!matches || matches.length === 0) throw Error('No match found.');
 
     const teams = await this.storage.select<Participant>('participant');

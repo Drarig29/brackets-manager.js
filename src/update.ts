@@ -238,13 +238,13 @@ class Update {
     }
 
     private async findWinnerBracket(): Promise<Group> {
-        const group = await this.storage.select<Group>('group', group => group.name === 'Winner Bracket');
+        const group = await this.storage.select<Group>('group', { name: 'Winner Bracket' });
         if (!group || group.length === 0) throw Error('Group not found.');
         return group[0];
     }
 
     private async findLoserBracket(): Promise<Group> {
-        const group = await this.storage.select<Group>('group', group => group.name === 'Loser Bracket');
+        const group = await this.storage.select<Group>('group', { name: 'Loser Bracket' });
         if (!group || group.length === 0) throw Error('Group not found.');
         return group[0];
     }
@@ -270,20 +270,20 @@ class Update {
     }
 
     private async findMatch(stage: number, group: number, roundNumber: number, matchNumber: number): Promise<Match> {
-        const round = await this.storage.select<Round>('round', round =>
-            round.stage_id === stage &&
-            round.group_id === group &&
-            round.number === roundNumber
-        );
+        const round = await this.storage.select<Round>('round', {
+            stage_id: stage,
+            group_id: group,
+            number: roundNumber,
+        });
 
         if (!round || round.length === 0) throw Error('This round does not exist.');
 
-        const match = await this.storage.select<Match>('match', match =>
-            match.stage_id === stage &&
-            match.group_id === group &&
-            match.round_id === round[0].id &&
-            match.number === matchNumber
-        );
+        const match = await this.storage.select<Match>('match', {
+            stage_id: stage,
+            group_id: group,
+            round_id: round[0].id,
+            number: matchNumber,
+        });
 
         if (!match || match.length === 0) throw Error('This match does not exist.');
         return match[0];

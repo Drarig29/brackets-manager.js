@@ -1,5 +1,3 @@
-declare type Predicate<T> = (entry: T, index: number) => boolean;
-
 export interface IStorage {
     /**
      * Inserts a value in the database and returns its id.
@@ -31,9 +29,9 @@ export interface IStorage {
     /**
      * Gets data from a table in the database with a filter.
      * @param table Where to get from.
-     * @param pred A predicate to filter data.
+     * @param pred An object to filter data.
      */
-    select<T>(table: string, pred: Predicate<T>): Promise<T[] | null>
+    select<T>(table: string, filter: Partial<T>): Promise<T[] | null>
 
     /**
      * Updates data in a table.
