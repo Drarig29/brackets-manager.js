@@ -48,7 +48,7 @@ class Create {
             number: 1,
         });
 
-        const slots = await this.registerParticipants();
+        const slots = await this.getParticipants();
         const ordered: ParticipantSlot[] = helpers.ordering[method](slots, this.stage.settings.groupCount);
 
         const groups = helpers.makeGroups(ordered, this.stage.settings.groupCount);
@@ -73,7 +73,7 @@ class Create {
             type: this.stage.type,
         });
 
-        const slots = await this.registerParticipants();
+        const slots = await this.getParticipants();
         const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
         const duels = helpers.makePairs(ordered);
 
@@ -97,7 +97,7 @@ class Create {
             number: 1,
         });
 
-        const slots = await this.registerParticipants();
+        const slots = await this.getParticipants();
         const ordered: ParticipantSlot[] = helpers.ordering[method](slots);
         const duels = helpers.makePairs(ordered);
 
@@ -268,7 +268,19 @@ class Create {
         return currentDuels;
     }
 
-    private async registerParticipants(): Promise<ParticipantSlot[]> {
+    /**
+     * Returns a list of slots.
+     * - If `participants` were given, inserts them in the storage.
+     * - If `size` was given, only returns a list of empty slots.
+     */
+    private async getParticipants(): Promise<ParticipantSlot[]> {
+        if (this.stage.size && this.stage.participants) throw Error('Cannot set size and participants at the same time.');
+
+        if (this.stage.size)
+            return Array.from(Array(this.stage.size), (_: ParticipantSlot) => ({ id: null }));
+
+        if (!this.stage.participants) throw Error('Either size or participants must be given.');
+
         const withoutByes: string[] = this.stage.participants.filter(name => name !== null) as any;
 
         const participants = withoutByes.map<Omit<Participant, 'id'>>(name => ({
