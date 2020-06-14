@@ -184,13 +184,13 @@ class Update {
 
             if (roundNumber === 1) { // First major round.
                 return [
-                    await this.findMatch(match.stage_id, winnerBracket.id, roundNumberWB, match.number * 2 - 1),
-                    await this.findMatch(match.stage_id, winnerBracket.id, roundNumberWB, match.number * 2),
+                    await this.findMatch(winnerBracket.id, roundNumberWB, match.number * 2 - 1),
+                    await this.findMatch(winnerBracket.id, roundNumberWB, match.number * 2),
                 ];
             } else if (roundNumber % 2 === 1) { // Minor rounds.
                 return [
-                    await this.findMatch(match.stage_id, winnerBracket.id, roundNumberWB, match.number),
-                    await this.findMatch(match.stage_id, match.group_id, roundNumber - 1, match.number),
+                    await this.findMatch(winnerBracket.id, roundNumberWB, match.number),
+                    await this.findMatch(match.group_id, roundNumber - 1, match.number),
                 ];
             }
         }
@@ -200,8 +200,8 @@ class Update {
         }
 
         return [
-            await this.findMatch(match.stage_id, match.group_id, roundNumber - 1, match.number * 2 - 1),
-            await this.findMatch(match.stage_id, match.group_id, roundNumber - 1, match.number * 2),
+            await this.findMatch(match.group_id, roundNumber - 1, match.number * 2 - 1),
+            await this.findMatch(match.group_id, roundNumber - 1, match.number * 2),
         ];
     }
 
@@ -215,16 +215,16 @@ class Update {
         const inLoserBracket = await this.isInLoserBracket(match);
 
         if (inLoserBracket && roundNumber % 2 === 1) { // Major rounds.
-            matches.push(await this.findMatch(match.stage_id, match.group_id, roundNumber + 1, match.number));
+            matches.push(await this.findMatch(match.group_id, roundNumber + 1, match.number));
         } else { // Upper bracket rounds or lower bracket minor rounds.
-            matches.push(await this.findMatch(match.stage_id, match.group_id, roundNumber + 1, Math.ceil(match.number / 2)));
+            matches.push(await this.findMatch(match.group_id, roundNumber + 1, Math.ceil(match.number / 2)));
         }
 
         if (inWinnerBracket) {
             const loserBracket = await this.findLoserBracket();
             const roundNumberLB = roundNumber > 1 ? (roundNumber - 1) * 2 : 1;
             const matchNumberLB = roundNumber > 1 ? match.number : Math.ceil(match.number / 2);
-            matches.push(await this.findMatch(match.stage_id, loserBracket.id, roundNumberLB, matchNumberLB));
+            matches.push(await this.findMatch(loserBracket.id, roundNumberLB, matchNumberLB));
         }
 
         return matches;
@@ -262,9 +262,8 @@ class Update {
         return group.name === name;
     }
 
-    private async findMatch(stage: number, group: number, roundNumber: number, matchNumber: number): Promise<Match> {
+    private async findMatch(group: number, roundNumber: number, matchNumber: number): Promise<Match> {
         const round = await this.storage.select<Round>('round', {
-            stage_id: stage,
             group_id: group,
             number: roundNumber,
         });
@@ -272,8 +271,6 @@ class Update {
         if (!round || round.length === 0) throw Error('This round does not exist.');
 
         const match = await this.storage.select<Match>('match', {
-            stage_id: stage,
-            group_id: group,
             round_id: round[0].id,
             number: matchNumber,
         });
