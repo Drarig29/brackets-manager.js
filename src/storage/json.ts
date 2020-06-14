@@ -1,5 +1,5 @@
 import { JsonDB } from "node-json-db";
-import { IStorage } from ".";
+import { IStorage, Table } from ".";
 
 class JsonDatabase implements IStorage {
 
@@ -10,11 +10,11 @@ class JsonDatabase implements IStorage {
         this.init()
     }
 
-    private ensureArrayExists(table: string) {
-        table = this.makePath(table);
+    private ensureArrayExists(table: Table) {
+        const path = this.makePath(table);
 
-        if (!this.internal.exists(table))
-            this.internal.push(table, []);
+        if (!this.internal.exists(path))
+            this.internal.push(path, []);
     }
 
     private init() {
@@ -26,15 +26,15 @@ class JsonDatabase implements IStorage {
         this.ensureArrayExists('match_game');
     }
 
-    private makePath(table: string): string {
+    private makePath(table: Table): string {
         return `/${table}`;
     }
 
-    private makeArrayPath(table: string): string {
+    private makeArrayPath(table: Table): string {
         return `/${table}[]`;
     }
 
-    private makeArrayAccessor(table: string, index: number): string {
+    private makeArrayAccessor(table: Table, index: number): string {
         return `/${table}[${index}]`;
     }
 
@@ -63,16 +63,16 @@ class JsonDatabase implements IStorage {
      * @param table Where to insert.
      * @param value What to insert.
      */
-    public insert<T>(table: string, value: T): Promise<number>;
+    public insert<T>(table: Table, value: T): Promise<number>;
 
     /**
      * Inserts multiple values in the database.
      * @param table Where to insert.
      * @param values What to insert.
      */
-    public insert<T>(table: string, values: T[]): Promise<boolean>;
+    public insert<T>(table: Table, values: T[]): Promise<boolean>;
 
-    public async insert(table: string, arg: any): Promise<number | boolean> {
+    public async insert(table: Table, arg: any): Promise<number | boolean> {
         let id: number = this.internal.getData(this.makePath(table)).length;
 
         if (!Array.isArray(arg)) {
@@ -89,11 +89,11 @@ class JsonDatabase implements IStorage {
         return true;
     }
 
-    public select<T>(table: string): Promise<T[] | null>;
-    public select<T>(table: string, key: number): Promise<T | null>;
-    public select<T>(table: string, filter: Partial<T>): Promise<T[] | null>
+    public select<T>(table: Table): Promise<T[] | null>;
+    public select<T>(table: Table, key: number): Promise<T | null>;
+    public select<T>(table: Table, filter: Partial<T>): Promise<T[] | null>
 
-    public async select<T>(table: string, arg?: any): Promise<T | T[] | null> {
+    public async select<T>(table: Table, arg?: any): Promise<T | T[] | null> {
         try {
             if (arg === undefined)
                 return this.internal.getData(this.makePath(table));
@@ -107,7 +107,7 @@ class JsonDatabase implements IStorage {
         }
     }
 
-    public async update<T>(table: string, key: number, value: T): Promise<boolean> {
+    public async update<T>(table: Table, key: number, value: T): Promise<boolean> {
         try {
             this.internal.push(this.makeArrayAccessor(table, key), value);
         } catch (error) {

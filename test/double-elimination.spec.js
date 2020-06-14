@@ -20,7 +20,7 @@ const example = {
         'Team 13', 'Team 14',
         'Team 15', 'Team 16',
     ],
-    settings: { seedOrdering: ['natural'] },
+    settings: { seedOrdering: ['natural'], grandFinal: 'simple' },
 };
 
 describe('Create double elimination stage', () => {
@@ -49,7 +49,7 @@ describe('Create double elimination stage', () => {
                 'Team 1', null,
                 null, null,
             ],
-            settings: { seedOrdering: ['natural'] },
+            settings: { seedOrdering: ['natural'], grandFinal: 'simple' },
         };
 
         await manager.createStage(withByes);
