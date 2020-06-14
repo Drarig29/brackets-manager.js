@@ -19,21 +19,21 @@ export interface IStorage {
      * Gets all data from a table in the database. 
      * @param table Where to get from.
      */
-    select<T>(table: string): Promise<T[] | undefined>
+    select<T>(table: string): Promise<T[] | null>
 
     /**
      * Gets specific data from a table in the database.
      * @param table Where to get from.
      * @param id What to get.
      */
-    select<T>(table: string, id: number): Promise<T | undefined>
+    select<T>(table: string, id: number): Promise<T | null>
 
     /**
      * Gets data from a table in the database with a filter.
      * @param table Where to get from.
      * @param pred A predicate to filter data.
      */
-    select<T>(table: string, pred: Predicate<T>): Promise<T[] | undefined>
+    select<T>(table: string, pred: Predicate<T>): Promise<T[] | null>
 
     /**
      * Updates data in a table.

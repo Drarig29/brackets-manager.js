@@ -79,11 +79,11 @@ class JsonDatabase implements IStorage {
         return true;
     }
 
-    public select<T>(table: string): Promise<T[] | undefined>;
-    public select<T>(table: string, key: number): Promise<T | undefined>;
-    public select<T>(table: string, pred: SelectCallback<T>): Promise<T[] | undefined>;
+    public select<T>(table: string): Promise<T[] | null>;
+    public select<T>(table: string, key: number): Promise<T | null>;
+    public select<T>(table: string, pred: SelectCallback<T>): Promise<T[] | null>;
 
-    public async select<T>(table: string, arg?: any): Promise<T | T[] | undefined> {
+    public async select<T>(table: string, arg?: any): Promise<T | T[] | null> {
         try {
             if (arg === undefined)
                 return this.internal.getData(this.makePath(table));
@@ -91,9 +91,9 @@ class JsonDatabase implements IStorage {
             if (typeof arg === "number")
                 return this.internal.getData(this.makeArrayAccessor(table, arg));
 
-            return this.internal.filter(this.makePath(table), arg);
+            return this.internal.filter(this.makePath(table), arg) || null;
         } catch (error) {
-            return undefined;
+            return null;
         }
     }
 
