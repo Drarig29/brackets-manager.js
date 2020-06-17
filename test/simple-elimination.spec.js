@@ -126,10 +126,14 @@ describe('Create single elimination stage', () => {
         assert.equal((await storage.select('match')).length, 7);
         assert.equal((await storage.select('match_game')).length, 7 * 3);
     });
+});
 
-    it('should set all matches to Bo1 except those of one round to Bo3', async () => {
+describe('Update match child count', () => {
+    beforeEach(async () => {
+        storage.reset();
+
         const example = {
-            name: 'Example with Bo1 and Bo3 matches',
+            name: 'Example',
             type: 'single_elimination',
             participants: [
                 'Team 1', 'Team 2',
@@ -141,17 +145,37 @@ describe('Create single elimination stage', () => {
         };
 
         await manager.create(0, example);
+    });
 
-        assert.equal((await storage.select('match')).length, 7);
-        assert.equal((await storage.select('match_game')).length, 7);
+    it('should change match child count at match level', async () => {
+        await manager.update.matchChildCount('match', 0, 3);
+        assert.equal((await storage.select('match_game')).length, 6 + 3);
+    });
 
-        await manager.update.round(2, 3); // Round of id 2 in Bo3
+    it('should change match child count at round level', async () => {
+        await manager.update.matchChildCount('round', 2, 3); // Round of id 2 in Bo3
         assert.equal((await storage.select('match_game')).length, 6 + 3);
 
-        await manager.update.round(1, 2); // Round of id 1 in Bo2
+        await manager.update.matchChildCount('round', 1, 2); // Round of id 1 in Bo2
         assert.equal((await storage.select('match_game')).length, 4 + 4 + 3);
 
-        await manager.update.round(0, 0); // Round of id 0 in Bo0 (normal matches without games)
+        await manager.update.matchChildCount('round', 0, 0); // Round of id 0 in Bo0 (normal matches without games)
         assert.equal((await storage.select('match_game')).length, 0 + 4 + 3);
+    });
+
+    it('should change match child count at group level', async () => {
+        await manager.update.matchChildCount('group', 0, 4);
+        assert.equal((await storage.select('match_game')).length, 7 * 4);
+
+        await manager.update.matchChildCount('group', 0, 2);
+        assert.equal((await storage.select('match_game')).length, 7 * 2);
+    });
+
+    it('should change match child count at stage level', async () => {
+        await manager.update.matchChildCount('stage', 0, 4);
+        assert.equal((await storage.select('match_game')).length, 7 * 4);
+
+        await manager.update.matchChildCount('stage', 0, 2);
+        assert.equal((await storage.select('match_game')).length, 7 * 2);
     });
 });

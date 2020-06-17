@@ -2,6 +2,8 @@ import { Match, Result, Round, Group, Stage, MatchGame } from "brackets-model";
 import { IStorage } from "./storage";
 import * as helpers from './helpers';
 
+export type Level = 'stage' | 'group' | 'round' | 'match';
+
 export class Update {
 
     private storage: IStorage;
@@ -10,17 +12,50 @@ export class Update {
         this.storage = storage;
     }
 
-    public async round(id: number, matchesChildCount: number) {
-        await this.storage.update<Match>('match', { round_id: id }, { child_count: matchesChildCount });
+    public async matchChildCount(level: Level, id: number, childCount: number) {
+        switch (level) {
+            case 'stage':
+                return this.updateStageMatchChildCount(id, childCount);
+            case 'group':
+                return this.updateGroupMatchChildCount(id, childCount);
+            case 'round':
+                return this.updateRoundMatchChildCount(id, childCount);
+            case 'match':
+                return this.updateMatchChildCount(id, childCount);
+        }
+    }
+
+    private async updateStageMatchChildCount(id: number, childCount: number) {
+        await this.storage.update<Match>('match', { stage_id: id }, { child_count: childCount });
+
+        const matches = await this.storage.select<Match>('match', { stage_id: id });
+        if (!matches) throw Error('This stage has no match.');
+
+        for (const match of matches)
+            await this.updateMatchChildCount(match.id, childCount);
+    }
+
+    private async updateGroupMatchChildCount(id: number, childCount: number) {
+        await this.storage.update<Match>('match', { group_id: id }, { child_count: childCount });
+
+        const matches = await this.storage.select<Match>('match', { group_id: id });
+        if (!matches) throw Error('This group has no match.');
+
+        for (const match of matches)
+            await this.updateMatchChildCount(match.id, childCount);
+    }
+
+    private async updateRoundMatchChildCount(id: number, childCount: number) {
+        await this.storage.update<Match>('match', { round_id: id }, { child_count: childCount });
 
         const matches = await this.storage.select<Match>('match', { round_id: id });
         if (!matches) throw Error('This round has no match.');
 
         for (const match of matches)
-            await this.updateMatchChildren(match.id, matchesChildCount);
+            await this.updateMatchChildCount(match.id, childCount);
     }
 
-    private async updateMatchChildren(matchId: number, targetChildCount: number) {
+    private async updateMatchChildCount(matchId: number, targetChildCount: number) {
         const games = await this.storage.select<MatchGame>('match_game', { parent_id: matchId });
         let childCount = games ? games.length : 0;
 
@@ -40,7 +75,11 @@ export class Update {
         }
 
         while (childCount > targetChildCount) {
-            await this.storage.delete<MatchGame>('match_game', { parent_id: matchId });
+            await this.storage.delete<MatchGame>('match_game', {
+                parent_id: matchId,
+                number: childCount,
+            });
+            
             childCount--;
         }
     }
