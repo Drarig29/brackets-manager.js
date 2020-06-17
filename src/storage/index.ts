@@ -31,7 +31,7 @@ export interface IStorage {
     /**
      * Gets data from a table in the database with a filter.
      * @param table Where to get from.
-     * @param pred An object to filter data.
+     * @param filter An object to filter data.
      */
     select<T>(table: Table, filter: Partial<T>): Promise<T[] | null>
 
@@ -42,4 +42,19 @@ export interface IStorage {
      * @param value How to update.
      */
     update<T>(table: Table, id: number, value: T): Promise<boolean>
+
+    /**
+     * Updates data in a table.
+     * @param table Where to update.
+     * @param filter An object to filter data.
+     * @param value How to update.
+     */
+    update<T>(table: Table, filter: Partial<T>, value: Partial<T>): Promise<boolean>
+
+    /**
+     * Delete data in a table, based on a filter.
+     * @param table Where to delete in.
+     * @param filter An object to filter data.
+     */
+    delete<T>(table: Table, filter: Partial<T>): Promise<boolean>
 }

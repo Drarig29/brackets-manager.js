@@ -107,13 +107,35 @@ class JsonDatabase implements IStorage {
         }
     }
 
-    public async update<T>(table: Table, key: number, value: T): Promise<boolean> {
-        try {
-            this.internal.push(this.makeArrayAccessor(table, key), value);
-        } catch (error) {
-            return false;
+    public update<T>(table: Table, key: number, value: T): Promise<boolean>;
+    public update<T>(table: Table, filter: Partial<T>, value: Partial<T>): Promise<boolean>;
+
+    public async update<T>(table: Table, arg: any, value: T | Partial<T>) {
+        if (typeof arg === 'number') {
+            try {
+                this.internal.push(this.makeArrayAccessor(table, arg), value);
+                return true;
+            } catch (error) {
+                return false;
+            }
         }
 
+        const values = this.internal.filter<{ id: number }>(this.makePath(table), this.makeFilter(arg));
+        if (!values) return false;
+
+        values.forEach(v => this.internal.push(this.makeArrayAccessor(table, v.id), value, false));
+        return true;
+    }
+
+    public async delete<T>(table: Table, filter: Partial<T>): Promise<boolean> {
+        const path = this.makePath(table);
+        const values: T[] = this.internal.getData(path);
+        if (!values) return false;
+
+        const predicate = this.makeFilter(filter);
+        const negativeFilter = (value: any) => !predicate(value);
+
+        this.internal.push(path, values.filter(negativeFilter));
         return true;
     }
 }

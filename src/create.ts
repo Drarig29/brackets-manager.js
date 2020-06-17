@@ -216,22 +216,28 @@ class Create {
         const opponent1 = helpers.toResult(opponents[0]);
         const opponent2 = helpers.toResult(opponents[1]);
 
-        const parentId = await this.storage.insert<Partial<Match>>('match', {
+        const parentId = await this.storage.insert<Match>('match', {
             number: matchNumber,
             stage_id: stageId,
             group_id: groupId,
             round_id: roundId,
             child_count: childCount,
             status: 'pending',
+            scheduled_datetime: null,
+            start_datetime: null,
+            end_datetime: null,
             opponent1,
             opponent2,
         });
 
         for (let i = 0; i < childCount; i++) {
-            await this.storage.insert<Partial<MatchGame>>('match_game', {
+            await this.storage.insert<MatchGame>('match_game', {
                 number: i + 1,
                 parent_id: parentId,
                 status: 'pending',
+                scheduled_datetime: null,
+                start_datetime: null,
+                end_datetime: null,
                 opponent1,
                 opponent2,
             });
