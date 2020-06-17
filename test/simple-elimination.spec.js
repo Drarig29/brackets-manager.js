@@ -108,7 +108,7 @@ describe('Create single elimination stage', () => {
 
     it('shoud create a single elimination stage with Bo3 matches', async () => {
         const example = {
-            name: 'Example with consolation final',
+            name: 'Example with Bo3 matches',
             type: 'single_elimination',
             participants: [
                 'Team 1', 'Team 2',
@@ -125,5 +125,33 @@ describe('Create single elimination stage', () => {
         assert.equal((await storage.select('round')).length, 3);
         assert.equal((await storage.select('match')).length, 7);
         assert.equal((await storage.select('match_game')).length, 7 * 3);
+    });
+
+    it('should set all matches to Bo1 except those of one round to Bo3', async () => {
+        const example = {
+            name: 'Example with Bo1 and Bo3 matches',
+            type: 'single_elimination',
+            participants: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: { seedOrdering: ['natural'], matchesChildCount: 1 },
+        };
+
+        await manager.createStage(0, example);
+
+        assert.equal((await storage.select('match')).length, 7);
+        assert.equal((await storage.select('match_game')).length, 7);
+
+        await manager.updateRound(2, 3); // Round of id 2 in Bo3
+        assert.equal((await storage.select('match_game')).length, 6 + 3);
+
+        await manager.updateRound(1, 2); // Round of id 1 in Bo2
+        assert.equal((await storage.select('match_game')).length, 4 + 4 + 3);
+
+        await manager.updateRound(0, 0); // Round of id 0 in Bo0 (normal matches without games)
+        assert.equal((await storage.select('match_game')).length, 0 + 4 + 3);
     });
 });

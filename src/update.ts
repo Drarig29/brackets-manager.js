@@ -1,4 +1,4 @@
-import { Match, Result, Round, Group, Stage } from "brackets-model";
+import { Match, Result, Round, Group, Stage, MatchGame } from "brackets-model";
 import { IStorage } from "./storage";
 import { BracketsManager } from ".";
 import * as helpers from './helpers';
@@ -8,12 +8,52 @@ export async function updateMatch(this: BracketsManager, values: Partial<Match>)
     await update.match(values);
 }
 
+export async function updateRound(this: BracketsManager, id: number, matchesChildCount: number) {
+    const update = new Update(this.storage);
+    await update.round(id, matchesChildCount);
+}
+
 class Update {
 
     private storage: IStorage;
 
     constructor(storage: IStorage) {
         this.storage = storage;
+    }
+
+    public async round(id: number, matchesChildCount: number) {
+        await this.storage.update<Match>('match', { round_id: id }, { child_count: matchesChildCount });
+
+        const matches = await this.storage.select<Match>('match', { round_id: id });
+        if (!matches) throw Error('This round has no match.');
+
+        for (const match of matches)
+            await this.updateMatchChildren(match.id, matchesChildCount);
+    }
+
+    private async updateMatchChildren(matchId: number, targetChildCount: number) {
+        const games = await this.storage.select<MatchGame>('match_game', { parent_id: matchId });
+        let childCount = games ? games.length : 0;
+
+        while (childCount < targetChildCount) {
+            await this.storage.insert<MatchGame>('match_game', {
+                number: childCount + 1,
+                parent_id: matchId,
+                status: 'pending',
+                scheduled_datetime: null,
+                start_datetime: null,
+                end_datetime: null,
+                opponent1: { id: null },
+                opponent2: { id: null },
+            });
+
+            childCount++;
+        }
+
+        while (childCount > targetChildCount) {
+            await this.storage.delete<MatchGame>('match_game', { parent_id: matchId });
+            childCount--;
+        }
     }
 
     public async match(match: Partial<Match>) {
