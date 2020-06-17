@@ -30,7 +30,7 @@ describe('Create double elimination stage', () => {
     });
 
     it('should create a double elimination stage', async () => {
-        await manager.createStage(0, example);
+        await manager.create(0, example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -52,7 +52,7 @@ describe('Create double elimination stage', () => {
             settings: { seedOrdering: ['natural'], grandFinal: 'simple' },
         };
 
-        await manager.createStage(0, withByes);
+        await manager.create(0, withByes);
 
         assert.equal((await storage.select('match', 2)).opponent1.id, 0);
         assert.equal((await storage.select('match', 2)).opponent2, null);
@@ -80,7 +80,7 @@ describe('Create double elimination stage', () => {
             settings: { grandFinal: 'double', seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(0, withDoubleGrandFinal);
+        await manager.create(0, withDoubleGrandFinal);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, withDoubleGrandFinal.name);
@@ -96,26 +96,26 @@ describe('Winner bracket', () => {
 
     before(async () => {
         storage.reset();
-        await manager.createStage(0, example);
+        await manager.create(0, example);
     });
 
     it('should end a match and determine next matches', async () => {
         const before = await storage.select('match', 8); // First match of WB round 2
         assert.equal(before.opponent2.id, null);
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 0, // First match of WB round 1
             opponent1: { score: 16, result: 'win' },
             opponent2: { score: 12 },
         });
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 1, // Second match of WB round 1
             opponent1: { score: 13 },
             opponent2: { score: 16, result: 'win' },
         });
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 15, // First match of LB round 1
             opponent1: { score: 16, result: 'win' },
             opponent2: { score: 10 },

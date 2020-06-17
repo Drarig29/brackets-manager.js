@@ -1,19 +1,8 @@
 import { Match, Result, Round, Group, Stage, MatchGame } from "brackets-model";
 import { IStorage } from "./storage";
-import { BracketsManager } from ".";
 import * as helpers from './helpers';
 
-export async function updateMatch(this: BracketsManager, values: Partial<Match>) {
-    const update = new Update(this.storage);
-    await update.match(values);
-}
-
-export async function updateRound(this: BracketsManager, id: number, matchesChildCount: number) {
-    const update = new Update(this.storage);
-    await update.round(id, matchesChildCount);
-}
-
-class Update {
+export class Update {
 
     private storage: IStorage;
 

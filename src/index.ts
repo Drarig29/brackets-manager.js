@@ -1,38 +1,28 @@
-import { InputStage, Match, Round } from 'brackets-model';
-import { createStage } from './create';
-import { updateMatch, updateRound } from './update';
-import { getRanking } from './results';
+import { InputStage } from 'brackets-model';
+import { Update } from './update';
 import { IStorage } from './storage';
+import { create } from './create';
+import { ranking } from './results';
 
 export class BracketsManager {
 
     protected storage: IStorage;
+    public update: Update;
 
     constructor(storage: IStorage) {
         this.storage = storage;
-        this.createStage = createStage;
-        this.updateMatch = updateMatch;
-        this.updateRound = updateRound;
-        this.getRanking = getRanking;
+        this.update = new Update(storage);
+        this.create = create;
+        this.ranking = ranking;
     }
 
     /** 
      * Creates a stage for an existing tournament. The tournament won't be created.
      */
-    public createStage: (tournamentdId: number, stage: InputStage) => Promise<void>;
-
-    /**
-     * Updates a match's values.
-     */
-    public updateMatch: (values: Partial<Match>) => Promise<void>;
-
-    /**
-     * Updates a round's values.
-     */
-    public updateRound: (id: number, matchesChildCount: number) => Promise<void>;
+    public create: (tournamentdId: number, stage: InputStage) => Promise<void>;
 
     /**
      * Returns the ranking for a round-robin group.
      */
-    public getRanking: (groupId: number) => Promise<string[]>;
+    public ranking: (groupId: number) => Promise<string[]>;
 }

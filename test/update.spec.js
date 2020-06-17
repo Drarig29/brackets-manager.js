@@ -27,14 +27,14 @@ describe('Update matches', () => {
 
     before(async () => {
         storage.reset();
-        await manager.createStage(0, example);
+        await manager.create(0, example);
     });
 
     it('should start a match', async () => {
         const before = await storage.select('match', 0);
         assert.equal(before.status, 'pending');
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 0,
             status: 'running',
         });
@@ -47,7 +47,7 @@ describe('Update matches', () => {
         const before = await storage.select('match', 0);
         assert.notExists(before.opponent1.score);
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 0,
             opponent1: { score: 2 },
             opponent2: { score: 1 },
@@ -61,7 +61,7 @@ describe('Update matches', () => {
     });
 
     it('should throw if end a match without winner', async () => {
-        await assert.isRejected(manager.updateMatch({
+        await assert.isRejected(manager.update.match({
             id: 4,
             status: 'completed',
         }), 'The match is not really completed.');
@@ -71,7 +71,7 @@ describe('Update matches', () => {
         const before = await storage.select('match', 0);
         assert.notExists(before.opponent1.result);
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 0,
             opponent1: { result: 'win' },
         });
@@ -86,7 +86,7 @@ describe('Update matches', () => {
         const before = await storage.select('match', 2);
         assert.notExists(before.opponent1.result);
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 2,
             opponent1: { forfeit: true },
         });
@@ -99,7 +99,7 @@ describe('Update matches', () => {
     });
 
     it('should remove forfeit from a match', async () => {
-        await manager.updateMatch({
+        await manager.update.match({
             id: 2,
             opponent1: { forfeit: undefined },
         });
@@ -112,12 +112,12 @@ describe('Update matches', () => {
     });
 
     it('should end the match by setting winner and loser', async () => {
-        await manager.updateMatch({
+        await manager.update.match({
             id: 0,
             status: 'running',
         });
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 0,
             opponent1: { result: 'win' },
             opponent2: { result: 'loss' },
@@ -130,7 +130,7 @@ describe('Update matches', () => {
     });
 
     it('should remove results from a match', async () => {
-        await manager.updateMatch({
+        await manager.update.match({
             id: 0,
             opponent1: { result: undefined },
             opponent1: { result: undefined },
@@ -143,7 +143,7 @@ describe('Update matches', () => {
     });
 
     it('should end the match by setting the winner and the scores', async () => {
-        await manager.updateMatch({
+        await manager.update.match({
             id: 1,
             opponent1: { score: 6 },
             opponent2: { result: 'win', score: 3 },
@@ -160,13 +160,13 @@ describe('Update matches', () => {
     });
 
     it('should throw if two winners', async () => {
-        await assert.isRejected(manager.updateMatch({
+        await assert.isRejected(manager.update.match({
             id: 3,
             opponent1: { result: 'win' },
             opponent2: { result: 'win' },
         }));
 
-        await assert.isRejected(manager.updateMatch({
+        await assert.isRejected(manager.update.match({
             id: 3,
             opponent1: { result: 'loss' },
             opponent2: { result: 'loss' },
@@ -178,23 +178,23 @@ describe('Locked matches', () => {
 
     before(async () => {
         storage.reset();
-        await manager.createStage(0, example);
+        await manager.create(0, example);
     });
 
     it('shoud throw when the matches leading to the match have not been completed yet', async () => {
-        await assert.isFulfilled(manager.updateMatch({ id: 0 })); // No problem when no previous match.
-        await assert.isRejected(manager.updateMatch({ id: 8 }), 'The match is locked.'); // First match of WB Round 2.
-        await assert.isRejected(manager.updateMatch({ id: 15 }), 'The match is locked.'); // First match of LB Round 1.
-        await assert.isRejected(manager.updateMatch({ id: 19 }), 'The match is locked.'); // First match of LB Round 1.
-        await assert.isRejected(manager.updateMatch({ id: 23 }), 'The match is locked.'); // First match of LB Round 3.
+        await assert.isFulfilled(manager.update.match({ id: 0 })); // No problem when no previous match.
+        await assert.isRejected(manager.update.match({ id: 8 }), 'The match is locked.'); // First match of WB Round 2.
+        await assert.isRejected(manager.update.match({ id: 15 }), 'The match is locked.'); // First match of LB Round 1.
+        await assert.isRejected(manager.update.match({ id: 19 }), 'The match is locked.'); // First match of LB Round 1.
+        await assert.isRejected(manager.update.match({ id: 23 }), 'The match is locked.'); // First match of LB Round 3.
     });
 
     it('should throw when one of participants already played next match', async () => {
         // Setup.
-        await manager.updateMatch({ id: 0, opponent1: { result: 'win' } });
-        await manager.updateMatch({ id: 1, opponent1: { result: 'win' } });
-        await manager.updateMatch({ id: 8, opponent1: { result: 'win' } });
+        await manager.update.match({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.match({ id: 1, opponent1: { result: 'win' } });
+        await manager.update.match({ id: 8, opponent1: { result: 'win' } });
 
-        await assert.isRejected(manager.updateMatch({ id: 0 }), 'The match is locked.');
+        await assert.isRejected(manager.update.match({ id: 0 }), 'The match is locked.');
     });
 });

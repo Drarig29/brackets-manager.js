@@ -26,7 +26,7 @@ describe('Create a round-robin stage', () => {
             settings: { groupCount: 2 },
         };
 
-        await manager.createStage(0, example);
+        await manager.create(0, example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -53,14 +53,14 @@ describe('Create a round-robin stage', () => {
             },
         };
 
-        await manager.createStage(0, example);
+        await manager.create(0, example);
 
         assert.equal((await storage.select('match', 0)).opponent1.id, 0);
         assert.equal((await storage.select('match', 0)).opponent2.id, 7);
     });
 
     it('should throw if no group count given', async () => {
-        await assert.isRejected(manager.createStage(0, { type: 'round_robin' }), 'You must specify a group count for round-robin stages.');
+        await assert.isRejected(manager.create(0, { type: 'round_robin' }), 'You must specify a group count for round-robin stages.');
     });
 });
 
@@ -80,41 +80,41 @@ describe('Update scores in a round-robin stage', () => {
 
     before(async () => {
         storage.reset();
-        await manager.createStage(0, example);
+        await manager.create(0, example);
     });
 
     it('should set all the scores', async () => {
-        await manager.updateMatch({
+        await manager.update.match({
             id: 0,
             opponent1: { score: 16, result: "win" }, // POCEBLO
             opponent2: { score: 9 }, // AQUELLEHEURE?!
         });
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 1,
             opponent1: { score: 3 }, // Ballec Squad
             opponent2: { score: 16, result: "win" }, // twitch.tv/mrs_fly
         });
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 2,
             opponent1: { score: 16, result: "win" }, // twitch.tv/mrs_fly
             opponent2: { score: 0 }, // AQUELLEHEURE?!
         });
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 3,
             opponent1: { score: 16, result: "win" }, // POCEBLO
             opponent2: { score: 2 }, // Ballec Squad
         });
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 4,
             opponent1: { score: 16, result: "win" }, // Ballec Squad
             opponent2: { score: 12 }, // AQUELLEHEURE?!
         });
 
-        await manager.updateMatch({
+        await manager.update.match({
             id: 5,
             opponent1: { score: 4 }, // twitch.tv/mrs_fly
             opponent2: { score: 16, result: "win" }, // POCEBLO
@@ -122,7 +122,7 @@ describe('Update scores in a round-robin stage', () => {
     });
 
     it('should give an appropriate ranking', async () => {
-        const ranking = await manager.getRanking(0);
+        const ranking = await manager.ranking(0);
         assert.deepEqual(ranking, example.participants)
     });
 });

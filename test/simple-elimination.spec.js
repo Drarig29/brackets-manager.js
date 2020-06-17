@@ -27,7 +27,7 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(0, example);
+        await manager.create(0, example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -51,7 +51,7 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(0, example);
+        await manager.create(0, example);
 
         assert.equal((await storage.select('match', 4)).opponent1.id, 0); // Determined because of opponent's BYE.
         assert.equal((await storage.select('match', 4)).opponent2.id, null); // To be determined.
@@ -72,7 +72,7 @@ describe('Create single elimination stage', () => {
             settings: { consolationFinal: true, seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(0, example);
+        await manager.create(0, example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -96,7 +96,7 @@ describe('Create single elimination stage', () => {
             settings: { consolationFinal: true, seedOrdering: ['natural'] },
         };
 
-        await manager.createStage(0, example);
+        await manager.create(0, example);
 
         assert.equal((await storage.select('match', 4)).opponent1, null);
         assert.equal((await storage.select('match', 4)).opponent2.id, 0);
@@ -119,7 +119,7 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'], matchesChildCount: 3 },
         };
 
-        await manager.createStage(0, example);
+        await manager.create(0, example);
 
         assert.equal((await storage.select('group')).length, 1);
         assert.equal((await storage.select('round')).length, 3);
@@ -140,18 +140,18 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'], matchesChildCount: 1 },
         };
 
-        await manager.createStage(0, example);
+        await manager.create(0, example);
 
         assert.equal((await storage.select('match')).length, 7);
         assert.equal((await storage.select('match_game')).length, 7);
 
-        await manager.updateRound(2, 3); // Round of id 2 in Bo3
+        await manager.update.round(2, 3); // Round of id 2 in Bo3
         assert.equal((await storage.select('match_game')).length, 6 + 3);
 
-        await manager.updateRound(1, 2); // Round of id 1 in Bo2
+        await manager.update.round(1, 2); // Round of id 1 in Bo2
         assert.equal((await storage.select('match_game')).length, 4 + 4 + 3);
 
-        await manager.updateRound(0, 0); // Round of id 0 in Bo0 (normal matches without games)
+        await manager.update.round(0, 0); // Round of id 0 in Bo0 (normal matches without games)
         assert.equal((await storage.select('match_game')).length, 0 + 4 + 3);
     });
 });

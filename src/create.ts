@@ -3,7 +3,7 @@ import { BracketsManager } from '.';
 import { IStorage } from './storage';
 import * as helpers from './helpers';
 
-export async function createStage(this: BracketsManager, tournamentId: number, stage: InputStage) {
+export async function create(this: BracketsManager, tournamentId: number, stage: InputStage) {
     const create = new Create(this.storage, tournamentId, stage);
 
     switch (stage.type) {
