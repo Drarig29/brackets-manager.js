@@ -76,7 +76,7 @@ class Create {
 
         const semiFinalLosers = losers[losers.length - 2];
         if (this.stage.settings && this.stage.settings.consolationFinal)
-            this.createUniqueMatchBracket('Consolation Final', stageId, 2, [semiFinalLosers]);
+            await this.createUniqueMatchBracket('Consolation Final', stageId, 2, [semiFinalLosers]);
     }
 
     public async doubleElimination() {
@@ -118,7 +118,7 @@ class Create {
         const rounds = helpers.roundRobinMatches(slots);
 
         for (let i = 0; i < rounds.length; i++)
-            this.createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i], this.getMatchesChildCount());
+            await this.createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i], this.getMatchesChildCount());
     }
 
     private async createStandardBracket(name: string, stageId: number, number: number, slots: ParticipantSlot[]): Promise<{
@@ -144,8 +144,8 @@ class Create {
         for (let i = roundCount - 1; i >= 0; i--) {
             const matchCount = Math.pow(2, i);
             duels = this.getCurrentDuels(duels, matchCount);
-            this.createRound(stageId, groupId, roundNumber++, matchCount, duels, this.getMatchesChildCount());
             losers.push(duels.map(helpers.byePropagation));
+            await this.createRound(stageId, groupId, roundNumber++, matchCount, duels, this.getMatchesChildCount());
         }
 
         const winner = helpers.byeResult(duels[0]);
@@ -176,12 +176,12 @@ class Create {
 
             // Major round.
             duels = this.getCurrentDuels(duels, matchCount, true);
-            this.createRound(stageId, groupId, roundNumber++, matchCount, duels, matchesChildCount);
+            await this.createRound(stageId, groupId, roundNumber++, matchCount, duels, matchesChildCount);
 
             // Minor round.
             let minorOrdering = this.getMinorOrdering(participantCount, i);
             duels = this.getCurrentDuels(duels, matchCount, false, losers[losersId++], minorOrdering);
-            this.createRound(stageId, groupId, roundNumber++, matchCount, duels, matchesChildCount);
+            await this.createRound(stageId, groupId, roundNumber++, matchCount, duels, matchesChildCount);
         }
 
         return helpers.byeResult(duels[0]); // Winner.
@@ -198,7 +198,7 @@ class Create {
         });
 
         for (let i = 0; i < duels.length; i++)
-            this.createRound(stageId, groupId, i + 1, 1, [duels[i]], this.getMatchesChildCount());
+            await this.createRound(stageId, groupId, i + 1, 1, [duels[i]], this.getMatchesChildCount());
     }
 
     private async createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, duels: Duels, matchesChildCount: number) {
@@ -209,13 +209,10 @@ class Create {
         });
 
         for (let i = 0; i < matchCount; i++)
-            this.createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
+            await this.createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
     }
 
     private async createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number) {
-        const opponent1 = helpers.toResult(opponents[0]);
-        const opponent2 = helpers.toResult(opponents[1]);
-
         const parentId = await this.storage.insert<Match>('match', {
             number: matchNumber,
             stage_id: stageId,
@@ -227,8 +224,8 @@ class Create {
             scheduled_datetime: null,
             start_datetime: null,
             end_datetime: null,
-            opponent1,
-            opponent2,
+            opponent1: helpers.toResult(opponents[0]),
+            opponent2: helpers.toResult(opponents[1]),
         });
 
         for (let i = 0; i < childCount; i++) {
@@ -239,8 +236,8 @@ class Create {
                 scheduled_datetime: null,
                 start_datetime: null,
                 end_datetime: null,
-                opponent1,
-                opponent2,
+                opponent1: helpers.toResult(opponents[0]),
+                opponent2: helpers.toResult(opponents[1]),
             });
         }
     }
