@@ -8,7 +8,7 @@
         "dist"
     ],
     "dependencies": {
-        "brackets-model": "^0.2.8",
+        "brackets-model": "^0.2.9",
         "node-json-db": "^1.0.3"
     },
     "devDependencies": {
