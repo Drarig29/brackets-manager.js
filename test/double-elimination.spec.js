@@ -142,3 +142,38 @@ describe('Winner bracket', () => {
         );
     });
 });
+
+describe('Seeding and ordering', () => {
+    before(() => storage.reset());
+
+    it('should have the good orderings everywhere', async () => {
+        await manager.create(0, {
+            name: 'Amateur',
+            type: 'double_elimination',
+            size: 16,
+            settings: {
+                seedOrdering: ['inner_outer', 'reverse', 'pair_flip', 'half_shift', 'reverse'],
+            },
+        });
+
+        let match = await storage.select('match', 0);
+        assert.equal(match.opponent1.position, 1);
+        assert.equal(match.opponent2.position, 16);
+
+        match = await storage.select('match', 15);
+        assert.equal(match.opponent1.position, 8);
+        assert.equal(match.opponent2.position, 7);
+
+        match = await storage.select('match', 19);
+        assert.equal(match.opponent1.position, 2);
+
+        match = await storage.select('match', 20);
+        assert.equal(match.opponent1.position, 1);
+
+        match = await storage.select('match', 25);
+        assert.equal(match.opponent1.position, 2);
+
+        match = await storage.select('match', 28);
+        assert.equal(match.opponent1.position, 1);
+    });
+});

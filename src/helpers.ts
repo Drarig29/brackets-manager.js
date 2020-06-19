@@ -1,4 +1,4 @@
-import { Stage, SeedOrdering, OrderingMap, ParticipantSlot, ParticipantResult, Duel, Match, Side } from "brackets-model";
+import { Stage, SeedOrdering, OrderingMap, ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels } from "brackets-model";
 import * as fs from 'fs';
 
 const viewerRoot = 'https://cdn.jsdelivr.net/gh/Drarig29/brackets-viewer.js/dist';
@@ -152,7 +152,8 @@ export function ensureNotTied(scores: number[]) {
 
 export function toResult(opponent: ParticipantSlot): ParticipantResult | null {
     return opponent ? {
-        id: opponent.id, // TODO: add position.
+        id: opponent.id,
+        position: opponent.position,
     } : null;
 }
 
@@ -169,11 +170,23 @@ export function byeResult(opponents: Duel): ParticipantSlot {
     return { id: null }; // Normal.
 }
 
-export function byePropagation(opponents: Duel): ParticipantSlot {
+export function byePropagation(opponents: Duel, index: number): ParticipantSlot {
     if (opponents[0] === null || opponents[1] === null) // At least one BYE.
         return null; // BYE.
 
-    return { id: null }; // Normal.
+    return { id: null, position: index + 1 }; // Normal.
+}
+
+export function populatePosition(duels: Duels): void {
+    let i = 1;
+
+    for (const duel of duels) {
+        if (duel[0] && !duel[0].position) duel[0].position = i;
+        i++;
+
+        if (duel[1] && !duel[1].position) duel[1].position = i;
+        i++;
+    }
 }
 
 export function getMatchResults(match: Match): {
