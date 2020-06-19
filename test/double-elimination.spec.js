@@ -143,10 +143,10 @@ describe('Winner bracket', () => {
     });
 });
 
-describe('Seeding and ordering', () => {
-    before(() => storage.reset());
+describe('Seeding and ordering in elimination', () => {
+    before(async () => {
+        storage.reset();
 
-    it('should have the good orderings everywhere', async () => {
         await manager.create(0, {
             name: 'Amateur',
             type: 'double_elimination',
@@ -155,7 +155,9 @@ describe('Seeding and ordering', () => {
                 seedOrdering: ['inner_outer', 'reverse', 'pair_flip', 'half_shift', 'reverse'],
             },
         });
+    });
 
+    it('should have the good orderings everywhere', async () => {
         let match = await storage.select('match', 0);
         assert.equal(match.opponent1.position, 1);
         assert.equal(match.opponent2.position, 16);
@@ -175,5 +177,38 @@ describe('Seeding and ordering', () => {
 
         match = await storage.select('match', 28);
         assert.equal(match.opponent1.position, 1);
+    });
+
+    it('should update the orderings in rounds', async () => {
+        await manager.update.roundOrdering(0, 'pair_flip');
+        let match = await storage.select('match', 0);
+        assert.equal(match.opponent1.position, 2);
+        assert.equal(match.opponent2.position, 1);
+
+        await manager.update.roundOrdering(5, 'reverse');
+        match = await storage.select('match', 19);
+        assert.equal(match.opponent1.position, 4);
+        match = await storage.select('match', 20);
+        assert.equal(match.opponent1.position, 3);
+    });
+
+    it('should throw if round does not support ordering', async () => {
+        await assert.isRejected(manager.update.roundOrdering(6, 'natural'), 'This round does not support ordering.');
+    });
+
+    it('should throw if at least one match is running or completed', async () => {
+        await manager.update.match({
+            id: 0,
+            opponent1: { score: 1 },
+        });
+
+        await assert.isRejected(manager.update.roundOrdering(0, 'natural'), 'At least one match has started or is completed.');
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { result: 'win' },
+        });
+
+        await assert.isRejected(manager.update.roundOrdering(0, 'natural'), 'At least one match has started or is completed.');
     });
 });

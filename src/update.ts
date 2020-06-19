@@ -1,4 +1,4 @@
-import { Match, Result, Round, Group, Stage, MatchGame } from "brackets-model";
+import { Match, Result, Round, Group, Stage, MatchGame, SeedOrdering, ParticipantResult } from "brackets-model";
 import { IStorage } from "./storage";
 import * as helpers from './helpers';
 
@@ -10,6 +10,52 @@ export class Update {
 
     constructor(storage: IStorage) {
         this.storage = storage;
+    }
+
+    public async roundOrdering(id: number, method: SeedOrdering) {
+        const round = await this.storage.select<Round>('round', id);
+        if (!round) throw Error('This round does not exist.');
+
+        const inRoundRobin = await this.isRoundRobin(round.stage_id);
+        if (inRoundRobin) throw Error('Impossible to update ordering in a round-robin stage.');
+
+        const matches = await this.storage.select<Match>('match', { round_id: id });
+        if (!matches) throw Error('This round has no match.');
+
+        if (matches.some(match => match.status !== 'pending'))
+            throw Error('At least one match has started or is completed.')
+
+        const inLoserBracket = await this.isLoserBracket(round.group_id);
+
+        if ((!inLoserBracket && round.number !== 1) || // Upper bracket and not round 1.
+            (inLoserBracket && !(round.number === 1 || round.number % 2 === 0))) // Loser bracket and not round 1 or not minor round.
+            throw Error('This round does not support ordering.');
+
+        const seedCount = round.number === 1 ? matches.length * 2 : matches.length;
+        const seeds = Array.from(Array(seedCount), (_, i) => i + 1);
+        const ordered = helpers.ordering[method](seeds);
+
+        for (const match of matches) {
+            const updated = { ...match };
+            updated.opponent1 = this.findPosition(matches, ordered.shift()!);
+
+            if (round.number === 1)
+                updated.opponent2 = this.findPosition(matches, ordered.shift()!);
+
+            await this.storage.update<Match>('match', updated.id, updated);
+        }
+    }
+
+    private findPosition(matches: Match[], position: number): ParticipantResult | null {
+        for (const match of matches) {
+            if (match.opponent1 && match.opponent1.position === position)
+                return match.opponent1;
+
+            if (match.opponent2 && match.opponent2.position === position)
+                return match.opponent2;
+        }
+
+        return null;
     }
 
     public async matchChildCount(level: Level, id: number, childCount: number) {
@@ -79,7 +125,7 @@ export class Update {
                 parent_id: matchId,
                 number: childCount,
             });
-            
+
             childCount--;
         }
     }
@@ -90,7 +136,7 @@ export class Update {
         const stored = await this.storage.select<Match>('match', match.id);
         if (!stored) throw Error('Match not found.');
 
-        const inRoundRobin = await this.isInRoundRobin(stored);
+        const inRoundRobin = await this.isRoundRobin(stored.stage_id);
         if (!inRoundRobin && await this.isMatchLocked(stored)) throw Error('The match is locked.');
 
         const completed = helpers.isMatchCompleted(match);
@@ -112,16 +158,24 @@ export class Update {
     }
 
     private setGeneric(stored: Match, match: Partial<Match>) {
-        if (match.status) stored.status = match.status;
+        let scoreUpdate = false;
 
         if (match.opponent1 && match.opponent1.score) {
             if (!stored.opponent1) throw Error('No team is defined yet. Can\'t set the score.');
             stored.opponent1.score = match.opponent1.score;
+            scoreUpdate = true;
         }
 
         if (match.opponent2 && match.opponent2.score) {
             if (!stored.opponent2) throw Error('No team is defined yet. Can\'t set the score.');
             stored.opponent2.score = match.opponent2.score;
+            scoreUpdate = true;
+        }
+
+        if (match.status) {
+            stored.status = match.status;
+        } else if (scoreUpdate) {
+            stored.status = 'running';
         }
     }
 
@@ -243,7 +297,7 @@ export class Update {
     }
 
     private async getPreviousMatches(match: Match): Promise<Match[]> {
-        const inLoserBracket = await this.isInLoserBracket(match);
+        const inLoserBracket = await this.isLoserBracket(match.group_id);
         const roundNumber = await this.getRoundNumber(match.round_id);
 
         if (inLoserBracket) {
@@ -279,8 +333,8 @@ export class Update {
         const roundNumber = await this.getRoundNumber(match.round_id);
 
         // Not always the opposite of "inLoserBracket". Could be in simple elimination.
-        const inWinnerBracket = await this.isInWinnerBracket(match);
-        const inLoserBracket = await this.isInLoserBracket(match);
+        const inWinnerBracket = await this.isWinnerBracket(match.group_id);
+        const inLoserBracket = await this.isLoserBracket(match.group_id);
 
         if (inLoserBracket && roundNumber % 2 === 1) { // Major rounds.
             matches.push(await this.findMatch(match.group_id, roundNumber + 1, match.number));
@@ -310,22 +364,22 @@ export class Update {
         return group[0];
     }
 
-    private isInWinnerBracket(match: Match): Promise<boolean> {
-        return this.isInGroupOfName(match, 'Winner Bracket');
+    private isWinnerBracket(groupId: number): Promise<boolean> {
+        return this.isGroupOfName(groupId, 'Winner Bracket');
     }
 
-    private isInLoserBracket(match: Match): Promise<boolean> {
-        return this.isInGroupOfName(match, 'Loser Bracket');
+    private isLoserBracket(groupId: number): Promise<boolean> {
+        return this.isGroupOfName(groupId, 'Loser Bracket');
     }
 
-    private async isInRoundRobin(match: Match): Promise<boolean> {
-        const stage = await this.storage.select<Stage>('stage', match.stage_id);
+    private async isRoundRobin(stageId: number): Promise<boolean> {
+        const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
         return stage.type === 'round_robin';
     }
 
-    private async isInGroupOfName(match: Match, name: string): Promise<boolean> {
-        const group = await this.storage.select<Group>('group', match.group_id);
+    private async isGroupOfName(groupId: number, name: string): Promise<boolean> {
+        const group = await this.storage.select<Group>('group', groupId);
         if (!group) throw Error('Group not found.');
         return group.name === name;
     }

@@ -43,7 +43,7 @@ describe('Update matches', () => {
         assert.equal(after.status, 'running');
     });
 
-    it('should update the scores for a match', async () => {
+    it('should update the scores for a match and set it to running', async () => {
         const before = await storage.select('match', 0);
         assert.notExists(before.opponent1.score);
 
@@ -54,6 +54,7 @@ describe('Update matches', () => {
         });
 
         const after = await storage.select('match', 0);
+        assert.equal(after.status, 'running');
         assert.equal(after.opponent1.score, 2);
 
         // Name should stay. It shouldn't be overwritten.
