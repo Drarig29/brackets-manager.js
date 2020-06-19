@@ -134,13 +134,25 @@ describe('Update matches', () => {
         await manager.update.match({
             id: 0,
             opponent1: { result: undefined },
-            opponent1: { result: undefined },
+            opponent2: { result: undefined },
         });
 
         const after = await storage.select('match', 0);
         assert.equal(after.status, 'running');
         assert.notExists(after.opponent1.result);
         assert.notExists(after.opponent2.result);
+    });
+
+    it('should end set the other score to 0 if only one given', async () => {
+        await manager.update.match({
+            id: 1,
+            opponent1: { score: 1 },
+        });
+
+        const after = await storage.select('match', 1);
+        assert.equal(after.status, 'running');
+        assert.equal(after.opponent1.score, 1);
+        assert.equal(after.opponent2.score, 0);
     });
 
     it('should end the match by setting the winner and the scores', async () => {
@@ -197,5 +209,70 @@ describe('Locked matches', () => {
         await manager.update.match({ id: 8, opponent1: { result: 'win' } });
 
         await assert.isRejected(manager.update.match({ id: 0 }), 'The match is locked.');
+    });
+});
+
+describe('Update match games', () => {
+    before(async () => {
+        storage.reset();
+
+        await manager.create(0, {
+            name: 'With match games',
+            type: 'single_elimination',
+            size: 4,
+            settings: {
+                matchesChildCount: 3, // Bo3.
+            },
+        });
+    });
+
+    it('should update parent score when match game is updated', async () => {
+        await manager.update.matchGame({
+            id: 0,
+            opponent1: {
+                result: 'win',
+            },
+        });
+
+        let match = await storage.select('match', 0);
+        assert.equal(match.status, 'running');
+        assert.equal(match.opponent1.score, 1);
+        assert.equal(match.opponent2.score, 0);
+
+        await manager.update.matchGame({
+            id: 1,
+            opponent1: {
+                result: 'win',
+            },
+        });
+
+        match = await storage.select('match', 0);
+        assert.equal(match.status, 'running');
+        assert.equal(match.opponent1.score, 2);
+        assert.equal(match.opponent2.score, 0);
+
+        await manager.update.matchGame({
+            id: 2,
+            opponent1: {
+                result: 'loss',
+            },
+        });
+
+        match = await storage.select('match', 0);
+        assert.equal(match.status, 'completed');
+        assert.equal(match.opponent1.score, 2);
+        assert.equal(match.opponent2.score, 1);
+
+        await manager.update.matchGame({
+            id: 2,
+            opponent1: {
+                result: undefined,
+            },
+        });
+
+        match = await storage.select('match', 0);
+        assert.equal(match.status, 'running');
+        assert.equal(match.opponent1.score, 2);
+        assert.equal(match.opponent2.score, 0);
     });
 });

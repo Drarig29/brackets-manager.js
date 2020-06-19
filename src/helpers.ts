@@ -1,4 +1,4 @@
-import { Stage, SeedOrdering, OrderingMap, ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels } from "brackets-model";
+import { Stage, SeedOrdering, OrderingMap, ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels, MatchResults } from "brackets-model";
 import * as fs from 'fs';
 
 const viewerRoot = 'https://cdn.jsdelivr.net/gh/Drarig29/brackets-viewer.js/dist';
@@ -189,35 +189,35 @@ export function populatePosition(duels: Duels): void {
     }
 }
 
-export function getMatchResults(match: Match): {
-    winner: number | null,
-    loser: number | null
-} {
-    let winner: number | null | undefined = undefined;
-    let loser: number | null | undefined = undefined;
+export function getMatchResults(match: MatchResults): Side | null {
+    let winner: Side | null = null;
 
     if (match.opponent1 && match.opponent1.result === 'win') {
-        winner = match.opponent1.id;
-        loser = match.opponent2 ? match.opponent2.id : null;
+        winner = 'opponent1';
     }
 
     if (match.opponent2 && match.opponent2.result === 'win') {
-        if (winner !== undefined) throw Error('There are two winners.')
-        winner = match.opponent2.id;
-        loser = match.opponent1 ? match.opponent1.id : null;
+        if (winner !== null) throw Error('There are two winners.')
+        winner = 'opponent2';
     }
 
-    if (winner === undefined) throw Error('No winner found.');
-    if (loser === undefined) throw Error('No loser found.');
-
-    return { winner, loser };
+    return winner;
 }
 
 export function getSide(match: Match): Side {
     return match.number % 2 === 1 ? 'opponent1' : 'opponent2';
 }
 
-export function isMatchCompleted(match: Partial<Match>): boolean {
+export function getOpponent(match: Match, side: Side): ParticipantResult {
+    const opponent = match[side];
+    return { id: opponent && opponent.id };
+}
+
+export function otherSide(side: Side): Side {
+    return side === 'opponent1' ? 'opponent2' : 'opponent1';
+}
+
+export function isMatchCompleted(match: Partial<MatchResults>): boolean {
     return (!!match.opponent1 && (match.opponent1.result !== undefined || match.opponent1.forfeit !== undefined))
         || (!!match.opponent2 && (match.opponent2.result !== undefined || match.opponent2.forfeit !== undefined));
 }

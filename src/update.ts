@@ -1,4 +1,4 @@
-import { Match, Result, Round, Group, Stage, MatchGame, SeedOrdering, ParticipantResult } from "brackets-model";
+import { Match, Result, Round, Group, Stage, MatchGame, SeedOrdering, ParticipantResult, MatchResults } from "brackets-model";
 import { IStorage } from "./storage";
 import * as helpers from './helpers';
 
@@ -139,6 +139,67 @@ export class Update {
         const inRoundRobin = await this.isRoundRobin(stored.stage_id);
         if (!inRoundRobin && await this.isMatchLocked(stored)) throw Error('The match is locked.');
 
+        const completed = await this.updateMatchResults(stored, match);
+        await this.storage.update('match', match.id, stored);
+
+        if (!inRoundRobin && completed) {
+            await this.updateNext(stored);
+        }
+    }
+
+    public async matchGame(game: Partial<MatchGame>) {
+        if (game.id === undefined) throw Error('No match game id given.');
+
+        const stored = await this.storage.select<MatchGame>('match_game', game.id);
+        if (!stored) throw Error('Match game not found.');
+
+        await this.updateMatchResults(stored, game);
+        await this.storage.update('match_game', game.id, stored);
+
+        const games = await this.storage.select<MatchGame>('match_game', { parent_id: stored.parent_id });
+        if (!games) throw Error('No match games.');
+
+        const results = games.map(game => helpers.getMatchResults(game));
+        const scores = {
+            opponent1: 0,
+            opponent2: 0,
+        }
+
+        for (const result of results) {
+            if (result === 'opponent1') scores.opponent1++;
+            else if (result === 'opponent2') scores.opponent2++;
+        }
+
+        const storedParent = await this.storage.select<Match>('match', stored.parent_id);
+        if (!storedParent) throw Error('Parent not found.');
+
+        const parent: Partial<MatchResults> = {
+            opponent1: {
+                id: storedParent.opponent1 && storedParent.opponent1.id,
+                score: scores.opponent1,
+            },
+            opponent2: {
+                id: storedParent.opponent2 && storedParent.opponent2.id,
+                score: scores.opponent2,
+            }
+        };
+
+        const parentCompleted = scores.opponent1 + scores.opponent2 === storedParent.child_count;
+        if (parentCompleted) {
+            if (scores.opponent1 > scores.opponent2)
+                parent.opponent1!.result = 'win';
+            else if (scores.opponent2 > scores.opponent1)
+                parent.opponent2!.result = 'win';
+            else
+                throw Error('Match games result in a tie for the parent match.');
+        }
+
+        this.updateMatchResults(storedParent, parent);
+
+        await this.storage.update('match', storedParent.id, storedParent);
+    }
+
+    private async updateMatchResults(stored: MatchResults, match: Partial<MatchResults>) {
         const completed = helpers.isMatchCompleted(match);
         if (match.status === 'completed' && !completed) throw Error('The match is not really completed.');
 
@@ -150,36 +211,32 @@ export class Update {
             this.removeCompleted(stored);
         }
 
-        await this.storage.update('match', match.id, stored);
-
-        if (!inRoundRobin && completed) {
-            await this.updateNext(stored);
-        }
+        return completed;
     }
 
-    private setGeneric(stored: Match, match: Partial<Match>) {
-        let scoreUpdate = false;
+    private setGeneric(stored: MatchResults, match: Partial<MatchResults>) {
+        if ((!match.opponent1 || match.opponent1.score === undefined) &&
+            (!match.opponent2 || match.opponent2.score === undefined)) {
+            // No score update.
+            if (match.status) stored.status = match.status;
+            return;
+        }
 
-        if (match.opponent1 && match.opponent1.score) {
-            if (!stored.opponent1) throw Error('No team is defined yet. Can\'t set the score.');
+        if (!stored.opponent1 || !stored.opponent2) throw Error('No team is defined yet. Can\'t set the score.');
+
+        // Default as soon as scores are updated.
+        stored.status = 'running';
+        stored.opponent1.score = 0;
+        stored.opponent2.score = 0;
+
+        if (match.opponent1 && match.opponent1.score !== undefined)
             stored.opponent1.score = match.opponent1.score;
-            scoreUpdate = true;
-        }
 
-        if (match.opponent2 && match.opponent2.score) {
-            if (!stored.opponent2) throw Error('No team is defined yet. Can\'t set the score.');
+        if (match.opponent2 && match.opponent2.score !== undefined)
             stored.opponent2.score = match.opponent2.score;
-            scoreUpdate = true;
-        }
-
-        if (match.status) {
-            stored.status = match.status;
-        } else if (scoreUpdate) {
-            stored.status = 'running';
-        }
     }
 
-    private setCompleted(stored: Match, match: Partial<Match>) {
+    private setCompleted(stored: MatchResults, match: Partial<MatchResults>) {
         stored.status = 'completed';
 
         this.setResults(stored, match, 'win', 'loss');
@@ -189,7 +246,7 @@ export class Update {
         this.setForfeits(stored, match);
     }
 
-    private removeCompleted(stored: Match) {
+    private removeCompleted(stored: MatchResults) {
         stored.status = 'running';
 
         if (stored.opponent1) stored.opponent1.forfeit = undefined;
@@ -198,7 +255,7 @@ export class Update {
         if (stored.opponent2) stored.opponent2.result = undefined;
     }
 
-    private setResults(stored: Match, match: Partial<Match>, check: Result, change: Result) {
+    private setResults(stored: MatchResults, match: Partial<MatchResults>, check: Result, change: Result) {
         if (match.opponent1 && match.opponent2) {
             if ((match.opponent1.result === 'win' && match.opponent2.result === 'win') ||
                 (match.opponent1.result === 'loss' && match.opponent2.result === 'loss')) {
@@ -229,7 +286,7 @@ export class Update {
         }
     }
 
-    private setForfeits(stored: Match, match: Partial<Match>) {
+    private setForfeits(stored: MatchResults, match: Partial<MatchResults>) {
         // The forfeiter doesn't have a loss result.
 
         if (match.opponent1 && match.opponent1.forfeit === true) {
@@ -251,12 +308,15 @@ export class Update {
         const nextMatches = await this.getNextMatches(match);
         if (nextMatches.length === 0) return;
 
-        const { winner, loser } = helpers.getMatchResults(match);
-        nextMatches[0][helpers.getSide(match)] = { id: winner };
+        const side = helpers.getSide(match);
+        const winner = helpers.getMatchResults(match);
+        if (!winner) throw Error('Cannot find a winner.');
+
+        nextMatches[0][side] = helpers.getOpponent(match, winner);
         this.storage.update('match', nextMatches[0].id, nextMatches[0]);
 
         if (nextMatches.length === 2) {
-            nextMatches[1][helpers.getSide(match)] = { id: loser };
+            nextMatches[1][side] = helpers.getOpponent(match, helpers.otherSide(winner));
             this.storage.update('match', nextMatches[1].id, nextMatches[1]);
         }
     }
