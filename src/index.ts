@@ -4,6 +4,9 @@ import { IStorage } from './storage';
 import { create } from './create';
 import { ranking } from './results';
 
+/**
+ * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
+ */
 export class BracketsManager {
 
     protected storage: IStorage;

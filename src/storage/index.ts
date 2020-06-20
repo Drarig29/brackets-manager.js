@@ -1,5 +1,8 @@
 export type Table = 'participant' | 'stage' | 'group' | 'round' | 'match' | 'match_game';
 
+/**
+ * This interface is used by the manager to abstract storage.
+ */
 export interface IStorage {
     /**
      * Inserts a value in the database and returns its id.

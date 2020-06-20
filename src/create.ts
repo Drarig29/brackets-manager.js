@@ -1,4 +1,5 @@
 import { Participant, Duels, Duel, InputStage, ParticipantSlot, Match, SeedOrdering, MatchGame, Stage, Group, Round } from 'brackets-model';
+import { ordering, defaultMinorOrdering } from './ordering';
 import { BracketsManager } from '.';
 import { IStorage } from './storage';
 import * as helpers from './helpers';
@@ -33,13 +34,18 @@ class Create {
         this.stage = stage;
     }
 
+    /**
+     * Creates a round-robin stage.
+     * 
+     * Group count must be given. It will distribute participants in groups and rounds.
+     */
     public async roundRobin() {
         if (!this.stage.settings || !this.stage.settings.groupCount) throw Error('You must specify a group count for round-robin stages.');
 
         if (Array.isArray(this.stage.settings.seedOrdering)
             && this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
-        // Default method for groups: Effort balanced.
+        // Default method for round-robin groups: Effort balanced.
         const method = this.getOrdering(0, 'groups') || 'groups.effort_balanced';
 
         const stageId = await this.storage.insert<Stage>('stage', {
@@ -50,17 +56,23 @@ class Create {
         });
 
         const slots = await this.getSlots();
-        const ordered = helpers.ordering[method](slots, this.stage.settings.groupCount);
+        const ordered = ordering[method](slots, this.stage.settings.groupCount);
         const groups = helpers.makeGroups(ordered, this.stage.settings.groupCount);
 
         for (let i = 0; i < groups.length; i++)
             await this.createGroup(`Group ${i + 1}`, stageId, i + 1, groups[i]);
     }
 
+    /**
+     * Creates a single elimination stage.
+     * 
+     * One bracket and optionally a consolation final between semi-final losers.
+     */
     public async singleElimination() {
         if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
             this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
+        // Get current stage number.
         const stages = await this.storage.select<Stage>('stage', { tournament_id: this.tournamentId });
         const stageCount = stages ? stages.length : 0;
 
@@ -79,6 +91,12 @@ class Create {
             await this.createUniqueMatchBracket('Consolation Final', stageId, 2, [semiFinalLosers]);
     }
 
+    /**
+     * Creates a double elimination stage.
+     * 
+     * One upper bracket (winner bracket, WB), one lower bracket (loser bracket, LB) and optionally a grand final
+     * between the winner of both bracket, which can be simple or double.
+     */
     public async doubleElimination() {
         if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
             this.stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
@@ -92,7 +110,7 @@ class Create {
 
         const slots = await this.getSlots();
         const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket('Winner Bracket', stageId, 1, slots);
-        const winnerLb = await this.createMajorMinorBracket('Loser Bracket', stageId, 2, losersWb);
+        const winnerLb = await this.createLowerBracket('Loser Bracket', stageId, 2, losersWb);
 
         // No Grand Final by default.
         const grandFinal = this.stage.settings && this.stage.settings.grandFinal;
@@ -108,6 +126,15 @@ class Create {
         await this.createUniqueMatchBracket('Grand Final', stageId, 3, finalDuels);
     }
 
+    /**
+     * Creates a round-robin group.
+     * 
+     * This will make as many rounds as needed to let each participant match every other once.
+     * @param name Name of the group.
+     * @param stageId ID of the parent stage.
+     * @param number Number in the stage.
+     * @param slots A list of slots.
+     */
     private async createGroup(name: string, stageId: number, number: number, slots: ParticipantSlot[]) {
         const groupId = await this.storage.insert<Group>('group', {
             stage_id: stageId,
@@ -121,6 +148,15 @@ class Create {
             await this.createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i], this.getMatchesChildCount());
     }
 
+    /**
+     * Creates a standard bracket, which is the only one in single elimination and the upper one in double elimination.
+     * 
+     * This will make as many rounds as needed to end with one winner.
+     * @param name Name of the bracket (group).
+     * @param stageId ID of the parent stage.
+     * @param number Number in the stage.
+     * @param slots A list of slots.
+     */
     private async createStandardBracket(name: string, stageId: number, number: number, slots: ParticipantSlot[]): Promise<{
         losers: ParticipantSlot[][],
         winner: ParticipantSlot,
@@ -134,7 +170,7 @@ class Create {
 
         // Inner outer by default for round 1 of standard bracket.
         const method = this.getOrdering(0, 'elimination') || 'inner_outer';
-        const ordered = helpers.ordering[method](slots);
+        const ordered = ordering[method](slots);
 
         let duels = helpers.makePairs(ordered);
         let roundNumber = 1;
@@ -144,35 +180,48 @@ class Create {
         for (let i = roundCount - 1; i >= 0; i--) {
             const matchCount = Math.pow(2, i);
             duels = this.getCurrentDuels(duels, matchCount);
-            losers.push(duels.map(helpers.byePropagation));
+            losers.push(duels.map(helpers.byeLoser));
             await this.createRound(stageId, groupId, roundNumber++, matchCount, duels, this.getMatchesChildCount());
         }
 
-        const winner = helpers.byeResult(duels[0]);
+        const winner = helpers.byeWinner(duels[0]);
         return { losers, winner };
     }
 
-    private async createMajorMinorBracket(name: string, stageId: number, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
+    /**
+     * Creates a lower bracket, alternating between major and minor rounds.
+     * 
+     * - A major round is a regular round.
+     * - A minor round matches the previous (major) round's winners against upper bracket losers of the corresponding round.
+     * @param name Name of the bracket (group).
+     * @param stageId ID of the parent stage.
+     * @param number Number in the stage.
+     * @param losers One list of losers per upper bracket round.
+     */
+    private async createLowerBracket(name: string, stageId: number, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
         const groupId = await this.storage.insert<Group>('group', {
             stage_id: stageId,
             name,
             number,
         });
 
-        const majorRoundCount = losers.length - 1;
+        // The first pair of rounds (major & minor) takes the first two lists of losers.
+        const roundPairCount = losers.length - 1;
+
+        // The first list of losers contains the input for the bracket.
         const participantCount = losers[0].length * 4;
-        const matchesChildCount = this.getMatchesChildCount();
 
         let losersId = 0;
         let roundNumber = 1;
 
+        const matchesChildCount = this.getMatchesChildCount();
         const method = this.getMajorOrdering(participantCount);
-        const ordered = helpers.ordering[method](losers[losersId++]);
+        const ordered = ordering[method](losers[losersId++]);
 
         let duels = helpers.makePairs(ordered);
 
-        for (let i = 0; i < majorRoundCount; i++) {
-            const matchCount = Math.pow(2, majorRoundCount - i - 1);
+        for (let i = 0; i < roundPairCount; i++) {
+            const matchCount = Math.pow(2, roundPairCount - i - 1);
 
             // Major round.
             duels = this.getCurrentDuels(duels, matchCount, true);
@@ -184,11 +233,15 @@ class Create {
             await this.createRound(stageId, groupId, roundNumber++, matchCount, duels, matchesChildCount);
         }
 
-        return helpers.byeResult(duels[0]); // Winner.
+        return helpers.byeWinner(duels[0]); // Winner.
     }
 
     /**
-     * Creates a bracket with rounds that only have 1 match each.
+     * Creates a bracket with rounds that only have 1 match each. Used for finals.
+     * @param name Name of the bracket (group).
+     * @param stageId ID of the parent stage.
+     * @param number Number in the stage.
+     * @param duels A list of duels.
      */
     private async createUniqueMatchBracket(name: string, stageId: number, number: number, duels: Duels) {
         const groupId = await this.storage.insert<Group>('group', {
@@ -201,6 +254,15 @@ class Create {
             await this.createRound(stageId, groupId, i + 1, 1, [duels[i]], this.getMatchesChildCount());
     }
 
+    /**
+     * Creates a round, which contain matches.
+     * @param stageId ID of the parent stage.
+     * @param groupId ID of the parent group.
+     * @param roundNumber Number in the group.
+     * @param matchCount Duel/match count.
+     * @param duels A list of duels.
+     * @param matchesChildCount Child count for each match of the round.
+     */
     private async createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, duels: Duels, matchesChildCount: number) {
         const roundId = await this.storage.insert<Round>('round', {
             number: roundNumber,
@@ -212,6 +274,18 @@ class Create {
             await this.createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
     }
 
+    /**
+     * Creates a match, possibly with match games.
+     * 
+     * - If `childCount` is 0, then there is no children. The score of the match is directly its intrinsic score.
+     * - If `childCount` is greater than 0, then the score of the match will automatically be calculated based on its child games.
+     * @param stageId ID of the parent stage.
+     * @param groupId ID of the parent group.
+     * @param roundId ID of the parent round.
+     * @param matchNumber Number in the round.
+     * @param opponents The two opponents matching against each other.
+     * @param childCount Child count for this match (number of games).
+     */
     private async createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number) {
         const parentId = await this.storage.insert<Match>('match', {
             number: matchNumber,
@@ -278,18 +352,18 @@ class Create {
             for (let duelId = 0; duelId < currentDuelCount; duelId++) {
                 const prevDuelId = duelId * 2;
                 currentDuels.push([
-                    helpers.byeResult(previousDuels[prevDuelId + 0]), // opponent1.
-                    helpers.byeResult(previousDuels[prevDuelId + 1]), // opponent2.
+                    helpers.byeWinner(previousDuels[prevDuelId + 0]), // opponent1.
+                    helpers.byeWinner(previousDuels[prevDuelId + 1]), // opponent2.
                 ]);
             }
         } else { // From major to minor (LB).
-            losers = helpers.ordering[method!](losers!);
+            losers = ordering[method!](losers!);
 
             for (let duelId = 0; duelId < currentDuelCount; duelId++) {
                 const prevDuelId = duelId;
                 currentDuels.push([
                     losers![prevDuelId], // opponent1.
-                    helpers.byeResult(previousDuels[prevDuelId]), // opponent2.
+                    helpers.byeWinner(previousDuels[prevDuelId]), // opponent2.
                 ]);
             }
         }
@@ -336,33 +410,50 @@ class Create {
         return slots;
     }
 
+    /**
+     * Safely gets `matchesChildCount` in the stage input settings.
+     */
     private getMatchesChildCount(): number {
         if (this.stage.settings === undefined || this.stage.settings.matchesChildCount === undefined) return 0;
         return this.stage.settings.matchesChildCount;
     }
 
-    private getOrdering(index: number, checkType: 'elimination' | 'groups'): SeedOrdering | null {
+    /**
+     * Safely gets an ordering by its index in the stage input settings.
+     * @param index Index of the ordering.
+     * @param stageType A value indicating if the method should be a group method or not.
+     */
+    private getOrdering(index: number, stageType: 'elimination' | 'groups'): SeedOrdering | null {
         if (this.stage.settings === undefined || this.stage.settings.seedOrdering === undefined) return null;
 
         const method = this.stage.settings.seedOrdering[index];
         if (!method) return null;
 
-        if (checkType === 'elimination' && method.match(/^groups\./))
+        if (stageType === 'elimination' && method.match(/^groups\./))
             throw Error('You must specify a seed ordering method without a \'groups\' prefix');
 
-        if (checkType === 'groups' && !method.match(/^groups\./))
+        if (stageType === 'groups' && !method.match(/^groups\./))
             throw Error('You must specify a seed ordering method with a \'groups\' prefix');
 
         return method;
     }
 
+    /**
+     * Safely gets the only major ordering for the lower bracket.
+     * @param participantCount Number of participants in the stage.
+     */
     private getMajorOrdering(participantCount: number): SeedOrdering {
         const ordering = this.getOrdering(1, 'elimination');
-        return ordering || helpers.defaultMinorOrdering[participantCount][0];
+        return ordering || defaultMinorOrdering[participantCount][0];
     }
 
+    /**
+     * Safely gets a minor ordering for the lower bracket by its index.
+     * @param participantCount Number of participants in the stage.
+     * @param index Index of the minor round.
+     */
     private getMinorOrdering(participantCount: number, index: number): SeedOrdering {
         const ordering = this.getOrdering(2 + index, 'elimination');
-        return ordering || helpers.defaultMinorOrdering[participantCount][1 + index];
+        return ordering || defaultMinorOrdering[participantCount][1 + index];
     }
 }

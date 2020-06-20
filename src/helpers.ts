@@ -1,24 +1,7 @@
-import { Stage, SeedOrdering, OrderingMap, ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels, MatchResults } from "brackets-model";
-import * as fs from 'fs';
-
-const viewerRoot = 'https://cdn.jsdelivr.net/gh/Drarig29/brackets-viewer.js/dist';
-
-export function makeViewer(data: Stage) {
-    const html = `<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.slim.min.js"></script>
-
-<link rel="stylesheet" href="${viewerRoot}/brackets-viewer.min.css" />
-<script type="text/javascript" src="${viewerRoot}/brackets-viewer.min.js"></script>
-
-<section class="tournament"></section>
-<script>
-    bracketsViewer.render(${JSON.stringify(data, null, 4)});
-</script>`;
-
-    fs.writeFileSync('viewer/viewer.html', html);
-}
+import { ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels, MatchResults, Result } from "brackets-model";
 
 /**
- * Distribute participants in rounds of matches for a round-robin group.
+ * Distributes participants in rounds for a round-robin group.
  * 
  * Conditions:
  *   - Each participant matches each other only once.
@@ -89,6 +72,11 @@ export function assertRoundRobin<T>(input: T[], output: T[][][]) {
     }
 }
 
+/**
+ * Distributes elements in groups of equal size.
+ * @param elements A list of elements to distribute in groups.
+ * @param groupCount The group count.
+ */
 export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
     const groupSize = Math.ceil(elements.length / groupCount);
     const result: T[][] = [];
@@ -106,12 +94,15 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
 /**
  * Makes pairs with each element and its next one.
  * @example [1, 2, 3, 4] --> [[1, 2], [3, 4]]
+ * @param array A list of elements.
  */
 export function makePairs<T>(array: T[]): T[][];
 
 /**
  * Makes pairs with one element from `left` and the other from `right`.
  * @example [1, 2] + [3, 4] --> [[1, 3], [2, 4]]
+ * @param left The first list of elements.
+ * @param right The second list of elements.
  */
 export function makePairs<T>(left: T[], right: T[]): T[][];
 
@@ -126,38 +117,63 @@ export function makePairs<T>(left: T[], right?: T[]): T[][] {
     return left.map((current, i) => [current, right[i]]);
 }
 
+/**
+ * Ensures that a list of elements has an even size.
+ * @param array A list of elements.
+ */
 export function ensureEvenSized<T>(array: T[]) {
     if (array.length % 2 === 1) {
         throw Error('Array size must be even.');
     }
 }
 
+/**
+ * Ensures that two lists of elements have the same size.
+ * @param left The first list of elements.
+ * @param right The second list of elements.
+ */
 export function ensureEquallySized<T>(left: T[], right: T[]) {
     if (left.length !== right.length) {
         throw Error('Arrays size must be equal.');
     }
 }
 
+/**
+ * Ensures that a list of elements has a size which is a power of two.
+ * @param array A list of elements.
+ */
 export function ensurePowerOfTwoSized<T>(array: T[]) {
     if (!Number.isInteger(Math.log2(array.length))) {
         throw Error('Array size must be a power of 2.');
     }
 }
 
+/**
+ * Ensures that a match scores aren't tied.
+ * @param scores Two numbers which are scores.
+ */
 export function ensureNotTied(scores: number[]) {
     if (scores[0] === scores[1]) {
         throw Error(`${scores[0]} and ${scores[1]} are tied. It cannot be.`);
     }
 }
 
-export function toResult(opponent: ParticipantSlot): ParticipantResult | null {
-    return opponent ? {
-        id: opponent.id,
-        position: opponent.position,
+/**
+ * Converts a participant slot to a result stored in storage.
+ * @param slot A participant slot.
+ */
+export function toResult(slot: ParticipantSlot): ParticipantResult | null {
+    return slot ? {
+        id: slot.id,
+        position: slot.position,
     } : null;
 }
 
-export function byeResult(opponents: Duel): ParticipantSlot {
+/**
+ * Returns the pre-computed winner for a match because of BYEs.
+ * @param opponents Two opponents.
+ */
+export function byeWinner(opponents: Duel): ParticipantSlot {
     if (opponents[0] === null && opponents[1] === null) // Double BYE.
         return null; // BYE.
 
@@ -170,26 +186,39 @@ export function byeResult(opponents: Duel): ParticipantSlot {
     return { id: null }; // Normal.
 }
 
-export function byePropagation(opponents: Duel, index: number): ParticipantSlot {
+/**
+ * Returns the pre-computed loser for a match because of BYEs.
+ * 
+ * Only used for loser bracket.
+ * @param opponents Two opponents.
+ * @param index The index of the duel in the round.
+ */
+export function byeLoser(opponents: Duel, index: number): ParticipantSlot {
     if (opponents[0] === null || opponents[1] === null) // At least one BYE.
         return null; // BYE.
 
     return { id: null, position: index + 1 }; // Normal.
 }
 
+/**
+ * Adds positions in each opponent if not present.
+ * @param duels A list of duels.
+ */
 export function populatePosition(duels: Duels): void {
     let i = 1;
 
     for (const duel of duels) {
-        if (duel[0] && !duel[0].position) duel[0].position = i;
-        i++;
-
-        if (duel[1] && !duel[1].position) duel[1].position = i;
-        i++;
+        if (duel[0] && duel[0].position) return; // Shortcut because if one position is present, then all will.
+        duel![0]!.position = i++;
+        duel![1]!.position = i++;
     }
 }
 
-export function getMatchResults(match: MatchResults): Side | null {
+/**
+ * Returns the winner side or `null` if no winner.
+ * @param match A match's results.
+ */
+export function getMatchResult(match: MatchResults): Side | null {
     let winner: Side | null = null;
 
     if (match.opponent1 && match.opponent1.result === 'win') {
@@ -204,100 +233,173 @@ export function getMatchResults(match: MatchResults): Side | null {
     return winner;
 }
 
+/**
+ * Finds a position in a list of matches.
+ * @param matches A list of matches to search into.
+ * @param position The position to find.
+ */
+export function findPosition(matches: Match[], position: number): ParticipantResult | null {
+    for (const match of matches) {
+        if (match.opponent1 && match.opponent1.position === position)
+            return match.opponent1;
+
+        if (match.opponent2 && match.opponent2.position === position)
+            return match.opponent2;
+    }
+
+    return null;
+}
+
+/**
+ * Gets the side where the winner of the given match will go in the next match.
+ * @param match The current match.
+ */
 export function getSide(match: Match): Side {
     return match.number % 2 === 1 ? 'opponent1' : 'opponent2';
 }
 
+/**
+ * Gets the opponent at the given side of the given match.
+ * @param match The match to get the opponent from.
+ * @param side The side where to get the opponent from.
+ */
 export function getOpponent(match: Match, side: Side): ParticipantResult {
     const opponent = match[side];
     return { id: opponent && opponent.id };
 }
 
-export function otherSide(side: Side): Side {
+/**
+ * Gets the other side of a match.
+ * @param side The side that we don't want.
+ */
+export function getOtherSide(side: Side): Side {
     return side === 'opponent1' ? 'opponent2' : 'opponent1';
 }
 
+/**
+ * Checks if a match is completed (either because of the result or the forfeit).
+ * @param match Partial match results.
+ */
 export function isMatchCompleted(match: Partial<MatchResults>): boolean {
     return (!!match.opponent1 && (match.opponent1.result !== undefined || match.opponent1.forfeit !== undefined))
         || (!!match.opponent2 && (match.opponent2.result !== undefined || match.opponent2.forfeit !== undefined));
 }
 
-// https://web.archive.org/web/20200601102344/https://tl.net/forum/sc2-tournaments/202139-superior-double-elimination-losers-bracket-seeding
+/**
+ * Updates the scores of a match.
+ * @param stored A reference to what will be updated in the storage.
+ * @param match Input of the update.
+ */
+export function setScores(stored: MatchResults, match: Partial<MatchResults>) {
+    if ((!match.opponent1 || match.opponent1.score === undefined) &&
+        (!match.opponent2 || match.opponent2.score === undefined)) {
+        // No score update.
+        if (match.status) stored.status = match.status;
+        return;
+    }
 
-export const ordering: OrderingMap = {
-    'natural': <T>(array: T[]) => [...array],
-    'reverse': <T>(array: T[]) => array.reverse(),
-    'half_shift': <T>(array: T[]) => [...array.slice(array.length / 2), ...array.slice(0, array.length / 2)],
-    'reverse_half_shift': <T>(array: T[]) => [...array.slice(0, array.length / 2).reverse(), ...array.slice(array.length / 2).reverse()],
-    'pair_flip': <T>(array: T[]) => {
-        const result: T[] = [];
-        for (let i = 0; i < array.length; i += 2) result.push(array[i + 1], array[i]);
-        return result;
-    },
-    'inner_outer': <T>(array: T[]) => {
-        const size = array.length / 4;
-        const parts = {
-            inner: [array.slice(size, 2 * size), array.slice(2 * size, 3 * size)],
-            outer: [array.slice(0, size), array.slice(3 * size, 4 * size)]
-        }
+    if (!stored.opponent1 || !stored.opponent2) throw Error('No team is defined yet. Can\'t set the score.');
 
-        function inner(part: T[][]): T[] {
-            return [part[0].pop()!, part[1].shift()!];
-        }
+    // Default when scores are updated.
+    stored.status = 'running';
+    stored.opponent1.score = 0;
+    stored.opponent2.score = 0;
 
-        function outer(part: T[][]): T[] {
-            return [part[0].shift()!, part[1].pop()!];
-        }
+    if (match.opponent1 && match.opponent1.score !== undefined)
+        stored.opponent1.score = match.opponent1.score;
 
-        const result: T[] = [];
-
-        for (let i = 0; i < size / 2; i++) {
-            result.push(
-                ...outer(parts.outer), // Outer's outer
-                ...inner(parts.inner), // Inner's inner
-                ...inner(parts.outer), // Outer's inner
-                ...outer(parts.inner), // Inner's outer
-            );
-        }
-
-        return result;
-    },
-    'groups.effort_balanced': <T>(array: T[], groupCount: number) => {
-        const result: T[] = [];
-        let i = 0, j = 0;
-
-        while (result.length < array.length) {
-            result.push(array[i]);
-            i += groupCount;
-            if (i >= array.length) i = ++j;
-        }
-
-        return result;
-    },
-    'groups.snake': <T>(array: T[], groupCount: number) => {
-        const groups = Array.from(Array(groupCount), (_): T[] => []);
-
-        for (let run = 0; run < array.length / groupCount; run++) {
-            if (run % 2 === 0) {
-                for (let group = 0; group < groupCount; group++) {
-                    groups[group].push(array[run * groupCount + group]);
-                }
-            } else {
-                for (let group = 0; group < groupCount; group++) {
-                    groups[groupCount - group - 1].push(array[run * groupCount + group]);
-                }
-            }
-        }
-
-        return groups.flat();
-    },
-    'groups.bracket_optimized': () => { throw Error('Not implemented.') },
+    if (match.opponent2 && match.opponent2.score !== undefined)
+        stored.opponent2.score = match.opponent2.score;
 }
 
-export const defaultMinorOrdering: { [key: number]: SeedOrdering[] } = {
-    8: ['natural', 'reverse', 'natural'],
-    16: ['natural', 'reverse_half_shift', 'reverse', 'natural'],
-    32: ['natural', 'reverse', 'half_shift', 'natural', 'natural'],
-    64: ['natural', 'reverse', 'half_shift', 'reverse', 'natural', 'natural'],
-    128: ['natural', 'reverse', 'half_shift', 'pair_flip', 'pair_flip', 'pair_flip', 'natural'],
+/**
+ * Completes a match and handles results and forfeits.
+ * @param stored A reference to what will be updated in the storage.
+ * @param match Input of the update.
+ */
+export function setCompleted(stored: MatchResults, match: Partial<MatchResults>) {
+    stored.status = 'completed';
+
+    setResults(stored, match, 'win', 'loss');
+    setResults(stored, match, 'loss', 'win');
+    setResults(stored, match, 'draw', 'draw');
+
+    setForfeits(stored, match);
+}
+
+/**
+ * Removes the 'completed' status of a match, set it back to running and removes results.
+ * @param stored A reference to what will be updated in the storage.
+ */
+export function removeCompleted(stored: MatchResults) {
+    stored.status = 'running';
+
+    if (stored.opponent1) {
+        stored.opponent1.forfeit = undefined;
+        stored.opponent1.result = undefined;
+    }
+
+    if (stored.opponent2) {
+        stored.opponent2.forfeit = undefined;
+        stored.opponent2.result = undefined;
+    }
+}
+
+/**
+ * Ensures the symmetry between opponents.
+ * 
+ * Sets an opponent's result to something, based on the result on the other opponent.
+ * @param stored A reference to what will be updated in the storage.
+ * @param match Input of the update.
+ * @param check A result to check in each opponent.
+ * @param change A result to set in each other opponent if `check` is correct.
+ */
+export function setResults(stored: MatchResults, match: Partial<MatchResults>, check: Result, change: Result) {
+    if (match.opponent1 && match.opponent2) {
+        if ((match.opponent1.result === 'win' && match.opponent2.result === 'win') ||
+            (match.opponent1.result === 'loss' && match.opponent2.result === 'loss')) {
+            throw Error('There are two winners.');
+        }
+
+        if (match.opponent1.forfeit === true && match.opponent2.forfeit === true) {
+            throw Error('There are two forfeits.');
+        }
+    }
+
+    if (match.opponent1 && match.opponent1.result === check) {
+        if (stored.opponent1) stored.opponent1.result = check;
+        else stored.opponent1 = { id: null, result: check };
+
+        if (stored.opponent2) stored.opponent2.result = change;
+        else stored.opponent2 = { id: null, result: change };
+    }
+
+    if (match.opponent2 && match.opponent2.result === check) {
+        if (stored.opponent2) stored.opponent2.result = check;
+        else stored.opponent2 = { id: null, result: check };
+
+        if (stored.opponent1) stored.opponent1.result = change;
+        else stored.opponent1 = { id: null, result: change };
+    }
+}
+
+/**
+ * Sets forfeits for each opponent (if needed).
+ * @param stored A reference to what will be updated in the storage.
+ * @param match Input of the update.
+ */
+export function setForfeits(stored: MatchResults, match: Partial<MatchResults>) {
+    if (match.opponent1 && match.opponent1.forfeit === true) {
+        if (stored.opponent1) stored.opponent1.forfeit = true;
+
+        if (stored.opponent2) stored.opponent2.result = 'win';
+        else stored.opponent2 = { id: null, result: 'win' };
+    }
+
+    if (match.opponent2 && match.opponent2.forfeit === true) {
+        if (stored.opponent2) stored.opponent2.forfeit = true;
+
+        if (stored.opponent1) stored.opponent1.result = 'win';
+        else stored.opponent1 = { id: null, result: 'win' };
+    }
 }

@@ -89,8 +89,24 @@ class JsonDatabase implements IStorage {
         return true;
     }
 
+    /**
+     * Gets all data from a table in the database. 
+     * @param table Where to get from.
+     */
     public select<T>(table: Table): Promise<T[] | null>;
+
+    /**
+     * Gets specific data from a table in the database.
+     * @param table Where to get from.
+     * @param id What to get.
+     */
     public select<T>(table: Table, key: number): Promise<T | null>;
+
+    /**
+     * Gets data from a table in the database with a filter.
+     * @param table Where to get from.
+     * @param filter An object to filter data.
+     */
     public select<T>(table: Table, filter: Partial<T>): Promise<T[] | null>
 
     public async select<T>(table: Table, arg?: any): Promise<T | T[] | null> {
@@ -107,7 +123,20 @@ class JsonDatabase implements IStorage {
         }
     }
 
+    /**
+     * Updates data in a table.
+     * @param table Where to update.
+     * @param id What to update.
+     * @param value How to update.
+     */
     public update<T>(table: Table, key: number, value: T): Promise<boolean>;
+
+    /**
+     * Updates data in a table.
+     * @param table Where to update.
+     * @param filter An object to filter data.
+     * @param value How to update.
+     */
     public update<T>(table: Table, filter: Partial<T>, value: Partial<T>): Promise<boolean>;
 
     public async update<T>(table: Table, arg: any, value: T | Partial<T>) {
@@ -127,6 +156,11 @@ class JsonDatabase implements IStorage {
         return true;
     }
 
+    /**
+     * Delete data in a table, based on a filter.
+     * @param table Where to delete in.
+     * @param filter An object to filter data.
+     */
     public async delete<T>(table: Table, filter: Partial<T>): Promise<boolean> {
         const path = this.makePath(table);
         const values: T[] = this.internal.getData(path);

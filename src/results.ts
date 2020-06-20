@@ -16,7 +16,7 @@ export async function ranking(this: BracketsManager, groupId: number): Promise<s
     const wins: { [key: number]: number } = Object.fromEntries(teams.map(team => [team.id, 0]));
 
     for (const match of matches) {
-        const winner = helpers.getMatchResults(match);
+        const winner = helpers.getMatchResult(match);
         if (!winner) continue;
 
         const opponent = helpers.getOpponent(match, winner);
