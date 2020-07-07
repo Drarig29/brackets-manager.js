@@ -37,6 +37,19 @@ describe('Create a round-robin stage', () => {
         assert.equal((await storage.select('match')).length, 12);
     });
 
+    it('should create a round-robin stage with to be determined participants', async () => {
+        await manager.create(0, {
+            name: 'Example',
+            type: 'round_robin',
+            size: 16,
+            settings: { groupCount: 4 },
+        });
+
+        assert.equal((await storage.select('group')).length, 4);
+        assert.equal((await storage.select('round')).length, 4 * 3);
+        assert.equal((await storage.select('match')).length, 4 * 3 * 2);
+    });
+
     it('should create a round-robin stage with effort balanced', async () => {
         const example = {
             name: 'Example with effort balanced',
