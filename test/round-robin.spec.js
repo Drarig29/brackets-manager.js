@@ -133,9 +133,4 @@ describe('Update scores in a round-robin stage', () => {
             opponent2: { score: 16, result: "win" }, // POCEBLO
         });
     });
-
-    it('should give an appropriate ranking', async () => {
-        const ranking = await manager.ranking(0);
-        assert.deepEqual(ranking, example.participants)
-    });
 });
