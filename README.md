@@ -4,6 +4,8 @@ A simple library to manage tournament brackets (round-robin, single elimination,
 
 It contains all the logic needed to manage tournaments.
 
+[![npm](https://img.shields.io/npm/v/brackets-manager.svg)](https://www.npmjs.com/package/brackets-manager)
+
 # Features
 
 - [BYE](https://en.wikipedia.org/wiki/Bye_%28sports%29) supported: only during creation (for seeding and balancing).
