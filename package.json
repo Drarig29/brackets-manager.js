@@ -1,6 +1,6 @@
 {
     "name": "brackets-manager",
-    "version": "0.1.3",
+    "version": "1.0.0",
     "description": "A simple library to manage tournament brackets (round-robin, single elimination, double elimination)",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
