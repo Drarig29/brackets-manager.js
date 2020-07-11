@@ -48,11 +48,12 @@ class Create {
         // Default method for round-robin groups: Effort balanced.
         const method = this.getOrdering(0, 'groups') || 'groups.effort_balanced';
 
+        const stageCount = await this.getStageCount();
         const stageId = await this.storage.insert<Stage>('stage', {
             tournament_id: this.tournamentId,
             name: this.stage.name,
             type: this.stage.type,
-            number: 1,
+            number: stageCount + 1,
         });
 
         const slots = await this.getSlots();
@@ -72,15 +73,12 @@ class Create {
         if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
             this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
-        // Get current stage number.
-        const stages = await this.storage.select<Stage>('stage', { tournament_id: this.tournamentId });
-        const stageCount = stages ? stages.length : 0;
-
+        const stageCount = await this.getStageCount();
         const stageId = await this.storage.insert<Stage>('stage', {
             tournament_id: this.tournamentId,
-            number: stageCount + 1,
             name: this.stage.name,
             type: this.stage.type,
+            number: stageCount + 1,
         });
 
         const slots = await this.getSlots();
@@ -101,11 +99,12 @@ class Create {
         if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
             this.stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
 
+        const stageCount = await this.getStageCount();
         const stageId = await this.storage.insert<Stage>('stage', {
             tournament_id: this.tournamentId,
             name: this.stage.name,
             type: this.stage.type,
-            number: 1,
+            number: stageCount + 1,
         });
 
         const slots = await this.getSlots();
@@ -408,6 +407,12 @@ class Create {
         });
 
         return slots;
+    }
+
+    private async getStageCount(): Promise<number> {
+        const stages = await this.storage.select<Stage>('stage', { tournament_id: this.tournamentId });
+        const stageCount = stages ? stages.length : 0;
+        return stageCount;
     }
 
     /**
