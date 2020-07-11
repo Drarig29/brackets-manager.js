@@ -23,7 +23,9 @@
     },
     "scripts": {
         "test": "npx mocha test",
-        "start": "tsc -watch"
+        "start": "tsc -watch",
+        "build": "tsc",
+        "prepublishOnly": "npm run build"
     },
     "keywords": [
         "javascript",
