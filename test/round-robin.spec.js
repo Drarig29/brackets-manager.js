@@ -16,8 +16,9 @@ describe('Create a round-robin stage', () => {
     it('should create a round-robin stage', async () => {
         const example = {
             name: 'Example',
+            tournamentId: 0,
             type: 'round_robin',
-            participants: [
+            seeding: [
                 'Team 1', 'Team 2',
                 'Team 3', 'Team 4',
                 'Team 5', 'Team 6',
@@ -26,7 +27,7 @@ describe('Create a round-robin stage', () => {
             settings: { groupCount: 2 },
         };
 
-        await manager.create(0, example);
+        await manager.create(example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -38,8 +39,9 @@ describe('Create a round-robin stage', () => {
     });
 
     it('should create a round-robin stage with to be determined participants', async () => {
-        await manager.create(0, {
+        await manager.create({
             name: 'Example',
+            tournamentId: 0,
             type: 'round_robin',
             size: 16,
             settings: { groupCount: 4 },
@@ -51,10 +53,11 @@ describe('Create a round-robin stage', () => {
     });
 
     it('should create a round-robin stage with effort balanced', async () => {
-        const example = {
+        await manager.create({
             name: 'Example with effort balanced',
+            tournamentId: 0,
             type: 'round_robin',
-            participants: [
+            seeding: [
                 'Team 1', 'Team 2',
                 'Team 3', 'Team 4',
                 'Team 5', 'Team 6',
@@ -64,16 +67,17 @@ describe('Create a round-robin stage', () => {
                 groupCount: 2,
                 seedOrdering: ['groups.snake'],
             },
-        };
-
-        await manager.create(0, example);
+        });
 
         assert.equal((await storage.select('match', 0)).opponent1.id, 0);
         assert.equal((await storage.select('match', 0)).opponent2.id, 7);
     });
 
     it('should throw if no group count given', async () => {
-        await assert.isRejected(manager.create(0, { type: 'round_robin' }), 'You must specify a group count for round-robin stages.');
+        await assert.isRejected(manager.create({
+            tournamentId: 0,
+            type: 'round_robin'
+        }), 'You must specify a group count for round-robin stages.');
     });
 });
 
@@ -81,19 +85,18 @@ describe('Create a round-robin stage', () => {
 // https://organizer.toornament.com/tournaments/3359823657332629504/stages/3359826493568360448/groups/3359826494507884609/result
 
 describe('Update scores in a round-robin stage', () => {
-    const example = {
-        name: 'Example scores',
-        type: 'round_robin',
-        participants: [
-            'POCEBLO', 'twitch.tv/mrs_fly',
-            'Ballec Squad', 'AQUELLEHEURE?!',
-        ],
-        settings: { groupCount: 1 },
-    };
-
     before(async () => {
         storage.reset();
-        await manager.create(0, example);
+        await manager.create({
+            name: 'Example scores',
+            tournamentId: 0,
+            type: 'round_robin',
+            seeding: [
+                'POCEBLO', 'twitch.tv/mrs_fly',
+                'Ballec Squad', 'AQUELLEHEURE?!',
+            ],
+            settings: { groupCount: 1 },
+        });
     });
 
     it('should set all the scores', async () => {

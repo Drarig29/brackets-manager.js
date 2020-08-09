@@ -9,8 +9,9 @@ const manager = new BracketsManager(storage);
 
 const example = {
     name: 'Amateur',
+    tournamentId: 0,
     type: 'double_elimination',
-    participants: [
+    seeding: [
         'Team 1', 'Team 2',
         'Team 3', 'Team 4',
         'Team 5', 'Team 6',
@@ -27,7 +28,7 @@ describe('Update matches', () => {
 
     before(async () => {
         storage.reset();
-        await manager.create(0, example);
+        await manager.create(example);
     });
 
     it('should start a match', async () => {
@@ -143,7 +144,7 @@ describe('Update matches', () => {
         assert.notExists(after.opponent2.result);
     });
 
-    it('should end set the other score to 0 if only one given', async () => {
+    it('should set the other score to 0 if only one given', async () => {
         await manager.update.match({
             id: 1,
             opponent1: { score: 1 },
@@ -191,7 +192,7 @@ describe('Locked matches', () => {
 
     before(async () => {
         storage.reset();
-        await manager.create(0, example);
+        await manager.create(example);
     });
 
     it('shoud throw when the matches leading to the match have not been completed yet', async () => {
@@ -213,11 +214,13 @@ describe('Locked matches', () => {
 });
 
 describe('Update match games', () => {
+
     before(async () => {
         storage.reset();
 
-        await manager.create(0, {
+        await manager.create({
             name: 'With match games',
+            tournamentId: 0,
             type: 'single_elimination',
             size: 4,
             settings: {
@@ -274,5 +277,31 @@ describe('Update match games', () => {
         assert.equal(match.status, 'running');
         assert.equal(match.opponent1.score, 2);
         assert.equal(match.opponent2.score, 0);
+    });
+});
+
+describe('Participants', () => {
+
+    before(async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Without participants',
+            tournamentId: 0,
+            type: 'double_elimination',
+            size: 8,
+        });
+    });
+
+    it('should update participants in a stage without any participant', async () => {
+        await manager.update.participants(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
+        const match = await storage.select('match', 0);
+        assert.equal(match.opponent1.id, 0)
     });
 });

@@ -20,7 +20,7 @@ export class BracketsManager {
     /** 
      * Creates a stage for an existing tournament. The tournament won't be created.
      */
-    public create: (tournamentdId: number, stage: InputStage) => Promise<void>;
+    public create: (stage: InputStage) => Promise<void>;
 }
 
 declare global {

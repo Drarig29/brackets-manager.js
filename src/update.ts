@@ -1,7 +1,8 @@
-import { Match, Round, Group, Stage, MatchGame, SeedOrdering, MatchResults } from "brackets-model";
+import { Match, Round, Group, Stage, MatchGame, SeedOrdering, MatchResults, Seeding } from "brackets-model";
 import { ordering } from './ordering';
 import { IStorage } from "./storage";
 import * as helpers from './helpers';
+import { Create } from "./create";
 
 export type Level = 'stage' | 'group' | 'round' | 'match';
 
@@ -82,6 +83,21 @@ export class Update {
         this.updateMatchResults(storedParent, parent);
 
         await this.storage.update('match', storedParent.id, storedParent);
+    }
+
+    public async participants(stageId: number, seeding: Seeding) {
+        const stage = await this.storage.select<Stage>('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
+
+        const create = new Create(this.storage, {
+            name: stage.name,
+            tournamentId: stage.tournament_id,
+            type: stage.type,
+            settings: stage.settings,
+            seeding,
+        }, true);
+
+        return create.run();
     }
 
     /**

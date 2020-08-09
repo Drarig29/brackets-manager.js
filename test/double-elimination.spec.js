@@ -9,8 +9,9 @@ const manager = new BracketsManager(storage);
 
 const example = {
     name: 'Amateur',
+    tournamentId: 0,
     type: 'double_elimination',
-    participants: [
+    seeding: [
         'Team 1', 'Team 2',
         'Team 3', 'Team 4',
         'Team 5', 'Team 6',
@@ -30,7 +31,7 @@ describe('Create double elimination stage', () => {
     });
 
     it('should create a double elimination stage', async () => {
-        await manager.create(0, example);
+        await manager.create(example);
 
         const stage = await storage.select('stage', 0);
         assert.equal(stage.name, example.name);
@@ -42,17 +43,16 @@ describe('Create double elimination stage', () => {
     });
 
     it('should propagate BYEs through the brackets', async () => {
-        const withByes = {
+        await manager.create({
             name: 'Example with BYEs',
+            tournamentId: 0,
             type: 'double_elimination',
-            participants: [
+            seeding: [
                 'Team 1', null,
                 null, null,
             ],
             settings: { seedOrdering: ['natural'], grandFinal: 'simple' },
-        };
-
-        await manager.create(0, withByes);
+        });
 
         assert.equal((await storage.select('match', 2)).opponent1.id, 0);
         assert.equal((await storage.select('match', 2)).opponent2, null);
@@ -68,23 +68,18 @@ describe('Create double elimination stage', () => {
     });
 
     it('should create a tournament with a double grand final', async () => {
-        const withDoubleGrandFinal = {
+        await manager.create({
             name: 'Example with double grand final',
+            tournamentId: 0,
             type: 'double_elimination',
-            participants: [
+            seeding: [
                 'Team 1', 'Team 2',
                 'Team 3', 'Team 4',
                 'Team 5', 'Team 6',
                 'Team 7', 'Team 8',
             ],
             settings: { grandFinal: 'double', seedOrdering: ['natural'] },
-        };
-
-        await manager.create(0, withDoubleGrandFinal);
-
-        const stage = await storage.select('stage', 0);
-        assert.equal(stage.name, withDoubleGrandFinal.name);
-        assert.equal(stage.type, withDoubleGrandFinal.type);
+        });
 
         assert.equal((await storage.select('group')).length, 3);
         assert.equal((await storage.select('round')).length, 3 + 4 + 2);
@@ -96,7 +91,7 @@ describe('Winner bracket', () => {
 
     before(async () => {
         storage.reset();
-        await manager.create(0, example);
+        await manager.create(example);
     });
 
     it('should end a match and determine next matches', async () => {
@@ -147,8 +142,9 @@ describe('Seeding and ordering in elimination', () => {
     before(async () => {
         storage.reset();
 
-        await manager.create(0, {
+        await manager.create({
             name: 'Amateur',
+            tournamentId: 0,
             type: 'double_elimination',
             size: 16,
             settings: {
