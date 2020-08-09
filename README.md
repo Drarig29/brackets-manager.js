@@ -38,7 +38,7 @@ It contains all the logic needed to manage tournaments.
 - You can use [brackets-viewer.js](https://github.com/Drarig29/brackets-viewer.js) to display the current state of a stage.
 - It is designed to be used with any storage.
 - An example of JSON storage is given to run tests. You can use it out of the box.
-- It uses asynchronous calls to a storage interface to be able to handle asynchronous SQL requests.
+- It uses asynchronous calls to a storage interface to be able to handle asynchronous SQL requests (for example).
 
 # Credits
 
@@ -47,6 +47,5 @@ This library has been created to be used by the [Nantarena](https://nantarena.ne
 It has been inspired by:
 
 - [Toornament](https://www.toornament.com/en_US/) (configuration, API and data format)
-- [jQuery Bracket](http://www.aropupu.fi/bracket/) (features examples)
-- [Responsive Tournament Bracket](https://codepen.io/jimmyhayek/full/yJkdEB) (connection between matches in plain CSS)
 - [Challonge's bracket generator](https://challonge.com/tournaments/bracket_generator)
+- [jQuery Bracket](http://www.aropupu.fi/bracket/) (feature examples)
