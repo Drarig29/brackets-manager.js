@@ -1,4 +1,4 @@
-import { ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels, MatchResults, Result } from "brackets-model";
+import { ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels, MatchResults, Result, Seeding, Participant } from "brackets-model";
 
 /**
  * Distributes participants in rounds for a round-robin group.
@@ -402,4 +402,28 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>) 
         if (stored.opponent1) stored.opponent1.result = 'win';
         else stored.opponent1 = { id: null, result: 'win' };
     }
+}
+
+export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding) {
+    const withoutByes: string[] = seeding.filter(name => name !== null) as any;
+
+    const participants = withoutByes.map<OmitId<Participant>>(name => ({
+        tournament_id: tournamentId,
+        name,
+    }));
+
+    return participants;
+}
+
+export function mapParticipantsToDatabase(seeding: Seeding, database: Participant[]) {
+    const slots = seeding.map<ParticipantSlot>((name, i) => {
+        if (name === null) return null; // BYE.
+
+        const found = database.find(participant => participant.name === name);
+        if (!found) throw Error('Participant name not found in database.');
+
+        return { id: found.id, position: i + 1 };
+    });
+
+    return slots;
 }

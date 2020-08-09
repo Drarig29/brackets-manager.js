@@ -6,20 +6,7 @@ import * as helpers from './helpers';
 
 export async function create(this: BracketsManager, tournamentId: number, stage: InputStage) {
     const create = new Create(this.storage, tournamentId, stage);
-
-    switch (stage.type) {
-        case 'round_robin':
-            await create.roundRobin();
-            break;
-        case 'single_elimination':
-            await create.singleElimination();
-            break;
-        case 'double_elimination':
-            await create.doubleElimination();
-            break;
-        default:
-            throw Error('Unknown stage type.');
-    }
+    return create.run();
 }
 
 class Create {
@@ -35,11 +22,27 @@ class Create {
     }
 
     /**
+     * Run the creation process.
+     */
+    public run() {
+        switch (this.stage.type) {
+            case 'round_robin':
+                return this.roundRobin();
+            case 'single_elimination':
+                return this.singleElimination();
+            case 'double_elimination':
+                return this.doubleElimination();
+            default:
+                throw Error('Unknown stage type.');
+        }
+    }
+
+    /**
      * Creates a round-robin stage.
      * 
      * Group count must be given. It will distribute participants in groups and rounds.
      */
-    public async roundRobin() {
+    private async roundRobin() {
         if (!this.stage.settings || !this.stage.settings.groupCount) throw Error('You must specify a group count for round-robin stages.');
 
         if (Array.isArray(this.stage.settings.seedOrdering)
@@ -69,7 +72,7 @@ class Create {
      * 
      * One bracket and optionally a consolation final between semi-final losers.
      */
-    public async singleElimination() {
+    private async singleElimination() {
         if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
             this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
@@ -95,7 +98,7 @@ class Create {
      * One upper bracket (winner bracket, WB), one lower bracket (loser bracket, LB) and optionally a grand final
      * between the winner of both bracket, which can be simple or double.
      */
-    public async doubleElimination() {
+    private async doubleElimination() {
         if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
             this.stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
 
