@@ -1,7 +1,7 @@
 export type Table = 'participant' | 'stage' | 'group' | 'round' | 'match' | 'match_game';
 
 /**
- * This interface is used by the manager to abstract storage.
+ * This CRUD interface is used by the manager to abstract storage.
  */
 export interface IStorage {
     /**
@@ -9,14 +9,14 @@ export interface IStorage {
      * @param table Where to insert.
      * @param value What to insert.
      */
-    insert<T>(table: Table, value: Omit<T, 'id'>): Promise<number>
+    insert<T>(table: Table, value: OmitId<T>): Promise<number>
 
     /**
      * Inserts multiple values in the database.
      * @param table Where to insert.
      * @param values What to insert.
      */
-    insert<T>(table: Table, values: Omit<T, 'id'>[]): Promise<boolean>
+    insert<T>(table: Table, values: OmitId<T>[]): Promise<boolean>
 
     /**
      * Gets all data from a table in the database. 

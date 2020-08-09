@@ -22,3 +22,7 @@ export class BracketsManager {
      */
     public create: (tournamentdId: number, stage: InputStage) => Promise<void>;
 }
+
+declare global {
+    type OmitId<T> = Omit<T, 'id'>
+}
