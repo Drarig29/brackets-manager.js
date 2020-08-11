@@ -73,10 +73,15 @@ class JsonDatabase implements IStorage {
     public insert<T>(table: Table, values: T[]): Promise<boolean>;
 
     public async insert(table: Table, arg: any): Promise<number | boolean> {
-        let id: number = this.internal.getData(this.makePath(table)).length;
+        let id = this.internal.getData(this.makePath(table)).length;
 
         if (!Array.isArray(arg)) {
-            this.internal.push(this.makeArrayPath(table), { id, ...arg });
+            try {
+                this.internal.push(this.makeArrayPath(table), { id, ...arg });
+            } catch (error) {
+                return -1;
+            }
+
             return id;
         }
 

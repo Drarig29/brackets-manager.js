@@ -290,6 +290,9 @@ describe('Participants', () => {
             tournamentId: 0,
             type: 'double_elimination',
             size: 8,
+            settings: {
+                seedOrdering: ['natural'],
+            },
         });
     });
 
@@ -301,7 +304,47 @@ describe('Participants', () => {
             'Team 7', 'Team 8',
         ]);
 
-        const match = await storage.select('match', 0);
-        assert.equal(match.opponent1.id, 0)
+        assert.equal((await storage.select('match', 0)).opponent1.id, 0);
+        assert.equal((await storage.select('participant')).length, 8);
+    });
+
+    it('should update participants in a stage with participants already', async () => {
+        await manager.update.participants(0, [
+            'Team A', 'Team B',
+            'Team C', 'Team D',
+            'Team E', 'Team F',
+            'Team G', 'Team H',
+        ]);
+
+        assert.equal((await storage.select('match', 0)).opponent1.id, 8);
+        assert.equal((await storage.select('participant')).length, 16);
+    });
+
+    it('should update participants in a stage by registering only one missing participant', async () => {
+        await manager.update.participants(0, [
+            'Team A', 'Team B', // Match 0.
+            'Team C', 'Team D', // Match 1.
+            'Team E', 'Team F', // Match 2.
+            'Team G', 'Team Z', // Match 3.
+        ]);
+
+        assert.equal((await storage.select('match', 0)).opponent1.id, 8);
+        assert.equal((await storage.select('match', 3)).opponent2.id, 16);
+        assert.equal((await storage.select('participant')).length, 17);
+    });
+
+    it('should throw if a match is locked', async () => {
+        await manager.update.match({
+            id: 2, // Any match id.
+            opponent1: { score: 1 },
+            opponent2: { score: 0 },
+        });
+
+        await assert.isRejected(manager.update.participants(0, [
+            'Any', 'Team',
+            'Name', 'Will',
+            'Be', 'Rejected',
+            'Of', 'Course',
+        ]), 'A match is locked.');
     });
 });

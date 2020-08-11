@@ -277,7 +277,16 @@ export function getOtherSide(side: Side): Side {
 }
 
 /**
- * Checks if a match is completed (either because of the result or the forfeit).
+ * Checks if a match is started.
+ * @param match Partial match results.
+ */
+export function isMatchStarted(match: Partial<MatchResults>): boolean {
+    return (!!match.opponent1 && match.opponent1.score !== undefined)
+        || (!!match.opponent2 && match.opponent2.score !== undefined);
+}
+
+/**
+ * Checks if a match is completed.
  * @param match Partial match results.
  */
 export function isMatchCompleted(match: Partial<MatchResults>): boolean {

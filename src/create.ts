@@ -60,6 +60,9 @@ export class Create {
             settings: this.stage.settings,
         });
 
+        if (stageId === -1)
+            throw Error('Could not insert the stage.');
+
         const slots = await this.getSlots();
         const ordered = ordering[method](slots, this.stage.settings.groupCount);
         const groups = helpers.makeGroups(ordered, this.stage.settings.groupCount);
@@ -85,6 +88,9 @@ export class Create {
             number: stageNumber,
             settings: this.stage.settings,
         });
+
+        if (stageId === -1)
+            throw Error('Could not insert the stage.');
 
         const slots = await this.getSlots();
         const { losers } = await this.createStandardBracket('Bracket', stageId, 1, slots);
@@ -112,6 +118,9 @@ export class Create {
             number: stageNumber,
             settings: this.stage.settings,
         });
+
+        if (stageId === -1)
+            throw Error('Could not insert the stage.');
 
         const slots = await this.getSlots();
         const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket('Winner Bracket', stageId, 1, slots);
@@ -147,6 +156,9 @@ export class Create {
             number,
         });
 
+        if (groupId === -1)
+            throw Error('Could not insert the group.');
+
         const rounds = helpers.roundRobinMatches(slots);
 
         for (let i = 0; i < rounds.length; i++)
@@ -172,6 +184,9 @@ export class Create {
             name,
             number,
         });
+
+        if (groupId === -1)
+            throw Error('Could not insert the group.');
 
         // Inner outer by default for round 1 of standard bracket.
         const method = this.getOrdering(0, 'elimination') || 'inner_outer';
@@ -209,6 +224,9 @@ export class Create {
             name,
             number,
         });
+
+        if (groupId === -1)
+            throw Error('Could not insert the group.');
 
         // The first pair of rounds (major & minor) takes the first two lists of losers.
         const roundPairCount = losers.length - 1;
@@ -255,6 +273,9 @@ export class Create {
             number,
         });
 
+        if (groupId === -1)
+            throw Error('Could not insert the group.');
+
         for (let i = 0; i < duels.length; i++)
             await this.createRound(stageId, groupId, i + 1, 1, [duels[i]], this.getMatchesChildCount());
     }
@@ -274,6 +295,9 @@ export class Create {
             stage_id: stageId,
             group_id: groupId,
         });
+
+        if (roundId === -1)
+            throw Error('Could not insert the round.');
 
         for (let i = 0; i < matchCount; i++)
             await this.createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
@@ -307,8 +331,11 @@ export class Create {
             opponent2: helpers.toResult(opponents[1]),
         });
 
+        if (parentId === -1)
+            throw Error('Could not insert the match.');
+
         for (let i = 0; i < childCount; i++) {
-            await this.insertMatchGame({
+            const id = await this.insertMatchGame({
                 number: i + 1,
                 parent_id: parentId,
                 status: 'pending',
@@ -318,6 +345,9 @@ export class Create {
                 opponent1: helpers.toResult(opponents[0]),
                 opponent2: helpers.toResult(opponents[1]),
             });
+
+            if (id === -1)
+                throw Error('Could not insert the match game.');
         }
     }
 
@@ -519,6 +549,9 @@ export class Create {
         if (!existing)
             return this.storage.insert<Match>('match', match);
 
+        if (helpers.isMatchStarted(existing))
+            throw Error('A match is locked.');
+
         await this.storage.update<Match>('match', existing.id, {
             ...existing,
             opponent1: match.opponent1,
@@ -541,6 +574,9 @@ export class Create {
         if (!existing)
             return this.storage.insert<MatchGame>('match_game', matchGame);
 
+        if (helpers.isMatchStarted(existing) || helpers.isMatchCompleted(existing))
+            throw Error('A match is locked.');
+
         await this.storage.update<MatchGame>('match_game', existing.id, {
             ...existing,
             opponent1: matchGame.opponent1,
@@ -551,18 +587,25 @@ export class Create {
     }
 
     private async registerParticipants(participants: OmitId<Participant>[]): Promise<boolean> {
-        let existing: Participant[] | null = null;
+        const existing = await this.storage.select<Participant>('participant', {
+            tournament_id: this.stage.tournamentId,
+        });
 
-        if (this.updateParticipants) {
-            existing = await this.storage.select<Participant>('participant', {
-                tournament_id: this.stage.tournamentId,
-            });
-        }
-
+        // Insert all if nothing.
         if (!existing || existing.length === 0)
             return this.storage.insert<Participant>('participant', participants);
 
-        return existing.length === participants.length;
+        // Insert only missing otherwise.
+        for (const participant of participants) {
+            if (existing.some(value => value.name === participant.name))
+                continue;
+
+            const result = await this.storage.insert<Participant>('participant', participant);
+            if (result === -1)
+                return false;
+        }
+
+        return true;
     }
 
     private async selectFirst<T>(table: Table, filter: Partial<T>) {
