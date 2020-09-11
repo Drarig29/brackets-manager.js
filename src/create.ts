@@ -607,7 +607,7 @@ export class Create {
     }
 
     private async registerParticipants(participants: OmitId<Participant>[]): Promise<boolean> {
-        const existing = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId, });
+        const existing = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
 
         // Insert all if nothing.
         if (!existing || existing.length === 0)

@@ -353,7 +353,7 @@ export class Update {
         const roundNumber = await this.getRoundNumber(match.round_id);
 
         if (inLoserBracket) {
-            const winnerBracket = await this.findGroupByName(WINNER_BRACKET_NAME);
+            const winnerBracket = await this.findGroupByName(match.stage_id, WINNER_BRACKET_NAME);
             const roundNumberWB = Math.ceil((roundNumber + 1) / 2);
 
             if (roundNumber === 1) { // First major round.
@@ -399,7 +399,7 @@ export class Update {
         }
 
         if (inWinnerBracket) {
-            const loserBracket = await this.findGroupByName(LOSER_BRACKET_NAME);
+            const loserBracket = await this.findGroupByName(match.stage_id, LOSER_BRACKET_NAME);
             const roundNumberLB = roundNumber > 1 ? (roundNumber - 1) * 2 : 1;
             const matchNumberLB = roundNumber > 1 ? match.number : Math.ceil(match.number / 2);
             matches.push(await this.findMatch(loserBracket.id, roundNumberLB, matchNumberLB));
@@ -422,8 +422,8 @@ export class Update {
      * Finds a group by its name.
      * @param name Name to find.
      */
-    private async findGroupByName(name: string): Promise<Group> {
-        const group = await this.storage.select<Group>('group', { name });
+    private async findGroupByName(stageId: number, name: string): Promise<Group> {
+        const group = await this.storage.select<Group>('group', { stage_id: stageId, name });
         if (!group || group.length === 0) throw Error('Group not found.');
         return group[0];
     }

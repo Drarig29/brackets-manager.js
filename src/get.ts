@@ -29,7 +29,7 @@ export class Get {
         const matches = await this.storage.select<Match>('match', { stage_id: stageId });
         if (!matches) throw Error('Error getting matches.');
 
-        const participants = await this.storage.select<Participant>('participant', stage.tournament_id);
+        const participants = await this.storage.select<Participant>('participant', { tournament_id: stage.tournament_id });
         if (!participants) throw Error('Error getting participants.');
 
         return { stage, groups, rounds, matches, participants };
