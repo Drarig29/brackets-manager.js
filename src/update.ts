@@ -85,7 +85,7 @@ export class Update {
         await this.storage.update('match', storedParent.id, storedParent);
     }
 
-    public async participants(stageId: number, seeding: Seeding | SeedingIds) {
+    public async seeding(stageId: number, seeding: Seeding | SeedingIds) {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 

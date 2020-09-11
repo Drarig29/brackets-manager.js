@@ -34,7 +34,7 @@ describe('Special cases', () => {
         });
 
         // Update seeding with already existing ids.
-        await manager.update.participants(0, [0, 1, 2, 3, 4, 5, 6, 7]);
+        await manager.update.seeding(0, [0, 1, 2, 3, 4, 5, 6, 7]);
 
         assert.equal((await storage.select('match', 0)).opponent1.id, 0);
     });

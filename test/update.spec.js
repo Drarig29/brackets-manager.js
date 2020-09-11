@@ -297,7 +297,7 @@ describe('Participants', () => {
     });
 
     it('should update participants in a stage without any participant', async () => {
-        await manager.update.participants(0, [
+        await manager.update.seeding(0, [
             'Team 1', 'Team 2',
             'Team 3', 'Team 4',
             'Team 5', 'Team 6',
@@ -309,7 +309,7 @@ describe('Participants', () => {
     });
 
     it('should update participants in a stage with participants already', async () => {
-        await manager.update.participants(0, [
+        await manager.update.seeding(0, [
             'Team A', 'Team B',
             'Team C', 'Team D',
             'Team E', 'Team F',
@@ -321,7 +321,7 @@ describe('Participants', () => {
     });
 
     it('should update participants in a stage by registering only one missing participant', async () => {
-        await manager.update.participants(0, [
+        await manager.update.seeding(0, [
             'Team A', 'Team B', // Match 0.
             'Team C', 'Team D', // Match 1.
             'Team E', 'Team F', // Match 2.
@@ -340,7 +340,7 @@ describe('Participants', () => {
             opponent2: { score: 0 },
         });
 
-        await assert.isRejected(manager.update.participants(0, [
+        await assert.isRejected(manager.update.seeding(0, [
             'Any', 'Team',
             'Name', 'Will',
             'Be', 'Rejected',
