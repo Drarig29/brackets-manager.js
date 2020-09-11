@@ -4,6 +4,15 @@ const { makeGroups, assertRoundRobin, roundRobinMatches } = require('../dist/hel
 
 describe('Helpers', () => {
 
+    it('should place 4 participants with inner-outer method', () => {
+        const teams = [1, 2, 3, 4];
+        const placement = ordering['inner_outer'](teams);
+        assert.deepEqual(placement, [
+            1, 4,
+            2, 3,
+        ]);
+    });
+
     it('should place 8 participants with inner-outer method', () => {
         const teams = [1, 2, 3, 4, 5, 6, 7, 8];
         const placement = ordering['inner_outer'](teams);

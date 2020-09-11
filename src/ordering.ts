@@ -14,28 +14,31 @@ export const ordering: OrderingMap = {
     },
     'inner_outer': <T>(array: T[]) => {
         const size = array.length / 4;
-        const parts = {
-            inner: [array.slice(size, 2 * size), array.slice(2 * size, 3 * size)],
-            outer: [array.slice(0, size), array.slice(3 * size, 4 * size)]
-        }
 
-        function inner(part: T[][]): T[] {
-            return [part[0].pop()!, part[1].shift()!];
-        }
+        const innerPart = [array.slice(size, 2 * size), array.slice(2 * size, 3 * size)]; // [_, X, X, _]
+        const outerPart = [array.slice(0, size), array.slice(3 * size, 4 * size)]; // [X, _, _, X]
 
-        function outer(part: T[][]): T[] {
-            return [part[0].shift()!, part[1].pop()!];
+        const methods = {
+            inner(part: T[][]): T[] {
+                return [part[0].pop()!, part[1].shift()!];
+            },
+            outer(part: T[][]): T[] {
+                return [part[0].shift()!, part[1].pop()!];
+            },
         }
 
         const result: T[] = [];
 
+        function add(part: T[][], method: 'inner' | 'outer') {
+            if (part[0].length > 0 && part[1].length > 0)
+                result.push(...methods[method](part));
+        }
+
         for (let i = 0; i < size / 2; i++) {
-            result.push(
-                ...outer(parts.outer), // Outer's outer
-                ...inner(parts.inner), // Inner's inner
-                ...inner(parts.outer), // Outer's inner
-                ...outer(parts.inner), // Inner's outer
-            );
+            add(outerPart, 'outer'); // Outer's outer
+            add(innerPart, 'inner'); // Inner's inner
+            add(outerPart, 'inner'); // Outer's inner
+            add(innerPart, 'outer'); // Inner's outer
         }
 
         return result;
