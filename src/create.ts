@@ -1,7 +1,7 @@
 import { Participant, Duels, Duel, InputStage, ParticipantSlot, Match, SeedOrdering, MatchGame, Stage, Group, Round, SeedingIds, Seeding } from 'brackets-model';
 import { ordering, defaultMinorOrdering } from './ordering';
 import { BracketsManager } from '.';
-import { IStorage, Table } from './storage';
+import { IStorage } from './storage';
 import * as helpers from './helpers';
 
 export async function create(this: BracketsManager, stage: InputStage) {
@@ -512,7 +512,7 @@ export class Create {
         let existing: Stage | null = null;
 
         if (this.updateParticipants) {
-            existing = await this.selectFirst<Stage>('stage', {
+            existing = await this.storage.selectFirst<Stage>('stage', {
                 tournament_id: stage.tournament_id,
                 number: stage.number,
             });
@@ -528,7 +528,7 @@ export class Create {
         let existing: Group | null = null;
 
         if (this.updateParticipants) {
-            existing = await this.selectFirst<Group>('group', {
+            existing = await this.storage.selectFirst<Group>('group', {
                 stage_id: group.stage_id,
                 number: group.number,
             });
@@ -544,7 +544,7 @@ export class Create {
         let existing: Round | null = null;
 
         if (this.updateParticipants) {
-            existing = await this.selectFirst<Round>('round', {
+            existing = await this.storage.selectFirst<Round>('round', {
                 group_id: round.group_id,
                 number: round.number,
             });
@@ -560,7 +560,7 @@ export class Create {
         let existing: Match | null = null;
 
         if (this.updateParticipants) {
-            existing = await this.selectFirst<Match>('match', {
+            existing = await this.storage.selectFirst<Match>('match', {
                 round_id: match.round_id,
                 number: match.number,
             });
@@ -585,7 +585,7 @@ export class Create {
         let existing: MatchGame | null = null;
 
         if (this.updateParticipants) {
-            existing = await this.selectFirst<MatchGame>('match_game', {
+            existing = await this.storage.selectFirst<MatchGame>('match_game', {
                 parent_id: matchGame.parent_id,
                 number: matchGame.number,
             });
@@ -624,14 +624,5 @@ export class Create {
         }
 
         return true;
-    }
-
-    private async selectFirst<T>(table: Table, filter: Partial<T>) {
-        const results = await this.storage.select<T>(table, filter);
-
-        if (!results || results.length === 0)
-            return null;
-
-        return results[0];
     }
 }

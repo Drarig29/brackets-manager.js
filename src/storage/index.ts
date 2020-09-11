@@ -3,7 +3,7 @@ export type Table = 'participant' | 'stage' | 'group' | 'round' | 'match' | 'mat
 /**
  * This CRUD interface is used by the manager to abstract storage.
  */
-export interface IStorage {
+export interface CrudInterface {
     /**
      * Inserts a value in the database and returns its id.
      * @param table Where to insert.
@@ -60,4 +60,8 @@ export interface IStorage {
      * @param filter An object to filter data.
      */
     delete<T>(table: Table, filter: Partial<T>): Promise<boolean>
+}
+
+export interface IStorage extends CrudInterface {
+    selectFirst<T>(table: Table, filter: Partial<T>): Promise<T | null>
 }

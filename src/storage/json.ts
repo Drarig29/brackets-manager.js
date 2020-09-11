@@ -1,7 +1,7 @@
 import { JsonDB } from "node-json-db";
-import { IStorage, Table } from ".";
+import { CrudInterface, Table } from ".";
 
-class JsonDatabase implements IStorage {
+class JsonDatabase implements CrudInterface {
 
     private internal: JsonDB;
 

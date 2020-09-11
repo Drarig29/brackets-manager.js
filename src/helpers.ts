@@ -453,3 +453,8 @@ export function mapParticipantsIdsToDatabase(seeding: SeedingIds, database: Part
 
     return slots;
 }
+
+export function matchesToSeeding(matches: Match[]) {
+    const flattened = ([] as ParticipantSlot[]).concat(...matches.map(match => [match.opponent1, match.opponent2]));
+    return flattened.sort((slotA, slotB) => (slotA && slotA.position || 0) - (slotB && slotB.position || 0));
+}
