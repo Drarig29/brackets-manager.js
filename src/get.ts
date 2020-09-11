@@ -1,6 +1,6 @@
 import { Group, Match, MatchGame, Participant, ParticipantSlot, Round, Stage } from "brackets-model";
-import { matchesToSeeding } from "./helpers";
 import { IStorage } from "./storage";
+import * as helpers from "./helpers";
 
 export class Get {
 
@@ -68,8 +68,8 @@ export class Get {
         const matches = await this.storage.select<Match>('match', { stage_id: stageId });
         if (!matches) throw Error('Error getting matches.');
 
-        const slots = matchesToSeeding(matches);
-        const seeding = [...new Set(slots)];
+        const slots = helpers.matchesToSeeding(matches);
+        const seeding = helpers.uniqueBy(slots, item => item && item.position);
 
         return seeding;
     }
@@ -85,6 +85,6 @@ export class Get {
         const matches = await this.storage.select<Match>('match', { round_id: round.id });
         if (!matches) throw Error('Error getting matches.');
 
-        return matchesToSeeding(matches);
+        return helpers.matchesToSeeding(matches);
     }
 }

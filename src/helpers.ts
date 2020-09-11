@@ -458,3 +458,11 @@ export function matchesToSeeding(matches: Match[]) {
     const flattened = ([] as ParticipantSlot[]).concat(...matches.map(match => [match.opponent1, match.opponent2]));
     return flattened.sort((slotA, slotB) => (slotA && slotA.position || 0) - (slotB && slotB.position || 0));
 }
+
+export function uniqueBy<T>(array: T[], key: (obj: T) => any) {
+    const seen = new Set();
+    return array.filter(item => {
+        const value = key(item);
+        return seen.has(value) ? false : seen.add(value);
+    });
+}

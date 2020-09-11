@@ -17,7 +17,7 @@ describe('Special cases', () => {
             "Team 5", "Team 6",
             "Team 7", "Team 8"
         ];
-        
+
         const participants = teams.map(name => ({
             tournament_id: 0,
             name,
@@ -159,5 +159,43 @@ describe('Seeding and ordering in elimination', () => {
         });
 
         await assert.isRejected(manager.update.roundOrdering(0, 'natural'), 'At least one match has started or is completed.');
+    });
+});
+
+describe('Get module', () => {
+    it('should get the seeding of a round-robin stage', async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            size: 32,
+            settings: {
+                groupCount: 8,
+                seedOrdering: ['groups.snake'],
+            },
+        });
+
+        const seeding = await manager.get.seeding(0);
+        assert.equal(seeding.length, 32);
+        assert.equal(seeding[0].position, 1);
+        assert.equal(seeding[1].position, 2);
+    });
+
+    it('should get the seeding of a single elimination stage', async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            size: 16,
+        });
+
+        const seeding = await manager.get.seeding(0);
+        assert.equal(seeding.length, 16);
+        assert.equal(seeding[0].position, 1);
+        assert.equal(seeding[1].position, 2);
     });
 });
