@@ -1,4 +1,4 @@
-import { ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels, MatchResults, Result, Seeding, Participant } from "brackets-model";
+import { ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels, MatchResults, Result, Seeding, Participant, SeedingIds } from "brackets-model";
 
 /**
  * Distributes participants in rounds for a round-robin group.
@@ -413,6 +413,10 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>) 
     }
 }
 
+export function isSeedingWithIds(seeding: Seeding | SeedingIds) {
+    return seeding.some((value: any) => typeof value === 'number');
+}
+
 export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding) {
     const withoutByes: string[] = seeding.filter(name => name !== null) as any;
 
@@ -424,12 +428,25 @@ export function extractParticipantsFromSeeding(tournamentId: number, seeding: Se
     return participants;
 }
 
-export function mapParticipantsToDatabase(seeding: Seeding, database: Participant[]) {
+export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Participant[]) {
     const slots = seeding.map<ParticipantSlot>((name, i) => {
         if (name === null) return null; // BYE.
 
         const found = database.find(participant => participant.name === name);
         if (!found) throw Error('Participant name not found in database.');
+
+        return { id: found.id, position: i + 1 };
+    });
+
+    return slots;
+}
+
+export function mapParticipantsIdsToDatabase(seeding: SeedingIds, database: Participant[]) {
+    const slots = seeding.map<ParticipantSlot>((id, i) => {
+        if (id === null) return null; // BYE.
+
+        const found = database.find(participant => participant.id === id);
+        if (!found) throw Error('Participant not found in database.');
 
         return { id: found.id, position: i + 1 };
     });

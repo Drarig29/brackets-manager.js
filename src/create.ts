@@ -1,4 +1,4 @@
-import { Participant, Duels, Duel, InputStage, ParticipantSlot, Match, SeedOrdering, MatchGame, Stage, Group, Round } from 'brackets-model';
+import { Participant, Duels, Duel, InputStage, ParticipantSlot, Match, SeedOrdering, MatchGame, Stage, Group, Round, SeedingIds, Seeding } from 'brackets-model';
 import { ordering, defaultMinorOrdering } from './ordering';
 import { BracketsManager } from '.';
 import { IStorage, Table } from './storage';
@@ -419,7 +419,17 @@ export class Create {
 
         if (!this.stage.seeding) throw Error('Either size or seeding must be given.');
 
-        const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, this.stage.seeding)
+        if (helpers.isSeedingWithIds(this.stage.seeding))
+            return this.getSlotsUsingIds(this.stage.seeding as SeedingIds);
+
+        return this.getSlotsUsingNames(this.stage.seeding as Seeding);
+    }
+
+    /**
+     * Returns the list of slots with a seeding containing names.
+     */
+    private async getSlotsUsingNames(seeding: Seeding) {
+        const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, this.stage.seeding as Seeding);
 
         if (!await this.registerParticipants(participants)) {
             throw Error('Error registering the participants.');
@@ -429,7 +439,17 @@ export class Create {
         const added = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
         if (!added) throw Error('Error getting registered participant.');
 
-        return helpers.mapParticipantsToDatabase(this.stage.seeding, added);
+        return helpers.mapParticipantsNamesToDatabase(seeding, added);
+    }
+
+    /**
+     * Returns the list of slots with a seeding containing ids.
+     */
+    private async getSlotsUsingIds(seeding: SeedingIds) {
+        const participants = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
+        if (!participants) throw Error('No available participants.');
+
+        return helpers.mapParticipantsIdsToDatabase(seeding, participants);
     }
 
     /**
@@ -587,9 +607,7 @@ export class Create {
     }
 
     private async registerParticipants(participants: OmitId<Participant>[]): Promise<boolean> {
-        const existing = await this.storage.select<Participant>('participant', {
-            tournament_id: this.stage.tournamentId,
-        });
+        const existing = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId, });
 
         // Insert all if nothing.
         if (!existing || existing.length === 0)

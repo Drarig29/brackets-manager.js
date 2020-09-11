@@ -1,4 +1,4 @@
-import { Match, Round, Group, Stage, MatchGame, SeedOrdering, MatchResults, Seeding } from "brackets-model";
+import { Match, Round, Group, Stage, MatchGame, SeedOrdering, MatchResults, Seeding, SeedingIds } from "brackets-model";
 import { ordering } from './ordering';
 import { IStorage } from "./storage";
 import * as helpers from './helpers';
@@ -85,7 +85,7 @@ export class Update {
         await this.storage.update('match', storedParent.id, storedParent);
     }
 
-    public async participants(stageId: number, seeding: Seeding) {
+    public async participants(stageId: number, seeding: Seeding | SeedingIds) {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
