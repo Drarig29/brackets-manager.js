@@ -569,7 +569,7 @@ export class Create {
         if (!existing)
             return this.storage.insert<Match>('match', match);
 
-        if (helpers.isMatchStarted(existing))
+        if (helpers.isMatchStarted(existing) || helpers.isMatchCompleted(existing))
             throw Error('A match is locked.');
 
         await this.storage.update<Match>('match', existing.id, {
