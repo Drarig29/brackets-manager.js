@@ -1,4 +1,4 @@
-import { Participant, Duels, Duel, InputStage, ParticipantSlot, Match, SeedOrdering, MatchGame, Stage, Group, Round, SeedingIds, Seeding } from 'brackets-model';
+import { Participant, InputStage, Match, SeedOrdering, MatchGame, Stage, Group, Round, SeedingIds, Seeding } from 'brackets-model';
 import { ordering, defaultMinorOrdering } from './ordering';
 import { BracketsManager } from '.';
 import { IStorage } from './storage';
@@ -68,7 +68,7 @@ export class Create {
         const groups = helpers.makeGroups(ordered, this.stage.settings.groupCount);
 
         for (let i = 0; i < groups.length; i++)
-            await this.createGroup(`Group ${i + 1}`, stageId, i + 1, groups[i]);
+            await this.createGroup(stageId, i + 1, groups[i]);
     }
 
     /**
@@ -93,11 +93,11 @@ export class Create {
             throw Error('Could not insert the stage.');
 
         const slots = await this.getSlots();
-        const { losers } = await this.createStandardBracket('Bracket', stageId, 1, slots);
+        const { losers } = await this.createStandardBracket(stageId, 1, slots);
 
         const semiFinalLosers = losers[losers.length - 2];
         if (this.stage.settings && this.stage.settings.consolationFinal)
-            await this.createUniqueMatchBracket('Consolation Final', stageId, 2, [semiFinalLosers]);
+            await this.createUniqueMatchBracket(stageId, 2, [semiFinalLosers]);
     }
 
     /**
@@ -123,8 +123,8 @@ export class Create {
             throw Error('Could not insert the stage.');
 
         const slots = await this.getSlots();
-        const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket('Winner Bracket', stageId, 1, slots);
-        const winnerLb = await this.createLowerBracket('Loser Bracket', stageId, 2, losersWb);
+        const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, slots);
+        const winnerLb = await this.createLowerBracket(stageId, 2, losersWb);
 
         // No Grand Final by default.
         const grandFinal = this.stage.settings && this.stage.settings.grandFinal;
@@ -137,7 +137,7 @@ export class Create {
             finalDuels.push([{ id: null }, { id: null }]);
         }
 
-        await this.createUniqueMatchBracket('Grand Final', stageId, 3, finalDuels);
+        await this.createUniqueMatchBracket(stageId, 3, finalDuels);
     }
 
     /**
@@ -149,10 +149,9 @@ export class Create {
      * @param number Number in the stage.
      * @param slots A list of slots.
      */
-    private async createGroup(name: string, stageId: number, number: number, slots: ParticipantSlot[]) {
+    private async createGroup(stageId: number, number: number, slots: ParticipantSlot[]) {
         const groupId = await this.insertGroup({
             stage_id: stageId,
-            name,
             number,
         });
 
@@ -174,14 +173,13 @@ export class Create {
      * @param number Number in the stage.
      * @param slots A list of slots.
      */
-    private async createStandardBracket(name: string, stageId: number, number: number, slots: ParticipantSlot[]): Promise<{
+    private async createStandardBracket(stageId: number, number: number, slots: ParticipantSlot[]): Promise<{
         losers: ParticipantSlot[][],
         winner: ParticipantSlot,
     }> {
         const roundCount = Math.log2(slots.length);
         const groupId = await this.insertGroup({
             stage_id: stageId,
-            name,
             number,
         });
 
@@ -218,10 +216,9 @@ export class Create {
      * @param number Number in the stage.
      * @param losers One list of losers per upper bracket round.
      */
-    private async createLowerBracket(name: string, stageId: number, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
+    private async createLowerBracket(stageId: number, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
         const groupId = await this.insertGroup({
             stage_id: stageId,
-            name,
             number,
         });
 
@@ -266,10 +263,9 @@ export class Create {
      * @param number Number in the stage.
      * @param duels A list of duels.
      */
-    private async createUniqueMatchBracket(name: string, stageId: number, number: number, duels: Duels) {
+    private async createUniqueMatchBracket(stageId: number, number: number, duels: Duels) {
         const groupId = await this.insertGroup({
             stage_id: stageId,
-            name,
             number,
         });
 
@@ -324,9 +320,6 @@ export class Create {
             child_count: childCount,
             status: 'pending',
             locked: false, // TODO: update that.
-            scheduled_datetime: null,
-            start_datetime: null,
-            end_datetime: null,
             opponent1: helpers.toResult(opponents[0]),
             opponent2: helpers.toResult(opponents[1]),
         });
@@ -339,9 +332,6 @@ export class Create {
                 number: i + 1,
                 parent_id: parentId,
                 status: 'pending',
-                scheduled_datetime: null,
-                start_datetime: null,
-                end_datetime: null,
                 opponent1: helpers.toResult(opponents[0]),
                 opponent2: helpers.toResult(opponents[1]),
             });

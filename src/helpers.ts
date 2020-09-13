@@ -1,4 +1,4 @@
-import { ParticipantSlot, ParticipantResult, Duel, Match, Side, Duels, MatchResults, Result, Seeding, Participant, SeedingIds } from "brackets-model";
+import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds } from "brackets-model";
 
 /**
  * Distributes participants in rounds for a round-robin group.

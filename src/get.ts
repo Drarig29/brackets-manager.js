@@ -1,4 +1,4 @@
-import { Group, Match, MatchGame, Participant, ParticipantSlot, Round, Stage } from "brackets-model";
+import { Group, Match, MatchGame, Participant, Round, Stage } from "brackets-model";
 import { IStorage } from "./storage";
 import * as helpers from "./helpers";
 
@@ -12,7 +12,7 @@ export class Get {
 
     /**
      * Returns the data needed to display a stage.
-     * @param stageId The id of the stage.
+     * @param stageId ID of the stage.
      * 
      * For performance reasons, match games are not retrieved here. Use `matchChildren()` for that.
      */
@@ -37,7 +37,7 @@ export class Get {
 
     /**
      * Returns the match games of a match.
-     * @param parentId The id of the parent match.
+     * @param parentId ID of the parent match.
      */
     public async matchChildren(parentId: number) {
         const games = await this.storage.select<MatchGame>('match_game', { parent_id: parentId });
@@ -48,7 +48,7 @@ export class Get {
 
     /**
      * Returns the seeding of a stage.
-     * @param stageId The id of the stage.
+     * @param stageId ID of the stage.
      */
     public async seeding(stageId: number): Promise<ParticipantSlot[]> {
         const stage = await this.storage.select<Stage>('stage', stageId);
@@ -62,7 +62,7 @@ export class Get {
 
     /**
      * Returns the seeding of a round-robin stage.
-     * @param stageId The id of the stage.
+     * @param stageId ID of the stage.
      */
     private async roundRobinSeeding(stageId: number): Promise<ParticipantSlot[]> {
         const matches = await this.storage.select<Match>('match', { stage_id: stageId });
@@ -76,7 +76,7 @@ export class Get {
 
     /**
      * Returns the seeding of an elimination stage.
-     * @param stageId The id of the stage.
+     * @param stageId ID of the stage.
      */
     private async eliminationSeeding(stageId: number): Promise<ParticipantSlot[]> {
         const round = await this.storage.selectFirst<Round>('round', { stage_id: stageId, number: 1 });

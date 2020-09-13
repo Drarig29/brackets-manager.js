@@ -6,9 +6,6 @@ import { Create } from "./create";
 
 export type Level = 'stage' | 'group' | 'round' | 'match';
 
-const WINNER_BRACKET_NAME = 'Winner Bracket';
-const LOSER_BRACKET_NAME = 'Loser Bracket';
-
 export class Update {
 
     private storage: IStorage;
@@ -118,7 +115,7 @@ export class Update {
         if (matches.some(match => match.status !== 'pending'))
             throw Error('At least one match has started or is completed.')
 
-        const inLoserBracket = await this.isGroupOfName(round.group_id, LOSER_BRACKET_NAME);
+        const inLoserBracket = await this.isLoserBracket(round.group_id);
 
         if ((!inLoserBracket && round.number !== 1) || // Upper bracket and not round 1.
             (inLoserBracket && !(round.number === 1 || round.number % 2 === 0))) // Loser bracket and not round 1 or not minor round.
@@ -145,7 +142,7 @@ export class Update {
     /**
      * Updates child count of all matches of a given level.
      * @param level The level at which to act.
-     * @param id The id of the chosen level.
+     * @param id ID of the chosen level.
      * @param childCount The target child count.
      */
     public async matchChildCount(level: Level, id: number, childCount: number) {
@@ -220,9 +217,6 @@ export class Update {
                 number: childCount + 1,
                 parent_id: matchId,
                 status: 'pending',
-                scheduled_datetime: null,
-                start_datetime: null,
-                end_datetime: null,
                 opponent1: { id: null },
                 opponent2: { id: null },
             });
@@ -349,11 +343,13 @@ export class Update {
      * @param match The current match.
      */
     private async getPreviousMatches(match: Match): Promise<Match[]> {
-        const inLoserBracket = await this.isGroupOfName(match.group_id, LOSER_BRACKET_NAME);
+        const inLoserBracket = await this.isLoserBracket(match.group_id);
         const roundNumber = await this.getRoundNumber(match.round_id);
 
         if (inLoserBracket) {
-            const winnerBracket = await this.findGroupByName(match.stage_id, WINNER_BRACKET_NAME);
+            const winnerBracket = await this.storage.selectFirst<Group>('group', { stage_id: match.stage_id, number: 1 });
+            if (!winnerBracket) throw Error('Winner bracket not found.');
+
             const roundNumberWB = Math.ceil((roundNumber + 1) / 2);
 
             if (roundNumber === 1) { // First major round.
@@ -389,8 +385,8 @@ export class Update {
         const roundNumber = await this.getRoundNumber(match.round_id);
 
         // Not always the opposite of "inLoserBracket". Could be in simple elimination.
-        const inWinnerBracket = await this.isGroupOfName(match.group_id, WINNER_BRACKET_NAME);
-        const inLoserBracket = await this.isGroupOfName(match.group_id, LOSER_BRACKET_NAME);
+        const inWinnerBracket = await this.isWinnerBracket(match.group_id);
+        const inLoserBracket = await this.isLoserBracket(match.group_id);
 
         if (inLoserBracket && roundNumber % 2 === 1) { // Major rounds.
             matches.push(await this.findMatch(match.group_id, roundNumber + 1, match.number));
@@ -399,7 +395,9 @@ export class Update {
         }
 
         if (inWinnerBracket) {
-            const loserBracket = await this.findGroupByName(match.stage_id, LOSER_BRACKET_NAME);
+            const loserBracket = await this.storage.selectFirst<Group>('group', { stage_id: match.stage_id, number: 2 });
+            if (!loserBracket) throw Error('Loser bracket not found.');
+
             const roundNumberLB = roundNumber > 1 ? (roundNumber - 1) * 2 : 1;
             const matchNumberLB = roundNumber > 1 ? match.number : Math.ceil(match.number / 2);
             matches.push(await this.findMatch(loserBracket.id, roundNumberLB, matchNumberLB));
@@ -419,24 +417,23 @@ export class Update {
     }
 
     /**
-     * Finds a group by its name.
-     * @param name Name to find.
+     * Checks if a group is a winner bracket.
+     * @param groupId ID of the group.
      */
-    private async findGroupByName(stageId: number, name: string): Promise<Group> {
-        const group = await this.storage.select<Group>('group', { stage_id: stageId, name });
-        if (!group || group.length === 0) throw Error('Group not found.');
-        return group[0];
+    private async isWinnerBracket(groupId: number): Promise<boolean> {
+        const group = await this.storage.select<Group>('group', groupId);
+        if (!group) throw Error('Group not found.');
+        return group.number === 1;
     }
 
     /**
-     * Checks if a group has the given name.
+     * Checks if a group is a loser bracket.
      * @param groupId ID of the group.
-     * @param name Name to check.
      */
-    private async isGroupOfName(groupId: number, name: string): Promise<boolean> {
+    private async isLoserBracket(groupId: number): Promise<boolean> {
         const group = await this.storage.select<Group>('group', groupId);
         if (!group) throw Error('Group not found.');
-        return group.name === name;
+        return group.number === 2;
     }
 
     /**
