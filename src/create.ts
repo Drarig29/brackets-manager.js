@@ -253,7 +253,7 @@ export class Create {
             await this.createRound(stageId, groupId, roundNumber++, matchCount, duels, matchesChildCount);
         }
 
-        return helpers.byeWinner(duels[0]); // Winner.
+        return helpers.byeWinnerToGrandFinal(duels[0]);
     }
 
     /**

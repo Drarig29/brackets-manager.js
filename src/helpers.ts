@@ -187,6 +187,16 @@ export function byeWinner(opponents: Duel): ParticipantSlot {
 }
 
 /**
+ * Returns the pre-computed winner for a match because of BYEs in a lower bracket.
+ * @param opponents Two opponents.
+ */
+export function byeWinnerToGrandFinal(opponents: Duel): ParticipantSlot {
+    const winner = byeWinner(opponents);
+    if (winner) winner.position = 1;
+    return winner;
+}
+
+/**
  * Returns the pre-computed loser for a match because of BYEs.
  * 
  * Only used for loser bracket.

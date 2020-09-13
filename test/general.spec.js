@@ -7,6 +7,79 @@ const { storage } = require('../dist/storage/json');
 
 const manager = new BracketsManager(storage);
 
+describe('BYE handling', () => {
+    beforeEach(async () => {
+        storage.reset();
+    });
+
+    it('should propagate BYEs through the brackets', async () => {
+        await manager.create({
+            name: 'Example with BYEs',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: [
+                'Team 1', null,
+                null, null,
+            ],
+            settings: { seedOrdering: ['natural'], grandFinal: 'simple' },
+        });
+
+        assert.equal((await storage.select('match', 2)).opponent1.id, 0);
+        assert.equal((await storage.select('match', 2)).opponent2, null);
+
+        assert.equal((await storage.select('match', 3)).opponent1, null);
+        assert.equal((await storage.select('match', 3)).opponent2, null);
+
+        assert.equal((await storage.select('match', 4)).opponent1, null);
+        assert.equal((await storage.select('match', 4)).opponent2, null);
+
+        assert.equal((await storage.select('match', 5)).opponent1.id, 0);
+        assert.equal((await storage.select('match', 5)).opponent2, null);
+    });
+});
+
+describe('Position checks', () => {
+    before(async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Example with double grand final',
+            tournamentId: 0,
+            type: 'double_elimination',
+            size: 8,
+            settings: { grandFinal: 'simple', seedOrdering: ['natural'] },
+        });
+    });
+    
+    it('should not have a position when we don\'t need the origin of a participant', async () => {
+        const matchFromWbRound2 = await storage.select('match', 4);
+        assert.equal(matchFromWbRound2.opponent1.position, undefined);
+        assert.equal(matchFromWbRound2.opponent2.position, undefined);
+
+        const matchFromLbRound2 = await storage.select('match', 9);
+        assert.equal(matchFromLbRound2.opponent2.position, undefined);
+
+        const matchFromGrandFinal = await storage.select('match', 13);
+        assert.equal(matchFromGrandFinal.opponent1.position, undefined);
+    });
+
+    it('should have a position where we need the origin of a participant', async () => {
+        const matchFromWbRound1 = await storage.select('match', 0);
+        assert.equal(matchFromWbRound1.opponent1.position, 1);
+        assert.equal(matchFromWbRound1.opponent2.position, 2);
+        
+        const matchFromLbRound1 = await storage.select('match', 7);
+        assert.equal(matchFromLbRound1.opponent1.position, 1);
+        assert.equal(matchFromLbRound1.opponent2.position, 2);
+
+        const matchFromLbRound2 = await storage.select('match', 9);
+        assert.equal(matchFromLbRound2.opponent1.position, 1);
+
+        const matchFromGrandFinal = await storage.select('match', 13);
+        assert.equal(matchFromGrandFinal.opponent2.position, 1);
+    });
+});
+
 describe('Special cases', () => {
     it('should create a stage and add participants ids in seeding', async () => {
         storage.reset();

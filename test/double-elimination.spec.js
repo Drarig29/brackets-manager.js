@@ -42,31 +42,6 @@ describe('Create double elimination stage', () => {
         assert.equal((await storage.select('match')).length, 30);
     });
 
-    it('should propagate BYEs through the brackets', async () => {
-        await manager.create({
-            name: 'Example with BYEs',
-            tournamentId: 0,
-            type: 'double_elimination',
-            seeding: [
-                'Team 1', null,
-                null, null,
-            ],
-            settings: { seedOrdering: ['natural'], grandFinal: 'simple' },
-        });
-
-        assert.equal((await storage.select('match', 2)).opponent1.id, 0);
-        assert.equal((await storage.select('match', 2)).opponent2, null);
-
-        assert.equal((await storage.select('match', 3)).opponent1, null);
-        assert.equal((await storage.select('match', 3)).opponent2, null);
-
-        assert.equal((await storage.select('match', 4)).opponent1, null);
-        assert.equal((await storage.select('match', 4)).opponent2, null);
-
-        assert.equal((await storage.select('match', 5)).opponent1.id, 0);
-        assert.equal((await storage.select('match', 5)).opponent2, null);
-    });
-
     it('should create a tournament with a double grand final', async () => {
         await manager.create({
             name: 'Example with double grand final',
