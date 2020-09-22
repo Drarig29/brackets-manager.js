@@ -1,4 +1,5 @@
-import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status } from "brackets-model";
+import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame } from "brackets-model";
+import { ordering } from "./ordering";
 
 /**
  * Distributes participants in rounds for a round-robin group.
@@ -486,10 +487,19 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>) 
     }
 }
 
+/**
+ * Indicates if a seeding is filled with participants' names or ids.
+ * @param seeding The seeding.
+ */
 export function isSeedingWithIds(seeding: Seeding | SeedingIds) {
     return seeding.some((value: any) => typeof value === 'number');
 }
 
+/**
+ * Extracts participants from a seeding, without the byes.
+ * @param tournamentId ID of the tournament.
+ * @param seeding The seeding.
+ */
 export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding) {
     const withoutByes: string[] = seeding.filter(name => name !== null) as any;
 
@@ -501,8 +511,13 @@ export function extractParticipantsFromSeeding(tournamentId: number, seeding: Se
     return participants;
 }
 
-export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Participant[]) {
-    const slots = seeding.map<ParticipantSlot>((name, i) => {
+/**
+ * Returns participant slots mapped to the instances stored in the database thanks to their name.
+ * @param seeding The seeding.
+ * @param database The participants stored in the database.
+ */
+export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Participant[]): ParticipantSlot[] {
+    const slots = seeding.map((name, i) => {
         if (name === null) return null; // BYE.
 
         const found = database.find(participant => participant.name === name);
@@ -514,8 +529,13 @@ export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Parti
     return slots;
 }
 
-export function mapParticipantsIdsToDatabase(seeding: SeedingIds, database: Participant[]) {
-    const slots = seeding.map<ParticipantSlot>((id, i) => {
+/**
+ * Returns participant slots mapped to the instances stored in the database thanks to their id.
+ * @param seeding The seeding.
+ * @param database The participants stored in the database.
+ */
+export function mapParticipantsIdsToDatabase(seeding: SeedingIds, database: Participant[]): ParticipantSlot[] {
+    const slots = seeding.map((id, i) => {
         if (id === null) return null; // BYE.
 
         const found = database.find(participant => participant.id === id);
@@ -527,15 +547,156 @@ export function mapParticipantsIdsToDatabase(seeding: SeedingIds, database: Part
     return slots;
 }
 
-export function matchesToSeeding(matches: Match[]) {
+/**
+ * Converts a list of matches to a seeding.
+ * @param matches The input matches.
+ */
+export function matchesToSeeding(matches: Match[]): ParticipantSlot[] {
     const flattened = ([] as ParticipantSlot[]).concat(...matches.map(match => [match.opponent1, match.opponent2]));
     return flattened.sort((slotA, slotB) => (slotA && slotA.position || 0) - (slotB && slotB.position || 0));
 }
 
-export function uniqueBy<T>(array: T[], key: (obj: T) => any) {
+/**
+ * Returns a list of objects which have unique values of a specific key.
+ * @param array The array to process.
+ * @param key The key to filter by.
+ */
+export function uniqueBy<T>(array: T[], key: (obj: T) => any): T[] {
     const seen = new Set();
     return array.filter(item => {
         const value = key(item);
         return seen.has(value) ? false : seen.add(value);
     });
+}
+
+/**
+ * Makes the transition to a major round for duels of the previous round. The duel count is divided by 2.
+ * @param previousDuels The previous duels to transition from.
+ * @param currentDuelCount The next (current) count of duels to transition to.
+ */
+export function transitionToMajor(previousDuels: Duels): Duels {
+    const currentDuelCount = previousDuels.length / 2;
+    const currentDuels = [];
+
+    for (let duelIndex = 0; duelIndex < currentDuelCount; duelIndex++) {
+        const prevDuelId = duelIndex * 2;
+        currentDuels.push([
+            byeWinner(previousDuels[prevDuelId + 0]),
+            byeWinner(previousDuels[prevDuelId + 1]),
+        ]);
+    }
+
+    return currentDuels;
+}
+
+/**
+ * Makes the transition to a minor round for duels of the previous round. The duel count stays the same.
+ * @param previousDuels The previous duels to transition from.
+ * @param currentDuelCount The next (current) count of duels to transition to.
+ */
+export function transitionToMinor(previousDuels: Duels, losers: ParticipantSlot[], method: SeedOrdering): Duels {
+    const orderedLosers = ordering[method](losers);
+    const currentDuelCount = previousDuels.length;
+    const currentDuels = [];
+
+    for (let duelIndex = 0; duelIndex < currentDuelCount; duelIndex++) {
+        const prevDuelId = duelIndex;
+        currentDuels.push([
+            orderedLosers[prevDuelId],
+            byeWinner(previousDuels[prevDuelId]),
+        ]);
+    }
+
+    return currentDuels;
+}
+
+/**
+ * Sets the parent match to a completed status if all its child games are completed.
+ * @param storedParent The parent match stored in the database.
+ * @param parent The partial parent match to update.
+ * @param scores The scores of the match child games.
+ */
+export function setParentMatchCompleted(storedParent: Match, parent: Partial<MatchResults>, scores: Scores) {
+    const parentCompleted = scores.opponent1 + scores.opponent2 === storedParent.child_count;
+    if (!parentCompleted) return;
+
+    if (scores.opponent1 > scores.opponent2)
+        parent.opponent1!.result = 'win';
+    else if (scores.opponent2 > scores.opponent1)
+        parent.opponent2!.result = 'win';
+    else
+        throw Error('Match games result in a tie for the parent match.');
+}
+
+/**
+ * Returns a parent match results based on its child games scores.
+ * @param storedParent The parent match stored in the database.
+ * @param scores The scores of the match child games.
+ */
+export function getParentMatchResults(storedParent: Match, scores: Scores): Partial<MatchResults> {
+    return {
+        opponent1: {
+            id: storedParent.opponent1 && storedParent.opponent1.id,
+            score: scores.opponent1,
+        },
+        opponent2: {
+            id: storedParent.opponent2 && storedParent.opponent2.id,
+            score: scores.opponent2,
+        }
+    };
+}
+
+/**
+ * Calculates the score of a parent match based on its child games.
+ * @param parentId ID of the parent match.
+ */
+export function getChildGamesResults(games: MatchGame[]): Scores {
+    const scores = {
+        opponent1: 0,
+        opponent2: 0,
+    }
+
+    for (const game of games) {
+        const result = getMatchResult(game);
+        if (result === 'opponent1') scores.opponent1++;
+        else if (result === 'opponent2') scores.opponent2++;
+    }
+
+    return scores;
+}
+
+/**
+ * Gets the default list of seeds for a round's matches.
+ * @param inLoserBracket Whether the match is in the loser bracket.
+ * @param roundNumber The number of the current round.
+ * @param matchCount The count of matches in the round.
+ */
+export function getSeeds(inLoserBracket: boolean, roundNumber: number, matchCount: number) {
+    const seedCount = getSeedCount(inLoserBracket, roundNumber, matchCount);
+    return Array.from(Array(seedCount), (_, i) => i + 1);
+}
+
+/**
+ * Gets the number of seeds for a round's matches.
+ * @param inLoserBracket Whether the match is in the loser bracket.
+ * @param roundNumber The number of the current round.
+ * @param matchCount The count of matches in the round.
+ */
+export function getSeedCount(inLoserBracket: boolean, roundNumber: number, matchCount: number) {
+    ensureOrderingSupported(inLoserBracket, roundNumber);
+
+    return roundNumber === 1 ?
+        matchCount * 2 : // Two per match for upper or lower bracket round 1.
+        matchCount; // One per match for loser bracket minor rounds.
+}
+
+/**
+ * Throws if the ordering is not supported on the current round.
+ * @param inLoserBracket Whether the match is in the loser bracket.
+ * @param roundNumber The number of the current round.
+ */
+export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: number) {
+    if ((!inLoserBracket && roundNumber !== 1) || // Upper bracket and not round 1.
+        (inLoserBracket && !(roundNumber === 1 || roundNumber % 2 === 0))) // Loser bracket and not round 1 or not minor round.
+        throw Error('This round does not support ordering.');
 }

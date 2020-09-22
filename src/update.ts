@@ -1,4 +1,4 @@
-import { Match, Round, Group, Stage, MatchGame, SeedOrdering, MatchResults, Seeding, SeedingIds, Status } from "brackets-model";
+import { Match, Round, Group, Stage, MatchGame, SeedOrdering, Seeding, SeedingIds, Status } from "brackets-model";
 import { ordering } from './ordering';
 import { IStorage } from "./storage";
 import * as helpers from './helpers';
@@ -17,7 +17,7 @@ export class Update {
     /**
      * Updates partial information of a match. Its id must be given.
      * 
-     * This will trigger an update in the next match.
+     * This will update related matches accordingly.
      * @param match Values to change in a match.
      */
     public async match(match: Partial<Match>) {
@@ -32,12 +32,16 @@ export class Update {
         const completed = helpers.setMatchResults(stored, match);
         await this.storage.update('match', match.id, stored);
 
-        if (!inRoundRobin && completed) {
-            await this.updatePrevious(stored);
-            await this.updateNext(stored);
-        }
+        if (!inRoundRobin && completed)
+            await this.updateRelatedMatches(stored);
     }
 
+    /**
+     * Resets the results of a match.
+     * 
+     * This will update related matches accordingly.
+     * @param matchId ID of the match.
+     */
     public async resetMatch(matchId: number) {
         if (matchId === undefined) throw Error('No match id given.');
 
@@ -50,16 +54,14 @@ export class Update {
         helpers.resetMatchResults(stored);
         await this.storage.update('match', matchId, stored);
 
-        if (!inRoundRobin) {
-            await this.updatePrevious(stored);
-            await this.updateNext(stored);
-        }
+        if (!inRoundRobin)
+            await this.updateRelatedMatches(stored);
     }
 
     /**
      * Updates partial information of a match game. It's id must be given.
      * 
-     * This will trigger an update in the parent match.
+     * This will update the parent match accordingly.
      * @param game Values to change in a match game.
      */
     public async matchGame(game: Partial<MatchGame>) {
@@ -74,32 +76,23 @@ export class Update {
         const storedParent = await this.storage.select<Match>('match', stored.parent_id);
         if (!storedParent) throw Error('Parent not found.');
 
-        const scores = await this.getGamesResults(stored.parent_id);
-        const parent: Partial<MatchResults> = {
-            opponent1: {
-                id: storedParent.opponent1 && storedParent.opponent1.id,
-                score: scores.opponent1,
-            },
-            opponent2: {
-                id: storedParent.opponent2 && storedParent.opponent2.id,
-                score: scores.opponent2,
-            }
-        };
+        const games = await this.storage.select<MatchGame>('match_game', { parent_id: stored.parent_id });
+        if (!games) throw Error('No match games.');
 
-        const parentCompleted = scores.opponent1 + scores.opponent2 === storedParent.child_count;
-        if (parentCompleted) {
-            if (scores.opponent1 > scores.opponent2)
-                parent.opponent1!.result = 'win';
-            else if (scores.opponent2 > scores.opponent1)
-                parent.opponent2!.result = 'win';
-            else
-                throw Error('Match games result in a tie for the parent match.');
-        }
+        const scores = helpers.getChildGamesResults(games);
+        const parent = helpers.getParentMatchResults(storedParent, scores);
 
+        helpers.setParentMatchCompleted(storedParent, parent, scores);
         helpers.setMatchResults(storedParent, parent);
+
         await this.storage.update('match', storedParent.id, storedParent);
     }
 
+    /**
+     * Updates the seeding of a stage.
+     * @param stageId ID of the stage.
+     * @param seeding The new seeding.
+     */
     public async seeding(stageId: number, seeding: Seeding | SeedingIds) {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
@@ -131,30 +124,13 @@ export class Update {
         if (!matches) throw Error('This round has no match.');
 
         if (matches.some(match => match.status > Status.Ready))
-            throw Error('At least one match has started or is completed.')
+            throw Error('At least one match has started or is completed.');
 
         const inLoserBracket = await this.isLoserBracket(round.group_id);
-
-        if ((!inLoserBracket && round.number !== 1) || // Upper bracket and not round 1.
-            (inLoserBracket && !(round.number === 1 || round.number % 2 === 0))) // Loser bracket and not round 1 or not minor round.
-            throw Error('This round does not support ordering.');
-
-        const seedCount = round.number === 1 ?
-            matches.length * 2 : // Two per match for upper or lower bracket round 1.
-            matches.length; // One per match for loser bracket minor rounds.
-
-        const seeds = Array.from(Array(seedCount), (_, i) => i + 1);
+        const seeds = helpers.getSeeds(inLoserBracket, round.number, matches.length);
         const positions = ordering[method](seeds);
 
-        for (const match of matches) {
-            const updated = { ...match }; // Create a copy.
-            updated.opponent1 = helpers.findPosition(matches, positions.shift()!);
-
-            if (round.number === 1)
-                updated.opponent2 = helpers.findPosition(matches, positions.shift()!);
-
-            await this.storage.update<Match>('match', updated.id, updated);
-        }
+        await this.updateRoundOrdering(round, matches, positions);
     }
 
     /**
@@ -222,6 +198,24 @@ export class Update {
     }
 
     /**
+     * Updates the ordering of participants in a round's matches.
+     * @param round The round to update.
+     * @param matches The matches of the round.
+     * @param positions The new positions.
+     */
+    private async updateRoundOrdering(round: Round, matches: Match[], positions: number[]) {
+        for (const match of matches) {
+            const updated = { ...match }; // Create a copy of the match... workaround for node-json-db, which returns a reference to data.
+            updated.opponent1 = helpers.findPosition(matches, positions.shift()!);
+
+            if (round.number === 1)
+                updated.opponent2 = helpers.findPosition(matches, positions.shift()!);
+
+            await this.storage.update<Match>('match', updated.id, updated);
+        }
+    }
+
+    /**
      * Updates child count for a match.
      * @param matchId ID of the match.
      * @param targetChildCount The target child count.
@@ -253,33 +247,25 @@ export class Update {
     }
 
     /**
-     * Calculates the score of a parent match based on its child games.
-     * @param parentId ID of the parent match.
+     * Updates the matches related (previous and next) to a match.
+     * @param stored The match stored in database.
      */
-    private async getGamesResults(parentId: number) {
-        const games = await this.storage.select<MatchGame>('match_game', { parent_id: parentId });
-        if (!games) throw Error('No match games.');
+    private async updateRelatedMatches(stored: Match) {
+        const roundNumber = await this.getRoundNumber(stored.round_id);
 
-        const scores = {
-            opponent1: 0,
-            opponent2: 0,
-        }
+        const inWinnerBracket = await this.isWinnerBracket(stored.group_id);
+        const inLoserBracket = await this.isLoserBracket(stored.group_id);
 
-        for (const game of games) {
-            const result = helpers.getMatchResult(game);
-            if (result === 'opponent1') scores.opponent1++;
-            else if (result === 'opponent2') scores.opponent2++;
-        }
-
-        return scores;
+        await this.updatePrevious(stored, roundNumber, inLoserBracket);
+        await this.updateNext(stored, roundNumber, inWinnerBracket, inLoserBracket);
     }
 
     /**
      * Updates the match(es) leading to the current match based on this match results.
      * @param match Input of the update.
      */
-    private async updatePrevious(match: Match) {
-        const previousMatches = await this.getPreviousMatches(match);
+    private async updatePrevious(match: Match, roundNumber: number, inLoserBracket: boolean) {
+        const previousMatches = await this.getPreviousMatches(match, roundNumber, inLoserBracket);
         if (previousMatches.length === 0) return;
 
         const winnerSide = helpers.getMatchResult(match);
@@ -291,6 +277,10 @@ export class Update {
             this.resetPrevious(previousMatches);
     }
 
+    /**
+     * Sets the status of previous matches to archived.
+     * @param previousMatches The matches to update.
+     */
     private async setPrevious(previousMatches: Match[]) {
         for (const match of previousMatches) {
             match.status = Status.Archived;
@@ -298,6 +288,10 @@ export class Update {
         }
     }
 
+    /**
+     * Resets the status of previous matches to what it should currently be.
+     * @param previousMatches The matches to update.
+     */
     private async resetPrevious(previousMatches: Match[]) {
         for (const match of previousMatches) {
             match.status = helpers.getMatchStatus([match.opponent1, match.opponent2]);
@@ -309,8 +303,8 @@ export class Update {
      * Updates the match(es) following the current match based on this match results.
      * @param match Input of the update.
      */
-    private async updateNext(match: Match) {
-        const nextMatches = await this.getNextMatches(match);
+    private async updateNext(match: Match, roundNumber: number, inWinnerBracket: boolean, inLoserBracket: boolean) {
+        const nextMatches = await this.getNextMatches(match, roundNumber, inWinnerBracket, inLoserBracket);
         if (nextMatches.length === 0) return;
 
         const winnerSide = helpers.getMatchResult(match);
@@ -322,6 +316,12 @@ export class Update {
             this.resetNext(match, nextMatches);
     }
 
+    /**
+     * Sets the participants and status in the match(es) following a match.
+     * @param match The current match.
+     * @param nextMatches The next match(es).
+     * @param winnerSide The side of the winner in the current match.
+     */
     private setNext(match: Match, nextMatches: Match[], winnerSide: Side) {
         const nextSide = helpers.getSide(match);
         helpers.setNextOpponent(match, nextMatches, 0, winnerSide, nextSide);
@@ -333,6 +333,11 @@ export class Update {
         }
     }
 
+    /**
+     * Resets the participants and status in the match(es) following a match.
+     * @param match The current match.
+     * @param nextMatches The next match(es).
+     */
     private resetNext(match: Match, nextMatches: Match[]) {
         const nextSide = helpers.getSide(match);
         helpers.resetNextOpponent(nextMatches, 0, nextSide);
@@ -355,71 +360,152 @@ export class Update {
     }
 
     /**
-     * Gets matches leading to the given match.
+     * Gets the matches leading to the given match.
      * @param match The current match.
      */
-    private async getPreviousMatches(match: Match): Promise<Match[]> {
-        const inLoserBracket = await this.isLoserBracket(match.group_id);
-        const roundNumber = await this.getRoundNumber(match.round_id);
-
+    private async getPreviousMatches(match: Match, roundNumber: number, inLoserBracket: boolean): Promise<Match[]> {
         if (inLoserBracket) {
-            const winnerBracket = await this.storage.selectFirst<Group>('group', { stage_id: match.stage_id, number: 1 });
-            if (!winnerBracket) throw Error('Winner bracket not found.');
-
-            const roundNumberWB = Math.ceil((roundNumber + 1) / 2);
-
-            if (roundNumber === 1) { // First major round.
-                return [
-                    await this.findMatch(winnerBracket.id, roundNumberWB, match.number * 2 - 1),
-                    await this.findMatch(winnerBracket.id, roundNumberWB, match.number * 2),
-                ];
-            } else if (roundNumber % 2 === 1) { // Minor rounds.
-                return [
-                    await this.findMatch(winnerBracket.id, roundNumberWB, match.number),
-                    await this.findMatch(match.group_id, roundNumber - 1, match.number),
-                ];
-            }
+            const winnerBracket = await this.getWinnerBracket(match.stage_id);
+            return await this.getPreviousMatchesLB(roundNumber, winnerBracket.id, match.number, match.group_id);
         }
 
         if (roundNumber === 1) {
-            return []; // The match is in the first round of the upper bracket.
+            return []; // The match is in the first round of an upper bracket.
         }
 
+        return await this.getMatchesBeforeMajorRound(roundNumber, match.group_id, match.number);
+    }
+
+    /**
+     * Gets the matches leading to a given match from the loser bracket. 
+     * @param roundNumber Number of the current round.
+     * @param winnerBracketId ID of the winner bracket.
+     * @param matchNumber Number of the current match.
+     * @param groupId ID of the current group.
+     */
+    private async getPreviousMatchesLB(roundNumber: number, winnerBracketId: number, matchNumber: number, groupId: number) {
+        const roundNumberWB = Math.ceil((roundNumber + 1) / 2);
+
+        if (roundNumber === 1)
+            return await this.getMatchesBeforeFirstRoundLB(winnerBracketId, matchNumber, roundNumberWB);
+
+        if (roundNumber % 2 === 0)
+            return await this.getMatchesBeforeMinorRoundLB(roundNumber, winnerBracketId, matchNumber, roundNumberWB, groupId);
+
+        return await this.getMatchesBeforeMajorRound(roundNumber, groupId, matchNumber);
+    }
+
+    /**
+     * Gets the matches leading to a given match in a major round.
+     * @param roundNumber Number of the current round.
+     * @param groupId ID of the current group.
+     * @param matchNumber Number of the current match.
+     */
+    private async getMatchesBeforeMajorRound(roundNumber: number, groupId: number, matchNumber: number) {
         return [
-            await this.findMatch(match.group_id, roundNumber - 1, match.number * 2 - 1),
-            await this.findMatch(match.group_id, roundNumber - 1, match.number * 2),
+            await this.findMatch(groupId, roundNumber - 1, matchNumber * 2 - 1),
+            await this.findMatch(groupId, roundNumber - 1, matchNumber * 2),
+        ];
+    }
+
+    /**
+     * Gets the matches leading to a given match in the first round of the loser bracket.
+     * @param winnerBracketId ID of the winner bracket.
+     * @param matchNumber Number of the current match.
+     * @param roundNumberWB The number of the previous round in the winner bracket.
+     */
+    private async getMatchesBeforeFirstRoundLB(winnerBracketId: number, matchNumber: number, roundNumberWB: number) {
+        return [
+            await this.findMatch(winnerBracketId, roundNumberWB, matchNumber * 2 - 1),
+            await this.findMatch(winnerBracketId, roundNumberWB, matchNumber * 2),
+        ];
+    }
+
+    /**
+     * Gets the matches leading to a given match in a minor round of the loser bracket.
+     * @param roundNumber Number of the current round.
+     * @param winnerBracketId ID of the winner bracket.
+     * @param matchNumber Number of the current match.
+     * @param roundNumberWB The number of the previous round in the winner bracket.
+     * @param groupId ID of the current group.
+     */
+    private async getMatchesBeforeMinorRoundLB(roundNumber: number, winnerBracketId: number, matchNumber: number, roundNumberWB: number, groupId: number) {
+        return [
+            await this.findMatch(winnerBracketId, roundNumberWB, matchNumber),
+            await this.findMatch(groupId, roundNumber - 1, matchNumber),
         ];
     }
 
     /**
      * Gets the match(es) where the opponents of the current match will go just after.
      * @param match The current match.
+     * @param roundNumber The number of the current round.
+     * @param inWinnerBracket Whether the match is in the winner bracket.
+     * @param inLoserBracket Whether the match is in the loser bracket.
      */
-    private async getNextMatches(match: Match): Promise<Match[]> {
-        const matches: Match[] = [];
+    private async getNextMatches(match: Match, roundNumber: number, inWinnerBracket: boolean, inLoserBracket: boolean): Promise<Match[]> {
+        if (inLoserBracket)
+            return await this.getNextMatchesLB(match, roundNumber);
 
-        const roundNumber = await this.getRoundNumber(match.round_id);
+        if (inWinnerBracket)
+            return await this.getNextMatchesWB(match, roundNumber);
 
-        // Not always the opposite of "inLoserBracket". Could be in simple elimination.
-        const inWinnerBracket = await this.isWinnerBracket(match.group_id);
-        const inLoserBracket = await this.isLoserBracket(match.group_id);
+        return await this.getNextMatchesSingleBracket(match, roundNumber);
+    }
 
-        if (inLoserBracket && roundNumber % 2 === 1) { // Major rounds.
-            matches.push(await this.findMatch(match.group_id, roundNumber + 1, match.number));
-        } else { // Upper bracket rounds or lower bracket minor rounds.
-            matches.push(await this.findMatch(match.group_id, roundNumber + 1, Math.ceil(match.number / 2)));
-        }
+    /**
+     * Gets the match(es) where the opponents of the current match of winner bracket will go just after.
+     * @param match The current match.
+     * @param roundNumber The number of the current round.
+     */
+    private async getNextMatchesWB(match: Match, roundNumber: number) {
+        const loserBracket = await this.getLoserBracket(match.stage_id);
+        const roundNumberLB = roundNumber > 1 ? (roundNumber - 1) * 2 : 1;
+        const matchNumberLB = roundNumber > 1 ? match.number : Math.ceil(match.number / 2);
 
-        if (inWinnerBracket) {
-            const loserBracket = await this.storage.selectFirst<Group>('group', { stage_id: match.stage_id, number: 2 });
-            if (!loserBracket) throw Error('Loser bracket not found.');
+        return [
+            ...await this.getNextMatchesSingleBracket(match, roundNumber),
+            await this.findMatch(loserBracket.id, roundNumberLB, matchNumberLB),
+        ];
+    }
 
-            const roundNumberLB = roundNumber > 1 ? (roundNumber - 1) * 2 : 1;
-            const matchNumberLB = roundNumber > 1 ? match.number : Math.ceil(match.number / 2);
-            matches.push(await this.findMatch(loserBracket.id, roundNumberLB, matchNumberLB));
-        }
+    /**
+     * Gets the match(es) where the opponents of the current match of a single elimination stage's bracket will go just after.
+     * @param match The current match.
+     * @param roundNumber The number of the current round.
+     */
+    private async getNextMatchesSingleBracket(match: Match, roundNumber: number): Promise<Match[]> {
+        return [await this.findMatch(match.group_id, roundNumber + 1, Math.ceil(match.number / 2))];
+    }
 
-        return matches;
+    /**
+     * Gets the match(es) where the opponents of the current match of loser bracket will go just after.
+     * @param match The current match.
+     * @param roundNumber The number of the current round.
+     */
+    private async getNextMatchesLB(match: Match, roundNumber: number) {
+        if (roundNumber % 2 === 1)
+            return await this.getMatchesAfterMajorRoundLB(match, roundNumber);
+
+        return await this.getMatchesAfterMinorRoundLB(match, roundNumber);
+    }
+
+    /**
+     * Gets the match(es) where the opponents of the current match of a winner bracket's major round will go just after.
+     * @param match The current match.
+     * @param roundNumber The number of the current round.
+     */
+    private async getMatchesAfterMajorRoundLB(match: Match, roundNumber: number): Promise<Match[]> {
+        return [await this.findMatch(match.group_id, roundNumber + 1, match.number)];
+    }
+
+    /**
+     * Gets the match(es) where the opponents of the current match of a winner bracket's minor round will go just after.
+     * @param match The current match.
+     * @param roundNumber The number of the current round.
+     */
+    private async getMatchesAfterMinorRoundLB(match: Match, roundNumber: number): Promise<Match[]> {
+        return [await this.findMatch(match.group_id, roundNumber + 1, Math.ceil(match.number / 2))];
     }
 
     /**
@@ -434,12 +520,24 @@ export class Update {
 
     /**
      * Checks if a group is a winner bracket.
+     * 
+     * It's not always the opposite of `inLoserBracket()`: it could be the only bracket of a single elimination stage.
      * @param groupId ID of the group.
      */
     private async isWinnerBracket(groupId: number): Promise<boolean> {
         const group = await this.storage.select<Group>('group', groupId);
         if (!group) throw Error('Group not found.');
         return group.number === 1;
+    }
+
+    /**
+     * Gets the winner bracket.
+     * @param stageId ID of the stage.
+     */
+    private async getWinnerBracket(stageId: number) {
+        const winnerBracket = await this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 1 });
+        if (!winnerBracket) throw Error('Winner bracket not found.');
+        return winnerBracket;
     }
 
     /**
@@ -450,6 +548,16 @@ export class Update {
         const group = await this.storage.select<Group>('group', groupId);
         if (!group) throw Error('Group not found.');
         return group.number === 2;
+    }
+
+    /**
+     * Gets the loser bracket.
+     * @param stageId ID of the stage.
+     */
+    private async getLoserBracket(stageId: number) {
+        const loserBracket = await this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 2 });
+        if (!loserBracket) throw Error('Loser bracket not found.');
+        return loserBracket;
     }
 
     /**

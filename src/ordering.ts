@@ -4,7 +4,7 @@ import { SeedOrdering } from "brackets-model";
 
 export const ordering: OrderingMap = {
     'natural': <T>(array: T[]) => [...array],
-    'reverse': <T>(array: T[]) => array.reverse(),
+    'reverse': <T>(array: T[]) => [...array].reverse(),
     'half_shift': <T>(array: T[]) => [...array.slice(array.length / 2), ...array.slice(0, array.length / 2)],
     'reverse_half_shift': <T>(array: T[]) => [...array.slice(0, array.length / 2).reverse(), ...array.slice(array.length / 2).reverse()],
     'pair_flip': <T>(array: T[]) => {

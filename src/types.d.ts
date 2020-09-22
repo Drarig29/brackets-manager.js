@@ -27,3 +27,8 @@ type Duels = Duel[];
  * The side of an opponent.
  */
 type Side = 'opponent1' | 'opponent2';
+
+/**
+ * The cumulated scores of the opponents in a match's child games.
+ */
+type Scores = { opponent1: number, opponent2: number };
