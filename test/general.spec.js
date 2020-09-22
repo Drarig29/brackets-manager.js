@@ -50,7 +50,7 @@ describe('Position checks', () => {
             settings: { grandFinal: 'simple', seedOrdering: ['natural'] },
         });
     });
-    
+
     it('should not have a position when we don\'t need the origin of a participant', async () => {
         const matchFromWbRound2 = await storage.select('match', 4);
         assert.equal(matchFromWbRound2.opponent1.position, undefined);
@@ -67,7 +67,7 @@ describe('Position checks', () => {
         const matchFromWbRound1 = await storage.select('match', 0);
         assert.equal(matchFromWbRound1.opponent1.position, 1);
         assert.equal(matchFromWbRound1.opponent2.position, 2);
-        
+
         const matchFromLbRound1 = await storage.select('match', 7);
         assert.equal(matchFromLbRound1.opponent1.position, 1);
         assert.equal(matchFromLbRound1.opponent2.position, 2);
@@ -172,7 +172,12 @@ describe('Seeding and ordering in elimination', () => {
             name: 'Amateur',
             tournamentId: 0,
             type: 'double_elimination',
-            size: 16,
+            seeding: [
+                'Team 1', 'Team 2','Team 3', 'Team 4',
+                'Team 5', 'Team 6','Team 7', 'Team 8',
+                'Team 9', 'Team 10','Team 11', 'Team 12',
+                'Team 13', 'Team 14','Team 15', 'Team 16',
+            ],
             settings: {
                 seedOrdering: ['inner_outer', 'reverse', 'pair_flip', 'half_shift', 'reverse'],
             },

@@ -1,4 +1,4 @@
-import { Match, Round, Group, Stage, MatchGame, SeedOrdering, MatchResults, Seeding, SeedingIds } from "brackets-model";
+import { Match, Round, Group, Stage, MatchGame, SeedOrdering, MatchResults, Seeding, SeedingIds, Status } from "brackets-model";
 import { ordering } from './ordering';
 import { IStorage } from "./storage";
 import * as helpers from './helpers';
@@ -15,7 +15,7 @@ export class Update {
     }
 
     /**
-     * Updates partial information of a match. It's id must be given.
+     * Updates partial information of a match. Its id must be given.
      * 
      * This will trigger an update in the next match.
      * @param match Values to change in a match.
@@ -27,12 +27,31 @@ export class Update {
         if (!stored) throw Error('Match not found.');
 
         const inRoundRobin = await this.isRoundRobin(stored.stage_id);
-        if (!inRoundRobin && await this.isMatchLocked(stored)) throw Error('The match is locked.');
+        if (!inRoundRobin && helpers.isMatchLocked(stored)) throw Error('The match is locked.');
 
-        const completed = await this.updateMatchResults(stored, match);
+        const completed = helpers.setMatchResults(stored, match);
         await this.storage.update('match', match.id, stored);
 
         if (!inRoundRobin && completed) {
+            await this.updatePrevious(stored);
+            await this.updateNext(stored);
+        }
+    }
+
+    public async resetMatch(matchId: number) {
+        if (matchId === undefined) throw Error('No match id given.');
+
+        const stored = await this.storage.select<Match>('match', matchId);
+        if (!stored) throw Error('Match not found.');
+
+        const inRoundRobin = await this.isRoundRobin(stored.stage_id);
+        if (!inRoundRobin && helpers.isMatchLocked(stored)) throw Error('The match is locked.');
+
+        helpers.resetMatchResults(stored);
+        await this.storage.update('match', matchId, stored);
+
+        if (!inRoundRobin) {
+            await this.updatePrevious(stored);
             await this.updateNext(stored);
         }
     }
@@ -49,7 +68,7 @@ export class Update {
         const stored = await this.storage.select<MatchGame>('match_game', game.id);
         if (!stored) throw Error('Match game not found.');
 
-        await this.updateMatchResults(stored, game);
+        helpers.setMatchResults(stored, game);
         await this.storage.update('match_game', game.id, stored);
 
         const storedParent = await this.storage.select<Match>('match', stored.parent_id);
@@ -77,8 +96,7 @@ export class Update {
                 throw Error('Match games result in a tie for the parent match.');
         }
 
-        this.updateMatchResults(storedParent, parent);
-
+        helpers.setMatchResults(storedParent, parent);
         await this.storage.update('match', storedParent.id, storedParent);
     }
 
@@ -112,7 +130,7 @@ export class Update {
         const matches = await this.storage.select<Match>('match', { round_id: id });
         if (!matches) throw Error('This round has no match.');
 
-        if (matches.some(match => match.status !== 'pending'))
+        if (matches.some(match => match.status > Status.Ready))
             throw Error('At least one match has started or is completed.')
 
         const inLoserBracket = await this.isLoserBracket(round.group_id);
@@ -216,7 +234,7 @@ export class Update {
             await this.storage.insert<MatchGame>('match_game', {
                 number: childCount + 1,
                 parent_id: matchId,
-                status: 'pending',
+                status: Status.Locked,
                 opponent1: { id: null },
                 opponent2: { id: null },
             });
@@ -257,42 +275,71 @@ export class Update {
     }
 
     /**
-     * Updates a match results based on an input.
-     * @param stored A reference to what will be updated in the storage.
+     * Updates the match(es) leading to the current match based on this match results.
      * @param match Input of the update.
      */
-    private async updateMatchResults(stored: MatchResults, match: Partial<MatchResults>) {
-        const completed = helpers.isMatchCompleted(match);
-        if (match.status === 'completed' && !completed) throw Error('The match is not really completed.');
+    private async updatePrevious(match: Match) {
+        const previousMatches = await this.getPreviousMatches(match);
+        if (previousMatches.length === 0) return;
 
-        helpers.setScores(stored, match);
+        const winnerSide = helpers.getMatchResult(match);
+        if (match.status === Status.Completed && !winnerSide) throw Error('Cannot find a winner.');
 
-        if (completed) {
-            helpers.setCompleted(stored, match);
-        } else if (helpers.isMatchCompleted(stored)) {
-            helpers.removeCompleted(stored);
+        if (winnerSide)
+            this.setPrevious(previousMatches);
+        else
+            this.resetPrevious(previousMatches);
+    }
+
+    private async setPrevious(previousMatches: Match[]) {
+        for (const match of previousMatches) {
+            match.status = Status.Archived;
+            await this.storage.update('match', match.id, match);
         }
+    }
 
-        return completed;
+    private async resetPrevious(previousMatches: Match[]) {
+        for (const match of previousMatches) {
+            match.status = helpers.getMatchStatus([match.opponent1, match.opponent2]);
+            await this.storage.update('match', match.id, match);
+        }
     }
 
     /**
-     * Updates match(es) following the current match based on this match results.
+     * Updates the match(es) following the current match based on this match results.
      * @param match Input of the update.
      */
     private async updateNext(match: Match) {
         const nextMatches = await this.getNextMatches(match);
         if (nextMatches.length === 0) return;
 
-        const side = helpers.getSide(match);
-        const winner = helpers.getMatchResult(match);
-        if (!winner) throw Error('Cannot find a winner.');
+        const winnerSide = helpers.getMatchResult(match);
+        if (match.status === Status.Completed && !winnerSide) throw Error('Cannot find a winner.');
 
-        nextMatches[0][side] = helpers.getOpponent(match, winner);
+        if (winnerSide)
+            this.setNext(match, nextMatches, winnerSide);
+        else
+            this.resetNext(match, nextMatches);
+    }
+
+    private setNext(match: Match, nextMatches: Match[], winnerSide: Side) {
+        const nextSide = helpers.getSide(match);
+        helpers.setNextOpponent(match, nextMatches, 0, winnerSide, nextSide);
         this.storage.update('match', nextMatches[0].id, nextMatches[0]);
 
         if (nextMatches.length === 2) {
-            nextMatches[1][side] = helpers.getOpponent(match, helpers.getOtherSide(winner));
+            helpers.setNextOpponent(match, nextMatches, 1, helpers.getOtherSide(winnerSide), winnerSide);
+            this.storage.update('match', nextMatches[1].id, nextMatches[1]);
+        }
+    }
+
+    private resetNext(match: Match, nextMatches: Match[]) {
+        const nextSide = helpers.getSide(match);
+        helpers.resetNextOpponent(nextMatches, 0, nextSide);
+        this.storage.update('match', nextMatches[0].id, nextMatches[0]);
+
+        if (nextMatches.length === 2) {
+            helpers.resetNextOpponent(nextMatches, 1, nextSide);
             this.storage.update('match', nextMatches[1].id, nextMatches[1]);
         }
     }
@@ -305,37 +352,6 @@ export class Update {
         const round = await this.storage.select<Round>('round', roundId);
         if (!round) throw Error('Round not found.');
         return round.number;
-    }
-
-    /**
-     * Checks if a match is locked.
-     * 
-     * One of these situations may lock the match:
-     * 
-     * - The matches leading to the locked match have not been completed yet.
-     * - One of the participants from the locked match has already played its following match.
-     * @param match The match to check.
-     */
-    private async isMatchLocked(match: Match): Promise<boolean> {
-        const previousMatches = await this.getPreviousMatches(match);
-
-        if (previousMatches.length === 2 &&
-            (!helpers.isMatchCompleted(previousMatches[0]) || !helpers.isMatchCompleted(previousMatches[1])))
-            return true; // Previous matches not completed yet.
-
-        const nextMatches = await this.getNextMatches(match);
-
-        if (nextMatches.length === 0)
-            return false; // No following match.
-
-        if (nextMatches.length === 1 && helpers.isMatchCompleted(nextMatches[0]))
-            return true; // Next match already completed.
-
-        if (nextMatches.length === 2 &&
-            (helpers.isMatchCompleted(nextMatches[0]) || helpers.isMatchCompleted(nextMatches[1])))
-            return true; // Next matches already completed.
-
-        return false;
     }
 
     /**
@@ -376,7 +392,7 @@ export class Update {
     }
 
     /**
-     * Gets match(es) where the opponents of the current match will go just after.
+     * Gets the match(es) where the opponents of the current match will go just after.
      * @param match The current match.
      */
     private async getNextMatches(match: Match): Promise<Match[]> {

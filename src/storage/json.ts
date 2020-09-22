@@ -34,8 +34,12 @@ class JsonDatabase implements CrudInterface {
         return `/${table}[]`;
     }
 
-    private makeArrayAccessor(table: Table, index: number): string {
+    private makeArrayIndexPath(table: Table, index: number): string {
         return `/${table}[${index}]`;
+    }
+
+    private makeArrayPropertyPath(table: Table, index: number, property: string): string {
+        return `/${table}[${index}]/${property}`;
     }
 
     private makeFilter(partial: any) {
@@ -120,7 +124,7 @@ class JsonDatabase implements CrudInterface {
                 return this.internal.getData(this.makePath(table));
 
             if (typeof arg === "number")
-                return this.internal.getData(this.makeArrayAccessor(table, arg));
+                return this.internal.getData(this.makeArrayIndexPath(table, arg));
 
             return this.internal.filter(this.makePath(table), this.makeFilter(arg)) || null;
         } catch (error) {
@@ -147,7 +151,7 @@ class JsonDatabase implements CrudInterface {
     public async update<T>(table: Table, arg: any, value: T | Partial<T>) {
         if (typeof arg === 'number') {
             try {
-                this.internal.push(this.makeArrayAccessor(table, arg), value);
+                this.internal.push(this.makeArrayIndexPath(table, arg), value);
                 return true;
             } catch (error) {
                 return false;
@@ -157,7 +161,7 @@ class JsonDatabase implements CrudInterface {
         const values = this.internal.filter<{ id: number }>(this.makePath(table), this.makeFilter(arg));
         if (!values) return false;
 
-        values.forEach(v => this.internal.push(this.makeArrayAccessor(table, v.id), value, false));
+        values.forEach(v => this.internal.push(this.makeArrayIndexPath(table, v.id), value, false));
         return true;
     }
 
@@ -172,9 +176,9 @@ class JsonDatabase implements CrudInterface {
         if (!values) return false;
 
         const predicate = this.makeFilter(filter);
-        const negativeFilter = (value: any) => !predicate(value);
+        const oppositeFilter = (value: any) => !predicate(value);
 
-        this.internal.push(path, values.filter(negativeFilter));
+        this.internal.push(path, values.filter(oppositeFilter));
         return true;
     }
 }

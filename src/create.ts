@@ -5,8 +5,8 @@ import { IStorage } from './storage';
 import * as helpers from './helpers';
 
 export async function create(this: BracketsManager, stage: InputStage) {
-    const create = new Create(this.storage, stage);
-    return create.run();
+    const instance = new Create(this.storage, stage);
+    return instance.run();
 }
 
 export class Create {
@@ -312,14 +312,15 @@ export class Create {
      * @param childCount Child count for this match (number of games).
      */
     private async createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number) {
+        const status = helpers.getMatchStatus(opponents);
+
         const parentId = await this.insertMatch({
             number: matchNumber,
             stage_id: stageId,
             group_id: groupId,
             round_id: roundId,
             child_count: childCount,
-            status: 'pending',
-            locked: false, // TODO: update that.
+            status: status,
             opponent1: helpers.toResult(opponents[0]),
             opponent2: helpers.toResult(opponents[1]),
         });
@@ -331,7 +332,7 @@ export class Create {
             const id = await this.insertMatchGame({
                 number: i + 1,
                 parent_id: parentId,
-                status: 'pending',
+                status: status,
                 opponent1: helpers.toResult(opponents[0]),
                 opponent2: helpers.toResult(opponents[1]),
             });
@@ -387,7 +388,7 @@ export class Create {
             for (let duelId = 0; duelId < currentDuelCount; duelId++) {
                 const prevDuelId = duelId;
                 currentDuels.push([
-                    losers![prevDuelId], // opponent1.
+                    losers[prevDuelId], // opponent1.
                     helpers.byeWinner(previousDuels[prevDuelId]), // opponent2.
                 ]);
             }
@@ -484,8 +485,8 @@ export class Create {
      * @param participantCount Number of participants in the stage.
      */
     private getMajorOrdering(participantCount: number): SeedOrdering {
-        const ordering = this.getOrdering(1, 'elimination');
-        return ordering || defaultMinorOrdering[participantCount][0];
+        const value = this.getOrdering(1, 'elimination');
+        return value || defaultMinorOrdering[participantCount][0];
     }
 
     /**
@@ -494,8 +495,8 @@ export class Create {
      * @param index Index of the minor round.
      */
     private getMinorOrdering(participantCount: number, index: number): SeedOrdering {
-        const ordering = this.getOrdering(2 + index, 'elimination');
-        return ordering || defaultMinorOrdering[participantCount][1 + index];
+        const value = this.getOrdering(2 + index, 'elimination');
+        return value || defaultMinorOrdering[participantCount][1 + index];
     }
 
     private async insertStage(stage: OmitId<Stage>): Promise<number> {
@@ -564,6 +565,7 @@ export class Create {
 
         await this.storage.update<Match>('match', existing.id, {
             ...existing,
+            status: match.status,
             opponent1: match.opponent1,
             opponent2: match.opponent2,
         });

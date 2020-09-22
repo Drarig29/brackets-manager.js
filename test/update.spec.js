@@ -2,6 +2,7 @@ const chai = require('chai');
 chai.use(require("chai-as-promised"));
 
 const assert = chai.assert;
+const { Status } = require('brackets-model');
 const { BracketsManager } = require('../dist');
 const { storage } = require('../dist/storage/json');
 
@@ -33,15 +34,15 @@ describe('Update matches', () => {
 
     it('should start a match', async () => {
         const before = await storage.select('match', 0);
-        assert.equal(before.status, 'pending');
+        assert.equal(before.status, Status.Ready);
 
         await manager.update.match({
             id: 0,
-            status: 'running',
+            status: Status.Running,
         });
 
         const after = await storage.select('match', 0);
-        assert.equal(after.status, 'running');
+        assert.equal(after.status, Status.Running);
     });
 
     it('should update the scores for a match and set it to running', async () => {
@@ -55,7 +56,7 @@ describe('Update matches', () => {
         });
 
         const after = await storage.select('match', 0);
-        assert.equal(after.status, 'running');
+        assert.equal(after.status, Status.Running);
         assert.equal(after.opponent1.score, 2);
 
         // Name should stay. It shouldn't be overwritten.
@@ -65,7 +66,7 @@ describe('Update matches', () => {
     it('should throw if end a match without winner', async () => {
         await assert.isRejected(manager.update.match({
             id: 4,
-            status: 'completed',
+            status: Status.Completed,
         }), 'The match is not really completed.');
     })
 
@@ -79,9 +80,27 @@ describe('Update matches', () => {
         });
 
         const after = await storage.select('match', 0);
-        assert.equal(after.status, 'completed');
+        assert.equal(after.status, Status.Completed);
         assert.equal(after.opponent1.result, 'win');
         assert.equal(after.opponent2.result, 'loss');
+    });
+
+    it('should update the status of the next match', async () => {
+        await manager.update.resetMatch(0);
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { result: 'win' },
+        });
+
+        assert.equal((await storage.select('match', 8)).status, Status.Waiting);
+
+        await manager.update.match({
+            id: 1,
+            opponent1: { result: 'win' },
+        });
+
+        assert.equal((await storage.select('match', 8)).status, Status.Ready);
     });
 
     it('should end the match by only setting a forfeit', async () => {
@@ -94,7 +113,7 @@ describe('Update matches', () => {
         });
 
         const after = await storage.select('match', 2);
-        assert.equal(after.status, 'completed');
+        assert.equal(after.status, Status.Completed);
         assert.equal(after.opponent1.forfeit, true);
         assert.equal(after.opponent1.result, null);
         assert.equal(after.opponent2.result, 'win');
@@ -103,11 +122,16 @@ describe('Update matches', () => {
     it('should remove forfeit from a match', async () => {
         await manager.update.match({
             id: 2,
+            opponent1: { forfeit: true },
+        });
+
+        await manager.update.match({
+            id: 2,
             opponent1: { forfeit: undefined },
         });
 
         const after = await storage.select('match', 2);
-        assert.equal(after.status, 'running');
+        assert.equal(after.status, Status.Running);
         assert.notExists(after.opponent1.forfeit);
         assert.notExists(after.opponent1.result);
         assert.notExists(after.opponent2.result);
@@ -116,7 +140,7 @@ describe('Update matches', () => {
     it('should end the match by setting winner and loser', async () => {
         await manager.update.match({
             id: 0,
-            status: 'running',
+            status: Status.Running,
         });
 
         await manager.update.match({
@@ -126,7 +150,7 @@ describe('Update matches', () => {
         });
 
         const after = await storage.select('match', 0);
-        assert.equal(after.status, 'completed');
+        assert.equal(after.status, Status.Completed);
         assert.equal(after.opponent1.result, 'win');
         assert.equal(after.opponent2.result, 'loss');
     });
@@ -134,12 +158,18 @@ describe('Update matches', () => {
     it('should remove results from a match', async () => {
         await manager.update.match({
             id: 0,
+            opponent1: { result: 'win' },
+            opponent2: { result: 'loss' },
+        });
+
+        await manager.update.match({
+            id: 0,
             opponent1: { result: undefined },
             opponent2: { result: undefined },
         });
 
         const after = await storage.select('match', 0);
-        assert.equal(after.status, 'running');
+        assert.equal(after.status, Status.Running);
         assert.notExists(after.opponent1.result);
         assert.notExists(after.opponent2.result);
     });
@@ -151,7 +181,7 @@ describe('Update matches', () => {
         });
 
         const after = await storage.select('match', 1);
-        assert.equal(after.status, 'running');
+        assert.equal(after.status, Status.Running);
         assert.equal(after.opponent1.score, 1);
         assert.equal(after.opponent2.score, 0);
     });
@@ -164,7 +194,7 @@ describe('Update matches', () => {
         });
 
         const after = await storage.select('match', 1);
-        assert.equal(after.status, 'completed');
+        assert.equal(after.status, Status.Completed);
 
         assert.equal(after.opponent1.result, 'loss');
         assert.equal(after.opponent1.score, 6);
@@ -204,7 +234,6 @@ describe('Locked matches', () => {
     });
 
     it('should throw when one of participants already played next match', async () => {
-        // Setup.
         await manager.update.match({ id: 0, opponent1: { result: 'win' } });
         await manager.update.match({ id: 1, opponent1: { result: 'win' } });
         await manager.update.match({ id: 8, opponent1: { result: 'win' } });
@@ -238,7 +267,7 @@ describe('Update match games', () => {
         });
 
         let match = await storage.select('match', 0);
-        assert.equal(match.status, 'running');
+        assert.equal(match.status, Status.Running);
         assert.equal(match.opponent1.score, 1);
         assert.equal(match.opponent2.score, 0);
 
@@ -250,7 +279,7 @@ describe('Update match games', () => {
         });
 
         match = await storage.select('match', 0);
-        assert.equal(match.status, 'running');
+        assert.equal(match.status, Status.Running);
         assert.equal(match.opponent1.score, 2);
         assert.equal(match.opponent2.score, 0);
 
@@ -262,7 +291,7 @@ describe('Update match games', () => {
         });
 
         match = await storage.select('match', 0);
-        assert.equal(match.status, 'completed');
+        assert.equal(match.status, Status.Completed);
         assert.equal(match.opponent1.score, 2);
         assert.equal(match.opponent2.score, 1);
 
@@ -274,15 +303,15 @@ describe('Update match games', () => {
         });
 
         match = await storage.select('match', 0);
-        assert.equal(match.status, 'running');
+        assert.equal(match.status, Status.Running);
         assert.equal(match.opponent1.score, 2);
         assert.equal(match.opponent2.score, 0);
     });
 });
 
-describe('Participants', () => {
+describe('Seeding', () => {
 
-    before(async () => {
+    beforeEach(async () => {
         storage.reset();
 
         await manager.create({
@@ -296,7 +325,7 @@ describe('Participants', () => {
         });
     });
 
-    it('should update participants in a stage without any participant', async () => {
+    it('should update the seeding in a stage without any participant', async () => {
         await manager.update.seeding(0, [
             'Team 1', 'Team 2',
             'Team 3', 'Team 4',
@@ -308,7 +337,14 @@ describe('Participants', () => {
         assert.equal((await storage.select('participant')).length, 8);
     });
 
-    it('should update participants in a stage with participants already', async () => {
+    it('should update the seeding in a stage with participants already', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
         await manager.update.seeding(0, [
             'Team A', 'Team B',
             'Team C', 'Team D',
@@ -320,7 +356,14 @@ describe('Participants', () => {
         assert.equal((await storage.select('participant')).length, 16);
     });
 
-    it('should update participants in a stage by registering only one missing participant', async () => {
+    it('should update the seeding in a stage by registering only one missing participant', async () => {
+        await manager.update.seeding(0, [
+            'Team A', 'Team B',
+            'Team C', 'Team D',
+            'Team E', 'Team F',
+            'Team G', 'Team H',
+        ]);
+
         await manager.update.seeding(0, [
             'Team A', 'Team B', // Match 0.
             'Team C', 'Team D', // Match 1.
@@ -328,12 +371,19 @@ describe('Participants', () => {
             'Team G', 'Team Z', // Match 3.
         ]);
 
-        assert.equal((await storage.select('match', 0)).opponent1.id, 8);
-        assert.equal((await storage.select('match', 3)).opponent2.id, 16);
-        assert.equal((await storage.select('participant')).length, 17);
+        assert.equal((await storage.select('match', 0)).opponent1.id, 0);
+        assert.equal((await storage.select('match', 3)).opponent2.id, 8);
+        assert.equal((await storage.select('participant')).length, 9);
     });
 
     it('should throw if a match is locked', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
         await manager.update.match({
             id: 2, // Any match id.
             opponent1: { score: 1 },

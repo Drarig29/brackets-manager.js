@@ -1,4 +1,4 @@
-import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds } from "brackets-model";
+import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status } from "brackets-model";
 
 /**
  * Distributes participants in rounds for a round-robin group.
@@ -211,20 +211,6 @@ export function byeLoser(opponents: Duel, index: number): ParticipantSlot {
 }
 
 /**
- * Adds positions in each opponent if not present.
- * @param duels A list of duels.
- */
-export function populatePosition(duels: Duels): void {
-    let i = 1;
-
-    for (const duel of duels) {
-        if (duel[0] && duel[0].position) return; // Shortcut because if one position is present, then all will.
-        duel![0]!.position = i++;
-        duel![1]!.position = i++;
-    }
-}
-
-/**
  * Returns the winner side or `null` if no winner.
  * @param match A match's results.
  */
@@ -241,6 +227,22 @@ export function getMatchResult(match: MatchResults): Side | null {
     }
 
     return winner;
+}
+
+export function getMatchStatus(opponents: Duel): Status {
+    if (opponents[0] === null || opponents[1] === null)
+        return Status.Completed;
+
+    if (opponents[0].id === null && opponents[1].id === null)
+        return Status.Locked;
+
+    if (opponents[0].id === null || opponents[1].id === null)
+        return Status.Waiting;
+
+    if (opponents[0].id !== null && opponents[1].id !== null)
+        return Status.Ready;
+
+    return Status.Locked;
 }
 
 /**
@@ -305,6 +307,67 @@ export function isMatchCompleted(match: Partial<MatchResults>): boolean {
 }
 
 /**
+ * Checks if a match is locked.
+ * @param match The match to check.
+ */
+export function isMatchLocked(match: MatchResults): boolean {
+    return match.status === Status.Locked || match.status === Status.Waiting || match.status === Status.Archived;
+}
+
+/**
+ * Updates a match results based on an input.
+ * @param stored A reference to what will be updated in the storage.
+ * @param match Input of the update.
+ */
+export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>) {
+    const completed = isMatchCompleted(match);
+
+    if (match.status === Status.Completed && !completed) throw Error('The match is not really completed.');
+
+    setScores(stored, match);
+
+    if (completed) {
+        setCompleted(stored, match);
+    } else if (isMatchCompleted(stored)) {
+        removeCompleted(stored);
+    }
+
+    return completed;
+}
+
+/**
+ * Resets the results of a match. (status, score, forfeit, result)
+ * @param stored A reference to what will be updated in the storage.
+ */
+export function resetMatchResults(stored: MatchResults) {
+    if (stored.opponent1) {
+        stored.opponent1.score = undefined;
+        stored.opponent1.forfeit = undefined;
+        stored.opponent1.result = undefined;
+    }
+
+    if (stored.opponent2) {
+        stored.opponent2.score = undefined;
+        stored.opponent2.forfeit = undefined;
+        stored.opponent2.result = undefined;
+    }
+
+    stored.status = getMatchStatus([stored.opponent1, stored.opponent2]);
+}
+
+export function setNextOpponent(match: Match, nextMatches: Match[], index: number, currentSide: Side, nextSide: Side) {
+    nextMatches[index][nextSide] = getOpponent(match, currentSide);
+
+    if (nextMatches[index].status < Status.Ready)
+        nextMatches[index].status++;
+}
+
+export function resetNextOpponent(nextMatches: Match[], index: number, nextSide: Side) {
+    nextMatches[index][nextSide] = { id: null };
+    nextMatches[index].status = Status.Locked;
+}
+
+/**
  * Updates the scores of a match.
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
@@ -320,7 +383,7 @@ export function setScores(stored: MatchResults, match: Partial<MatchResults>) {
     if (!stored.opponent1 || !stored.opponent2) throw Error('No team is defined yet. Can\'t set the score.');
 
     // Default when scores are updated.
-    stored.status = 'running';
+    stored.status = Status.Running;
     stored.opponent1.score = 0;
     stored.opponent2.score = 0;
 
@@ -337,7 +400,7 @@ export function setScores(stored: MatchResults, match: Partial<MatchResults>) {
  * @param match Input of the update.
  */
 export function setCompleted(stored: MatchResults, match: Partial<MatchResults>) {
-    stored.status = 'completed';
+    stored.status = Status.Completed;
 
     setResults(stored, match, 'win', 'loss');
     setResults(stored, match, 'loss', 'win');
@@ -347,11 +410,11 @@ export function setCompleted(stored: MatchResults, match: Partial<MatchResults>)
 }
 
 /**
- * Removes the 'completed' status of a match, set it back to running and removes results.
+ * Removes the completed status of a match, set it back to running and removes results.
  * @param stored A reference to what will be updated in the storage.
  */
 export function removeCompleted(stored: MatchResults) {
-    stored.status = 'running';
+    stored.status = Status.Running;
 
     if (stored.opponent1) {
         stored.opponent1.forfeit = undefined;
