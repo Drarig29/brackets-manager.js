@@ -25,6 +25,7 @@
         "test": "npx mocha test",
         "start": "tsc -watch",
         "build": "tsc",
+        "prepare": "npm run build",
         "prepublishOnly": "npm run build"
     },
     "keywords": [

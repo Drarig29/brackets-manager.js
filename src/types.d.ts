@@ -4,6 +4,11 @@
 type OrderingMap = { [key in import('brackets-model').SeedOrdering]: <T>(array: T[], ...args: any) => T[] };
 
 /**
+ * Omits the `id` property of a type.
+ */
+type OmitId<T> = Omit<T, 'id'>;
+
+/**
  * Used by the library to handle placements. Is `null` if is a BYE. Has a `null` name if it's yet to be determined.
  */
 type ParticipantSlot = { id: number | null, position?: number } | null;

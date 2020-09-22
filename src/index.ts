@@ -34,7 +34,3 @@ export class BracketsManager {
      */
     public create: (stage: InputStage) => Promise<void>;
 }
-
-declare global {
-    type OmitId<T> = Omit<T, 'id'>
-}
