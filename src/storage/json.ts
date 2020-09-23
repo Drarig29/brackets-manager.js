@@ -38,10 +38,6 @@ class JsonDatabase implements CrudInterface {
         return `/${table}[${index}]`;
     }
 
-    private makeArrayPropertyPath(table: Table, index: number, property: string): string {
-        return `/${table}[${index}]/${property}`;
-    }
-
     private makeFilter(partial: any) {
         return (entry: any): boolean => {
             let result = true;

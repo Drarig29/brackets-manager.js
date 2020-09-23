@@ -56,8 +56,8 @@ export class Create {
      * One bracket and optionally a consolation final between semi-final losers.
      */
     private async singleElimination() {
-        if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
-            this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
+        if (Array.isArray(this.stage.settings?.seedOrdering) &&
+            this.stage.settings?.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
         const slots = await this.getSlots();
         const stageId = await this.createStage();
@@ -381,7 +381,9 @@ export class Create {
      * Safely gets `matchesChildCount` in the stage input settings.
      */
     private getMatchesChildCount(): number {
-        if (this.stage.settings === undefined || this.stage.settings.matchesChildCount === undefined) return 0;
+        if (!this.stage.settings?.matchesChildCount)
+            return 0;
+
         return this.stage.settings.matchesChildCount;
     }
 
@@ -391,7 +393,8 @@ export class Create {
      * @param stageType A value indicating if the method should be a group method or not.
      */
     private getOrdering(orderingIndex: number, stageType: 'elimination' | 'groups'): SeedOrdering | null {
-        if (this.stage.settings === undefined || this.stage.settings.seedOrdering === undefined) return null;
+        if (!this.stage.settings?.seedOrdering)
+            return null;
 
         const method = this.stage.settings.seedOrdering[orderingIndex];
         if (!method) return null;
@@ -409,10 +412,11 @@ export class Create {
      * Gets the duels in groups for a round-robin stage.
      */
     private async getRoundRobinGroups(): Promise<Duels> {
-        if (!this.stage.settings || !this.stage.settings.groupCount) throw Error('You must specify a group count for round-robin stages.');
+        if (this.stage.settings?.groupCount === undefined)
+            throw Error('You must specify a group count for round-robin stages.');
 
-        if (Array.isArray(this.stage.settings.seedOrdering)
-            && this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
+        if (Array.isArray(this.stage.settings.seedOrdering) && this.stage.settings.seedOrdering.length !== 1)
+            throw Error('You must specify one seed ordering method.');
 
         const method = this.getRoundRobinOrdering();
         const slots = await this.getSlots();
@@ -606,7 +610,7 @@ export class Create {
      * @param losers The semi final losers who will play the consolation final.
      */
     private async createConsolationFinal(stageId: number, losers: ParticipantSlot[][]) {
-        if (!this.stage.settings || !this.stage.settings.consolationFinal) return;
+        if (!this.stage.settings?.consolationFinal) return;
 
         const semiFinalLosers = losers[losers.length - 2];
         await this.createUniqueMatchBracket(stageId, 2, [semiFinalLosers]);
@@ -620,7 +624,7 @@ export class Create {
      */
     private async createGrandFinal(stageId: number, winnerWb: ParticipantSlot, winnerLb: ParticipantSlot) {
         // No Grand Final by default.
-        const grandFinal = this.stage.settings && this.stage.settings.grandFinal;
+        const grandFinal = this.stage.settings?.grandFinal;
         if (grandFinal === undefined) return;
 
         // One duel by default.

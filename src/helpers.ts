@@ -123,9 +123,8 @@ export function makePairs<T>(left: T[], right?: T[]): T[][] {
  * @param array A list of elements.
  */
 export function ensureEvenSized<T>(array: T[]) {
-    if (array.length % 2 === 1) {
+    if (array.length % 2 === 1)
         throw Error('Array size must be even.');
-    }
 }
 
 /**
@@ -134,9 +133,8 @@ export function ensureEvenSized<T>(array: T[]) {
  * @param right The second list of elements.
  */
 export function ensureEquallySized<T>(left: T[], right: T[]) {
-    if (left.length !== right.length) {
+    if (left.length !== right.length)
         throw Error('Arrays size must be equal.');
-    }
 }
 
 /**
@@ -144,9 +142,8 @@ export function ensureEquallySized<T>(left: T[], right: T[]) {
  * @param array A list of elements.
  */
 export function ensurePowerOfTwoSized<T>(array: T[]) {
-    if (!Number.isInteger(Math.log2(array.length))) {
+    if (!Number.isInteger(Math.log2(array.length)))
         throw Error('Array size must be a power of 2.');
-    }
 }
 
 /**
@@ -154,9 +151,8 @@ export function ensurePowerOfTwoSized<T>(array: T[]) {
  * @param scores Two numbers which are scores.
  */
 export function ensureNotTied(scores: number[]) {
-    if (scores[0] === scores[1]) {
+    if (scores[0] === scores[1])
         throw Error(`${scores[0]} and ${scores[1]} are tied. It cannot be.`);
-    }
 }
 
 /**
@@ -218,11 +214,11 @@ export function byeLoser(opponents: Duel, index: number): ParticipantSlot {
 export function getMatchResult(match: MatchResults): Side | null {
     let winner: Side | null = null;
 
-    if (match.opponent1 && match.opponent1.result === 'win') {
+    if (match.opponent1?.result === 'win') {
         winner = 'opponent1';
     }
 
-    if (match.opponent2 && match.opponent2.result === 'win') {
+    if (match.opponent2?.result === 'win') {
         if (winner !== null) throw Error('There are two winners.')
         winner = 'opponent2';
     }
@@ -253,10 +249,10 @@ export function getMatchStatus(opponents: Duel): Status {
  */
 export function findPosition(matches: Match[], position: number): ParticipantResult | null {
     for (const match of matches) {
-        if (match.opponent1 && match.opponent1.position === position)
+        if (match.opponent1?.position === position)
             return match.opponent1;
 
-        if (match.opponent2 && match.opponent2.position === position)
+        if (match.opponent2?.position === position)
             return match.opponent2;
     }
 
@@ -294,8 +290,7 @@ export function getOtherSide(side: Side): Side {
  * @param match Partial match results.
  */
 export function isMatchStarted(match: Partial<MatchResults>): boolean {
-    return (!!match.opponent1 && match.opponent1.score !== undefined)
-        || (!!match.opponent2 && match.opponent2.score !== undefined);
+    return match.opponent1?.score !== undefined || match.opponent2?.score !== undefined;
 }
 
 /**
@@ -303,8 +298,8 @@ export function isMatchStarted(match: Partial<MatchResults>): boolean {
  * @param match Partial match results.
  */
 export function isMatchCompleted(match: Partial<MatchResults>): boolean {
-    return (!!match.opponent1 && (match.opponent1.result !== undefined || match.opponent1.forfeit !== undefined))
-        || (!!match.opponent2 && (match.opponent2.result !== undefined || match.opponent2.forfeit !== undefined));
+    return (match.opponent1?.result !== undefined || match.opponent1?.forfeit !== undefined)
+        || (match.opponent2?.result !== undefined || match.opponent2?.forfeit !== undefined);
 }
 
 /**
@@ -382,8 +377,7 @@ export function resetNextOpponent(nextMatches: Match[], index: number, nextSide:
  * @param match Input of the update.
  */
 export function setScores(stored: MatchResults, match: Partial<MatchResults>) {
-    if ((!match.opponent1 || match.opponent1.score === undefined) &&
-        (!match.opponent2 || match.opponent2.score === undefined)) {
+    if (match.opponent1?.score === undefined && match.opponent2?.score === undefined) {
         // No score update.
         if (match.status) stored.status = match.status;
         return;
@@ -396,10 +390,10 @@ export function setScores(stored: MatchResults, match: Partial<MatchResults>) {
     stored.opponent1.score = 0;
     stored.opponent2.score = 0;
 
-    if (match.opponent1 && match.opponent1.score !== undefined)
+    if (match.opponent1?.score !== undefined)
         stored.opponent1.score = match.opponent1.score;
 
-    if (match.opponent2 && match.opponent2.score !== undefined)
+    if (match.opponent2?.score !== undefined)
         stored.opponent2.score = match.opponent2.score;
 }
 
@@ -457,7 +451,7 @@ export function setResults(stored: MatchResults, match: Partial<MatchResults>, c
         }
     }
 
-    if (match.opponent1 && match.opponent1.result === check) {
+    if (match.opponent1?.result === check) {
         if (stored.opponent1) stored.opponent1.result = check;
         else stored.opponent1 = { id: null, result: check };
 
@@ -465,7 +459,7 @@ export function setResults(stored: MatchResults, match: Partial<MatchResults>, c
         else stored.opponent2 = { id: null, result: change };
     }
 
-    if (match.opponent2 && match.opponent2.result === check) {
+    if (match.opponent2?.result === check) {
         if (stored.opponent2) stored.opponent2.result = check;
         else stored.opponent2 = { id: null, result: check };
 
@@ -480,14 +474,14 @@ export function setResults(stored: MatchResults, match: Partial<MatchResults>, c
  * @param match Input of the update.
  */
 export function setForfeits(stored: MatchResults, match: Partial<MatchResults>) {
-    if (match.opponent1 && match.opponent1.forfeit === true) {
+    if (match.opponent1?.forfeit === true) {
         if (stored.opponent1) stored.opponent1.forfeit = true;
 
         if (stored.opponent2) stored.opponent2.result = 'win';
         else stored.opponent2 = { id: null, result: 'win' };
     }
 
-    if (match.opponent2 && match.opponent2.forfeit === true) {
+    if (match.opponent2?.forfeit === true) {
         if (stored.opponent2) stored.opponent2.forfeit = true;
 
         if (stored.opponent1) stored.opponent1.result = 'win';

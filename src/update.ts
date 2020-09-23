@@ -157,8 +157,7 @@ export class Update {
             const locked = helpers.isMatchParticipantLocked(match);
             if (!locked) continue;
 
-            if ((match.opponent1 && opponent1 && match.opponent1.id !== opponent1.id) ||
-                (match.opponent2 && opponent2 && match.opponent2.id !== opponent2.id))
+            if (match.opponent1?.id !== opponent1?.id || match.opponent2?.id !== opponent2?.id)
                 throw Error('A match is locked.');
         }
     }
