@@ -401,7 +401,7 @@ export class Create {
         if (stageType === 'elimination' && method.match(/^groups\./))
             throw Error('You must specify a seed ordering method without a \'groups\' prefix');
 
-        if (stageType === 'groups' && !method.match(/^groups\./))
+        if (stageType === 'groups' && method !== 'natural' && !method.match(/^groups\./))
             throw Error('You must specify a seed ordering method with a \'groups\' prefix');
 
         return method;
