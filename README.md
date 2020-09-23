@@ -10,7 +10,7 @@ It contains all the logic needed to manage tournaments.
 
 - [BYE](https://en.wikipedia.org/wiki/Bye_%28sports%29) supported: only during creation (for seeding and balancing).
 - Forfeit supported: only during updates.
-- Match status supported (pending, running, completed).
+- Match  supported (locked, waiting, ready, running, completed, archived).
 
 ## Round-robin
 
@@ -34,7 +34,7 @@ It contains all the logic needed to manage tournaments.
 
 # Interface
 
-- This library doesn't come with a GUI to create and update tournaments. You need to create your own.
+- This library doesn't come with a GUI to create and update tournaments.
 - You can use [brackets-viewer.js](https://github.com/Drarig29/brackets-viewer.js) to display the current state of a stage.
 - It is designed to be used with any storage.
 - An example of JSON storage is given to run tests. You can use it out of the box.
