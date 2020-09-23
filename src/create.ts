@@ -119,8 +119,7 @@ export class Create {
         losers: ParticipantSlot[][],
         winner: ParticipantSlot,
     }> {
-        // Inner outer by default for round 1 of standard bracket.
-        const method = this.getOrdering(0, 'elimination') || 'inner_outer';
+        const method = this.getStandardBracketFirstRoundOrdering();
         const ordered = ordering[method](slots);
 
         const roundCount = Math.log2(slots.length);
@@ -158,7 +157,7 @@ export class Create {
      * @param losers One list of losers per upper bracket round.
      */
     private async createLowerBracket(stageId: number, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
-        // The first pair of rounds (major & minor) takes the first two lists of losers.
+        // The first pair of rounds (major & minor) takes the **first two** lists of losers (hence the -1).
         const roundPairCount = losers.length - 1;
 
         // The first list of losers contains the input for the bracket.
@@ -329,7 +328,7 @@ export class Create {
      * - If `seeding` was given, inserts them in the storage.
      * - If `size` was given, only returns a list of empty slots.
      */
-    private async getSlots(): Promise<ParticipantSlot[]> {
+    public async getSlots(): Promise<ParticipantSlot[]> {
         if (this.stage.size && this.stage.seeding) throw Error('Cannot set size and seeding at the same time.');
 
         if (this.stage.size)
@@ -349,9 +348,8 @@ export class Create {
     private async getSlotsUsingNames(seeding: Seeding) {
         const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, this.stage.seeding as Seeding);
 
-        if (!await this.registerParticipants(participants)) {
+        if (!await this.registerParticipants(participants))
             throw Error('Error registering the participants.');
-        }
 
         // Get participants back with ids.
         const added = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
@@ -416,12 +414,24 @@ export class Create {
         if (Array.isArray(this.stage.settings.seedOrdering)
             && this.stage.settings.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
-        // Default method for round-robin groups: Effort balanced.
-        const method = this.getOrdering(0, 'groups') || 'groups.effort_balanced';
-
+        const method = this.getRoundRobinOrdering();
         const slots = await this.getSlots();
         const ordered = ordering[method](slots, this.stage.settings.groupCount);
         return helpers.makeGroups(ordered, this.stage.settings.groupCount);
+    }
+
+    /**
+     * Returns the ordering method for the groups in a round-robin stage.
+     */
+    public getRoundRobinOrdering() {
+        return this.getOrdering(0, 'groups') || 'groups.effort_balanced';
+    }
+
+    /**
+     * Returns the ordering method for the first round of the upper bracket of an elimination stage.
+     */
+    public getStandardBracketFirstRoundOrdering() {
+        return this.getOrdering(0, 'elimination') || 'inner_outer';
     }
 
     /**
@@ -520,15 +530,7 @@ export class Create {
         if (!existing)
             return this.storage.insert<Match>('match', match);
 
-        if (helpers.isMatchStarted(existing) || helpers.isMatchCompleted(existing))
-            throw Error('A match is locked.');
-
-        await this.storage.update<Match>('match', existing.id, {
-            ...existing,
-            status: match.status,
-            opponent1: match.opponent1,
-            opponent2: match.opponent2,
-        });
+        await this.storage.update<Match>('match', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(match) });
 
         return existing.id;
     }
@@ -550,15 +552,7 @@ export class Create {
         if (!existing)
             return this.storage.insert<MatchGame>('match_game', matchGame);
 
-        if (helpers.isMatchStarted(existing) || helpers.isMatchCompleted(existing))
-            throw Error('A match is locked.');
-
-        await this.storage.update<MatchGame>('match_game', existing.id, {
-            ...existing,
-            status: matchGame.status,
-            opponent1: matchGame.opponent1,
-            opponent2: matchGame.opponent2,
-        });
+        await this.storage.update<MatchGame>('match_game', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(matchGame) });
 
         return existing.id;
     }

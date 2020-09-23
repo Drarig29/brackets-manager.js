@@ -376,7 +376,33 @@ describe('Seeding', () => {
         assert.equal((await storage.select('participant')).length, 9);
     });
 
-    it('should throw if a match is locked', async () => {
+    it('should update the seeding in a stage on non-locked matches', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
+        await manager.update.match({
+            id: 2, // Any match id.
+            opponent1: { score: 1 },
+            opponent2: { score: 0 },
+        });
+
+        await manager.update.seeding(0, [
+            'Team A', 'Team B', // Match 0.
+            'Team C', 'Team D', // Match 1.
+            'Team 5', 'Team 6', // Match 2. NO CHANGE.
+            'Team G', 'Team H', // Match 3.
+        ]);
+
+        assert.equal((await storage.select('match', 0)).opponent1.id, 8); // New id.
+        assert.equal((await storage.select('match', 2)).opponent1.id, 4); // Still old id.
+        assert.equal((await storage.select('participant')).length, 8 + 6);
+    });
+
+    it('should throw if a match is locked and would have to be changed', async () => {
         await manager.update.seeding(0, [
             'Team 1', 'Team 2',
             'Team 3', 'Team 4',
@@ -391,10 +417,10 @@ describe('Seeding', () => {
         });
 
         await assert.isRejected(manager.update.seeding(0, [
-            'Any', 'Team',
-            'Name', 'Will',
-            'Be', 'Rejected',
-            'Of', 'Course',
+            'Team A', 'Team B', // Match 0.
+            'Team C', 'Team D', // Match 1.
+            'WILL', 'THROW',    // Match 2.
+            'Team G', 'Team H', // Match 3.
         ]), 'A match is locked.');
     });
 });

@@ -308,11 +308,19 @@ export function isMatchCompleted(match: Partial<MatchResults>): boolean {
 }
 
 /**
- * Checks if a match is locked.
+ * Checks if a match's results can't be updated.
  * @param match The match to check.
  */
-export function isMatchLocked(match: MatchResults): boolean {
+export function isMatchUpdateLocked(match: MatchResults): boolean {
     return match.status === Status.Locked || match.status === Status.Waiting || match.status === Status.Archived;
+}
+
+/**
+ * Checks if a match's participants can't be updated.
+ * @param match The match to check.
+ */
+export function isMatchParticipantLocked(match: MatchResults): boolean {
+    return match.status >= Status.Running;
 }
 
 /**
@@ -644,6 +652,18 @@ export function getParentMatchResults(storedParent: Match, scores: Scores): Part
             score: scores.opponent2,
         }
     };
+}
+
+/**
+ * Gets the values which need to be updated in a match when it's updated on insertion.
+ * @param match The up to date match.
+ */
+export function getUpdatedMatchResults(match: OmitId<MatchResults>): MatchResults {
+    return {
+        status: match.status,
+        opponent1: match.opponent1,
+        opponent2: match.opponent2,
+    }
 }
 
 /**

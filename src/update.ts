@@ -1,4 +1,4 @@
-import { Match, Round, Group, Stage, MatchGame, SeedOrdering, Seeding, SeedingIds, Status } from "brackets-model";
+import { Match, Round, Group, Stage, MatchGame, SeedOrdering, Seeding, SeedingIds, Status, StageType } from "brackets-model";
 import { ordering } from './ordering';
 import { IStorage } from "./storage";
 import * as helpers from './helpers';
@@ -27,7 +27,7 @@ export class Update {
         if (!stored) throw Error('Match not found.');
 
         const inRoundRobin = await this.isRoundRobin(stored.stage_id);
-        if (!inRoundRobin && helpers.isMatchLocked(stored)) throw Error('The match is locked.');
+        if (!inRoundRobin && helpers.isMatchUpdateLocked(stored)) throw Error('The match is locked.');
 
         const completed = helpers.setMatchResults(stored, match);
         await this.storage.update('match', match.id, stored);
@@ -49,7 +49,7 @@ export class Update {
         if (!stored) throw Error('Match not found.');
 
         const inRoundRobin = await this.isRoundRobin(stored.stage_id);
-        if (!inRoundRobin && helpers.isMatchLocked(stored)) throw Error('The match is locked.');
+        if (!inRoundRobin && helpers.isMatchUpdateLocked(stored)) throw Error('The match is locked.');
 
         helpers.resetMatchResults(stored);
         await this.storage.update('match', matchId, stored);
@@ -105,7 +105,62 @@ export class Update {
             seeding,
         }, true);
 
+        const method = this.getSeedingOrdering(stage.type, create);
+        const slots = await create.getSlots();
+
+        const matches = await this.getSeedingMatches(stage.id, stage.type);
+        if (!matches)
+            throw Error('Error getting first matches.');
+
+        const ordered = ordering[method](slots);
+        await this.assertCanUpdateSeeding(matches, ordered);
+
         return create.run();
+    }
+
+    /**
+     * Returns the good seeding ordering based on the stage's type.
+     * @param stageType The type of the stage.
+     * @param create A reference to a Create instance.
+     */
+    private getSeedingOrdering(stageType: StageType, create: Create) {
+        return stageType === 'round_robin' ? create.getRoundRobinOrdering() : create.getStandardBracketFirstRoundOrdering();
+    }
+
+    /**
+     * Returns the matches which contain the seeding of a stage based on its type.
+     * @param stageId ID of the stage.
+     * @param stageType The type of the stage.
+     */
+    private async getSeedingMatches(stageId: number, stageType: StageType) {
+        if (stageType === 'round_robin')
+            return this.storage.select<Match>('match');
+
+        const firstRound = await this.storage.selectFirst<Round>('round', { stage_id: stageId, number: 1 });
+        if (!firstRound) throw Error('First round not found.');
+
+        return this.storage.select<Match>('match', { round_id: firstRound.id });
+    }
+
+    /**
+     * Throws an error if a match is locked and the new seeding will change this match's participants.
+     * @param matches The matches stored in the database.
+     * @param slots The slots to check from the new seeding.
+     */
+    private async assertCanUpdateSeeding(matches: Match[], slots: ParticipantSlot[]) {
+        let index = 0;
+
+        for (const match of matches) {
+            const opponent1 = slots[index++];
+            const opponent2 = slots[index++];
+
+            const locked = helpers.isMatchParticipantLocked(match);
+            if (!locked) continue;
+
+            if ((match.opponent1 && opponent1 && match.opponent1.id !== opponent1.id) ||
+                (match.opponent2 && opponent2 && match.opponent2.id !== opponent2.id))
+                throw Error('A match is locked.');
+        }
     }
 
     /**
