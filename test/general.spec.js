@@ -173,10 +173,10 @@ describe('Seeding and ordering in elimination', () => {
             tournamentId: 0,
             type: 'double_elimination',
             seeding: [
-                'Team 1', 'Team 2','Team 3', 'Team 4',
-                'Team 5', 'Team 6','Team 7', 'Team 8',
-                'Team 9', 'Team 10','Team 11', 'Team 12',
-                'Team 13', 'Team 14','Team 15', 'Team 16',
+                'Team 1', 'Team 2', 'Team 3', 'Team 4',
+                'Team 5', 'Team 6', 'Team 7', 'Team 8',
+                'Team 9', 'Team 10', 'Team 11', 'Team 12',
+                'Team 13', 'Team 14', 'Team 15', 'Team 16',
             ],
             settings: {
                 seedOrdering: ['inner_outer', 'reverse', 'pair_flip', 'half_shift', 'reverse'],
@@ -275,5 +275,26 @@ describe('Get module', () => {
         assert.equal(seeding.length, 16);
         assert.equal(seeding[0].position, 1);
         assert.equal(seeding[1].position, 2);
+    });
+
+    it('should get the seeding with BYEs', async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', null, 'Team 3', 'Team 4',
+                'Team 5', null, null, 'Team 8',
+            ],
+        });
+
+        const seeding = await manager.get.seeding(0);
+        assert.equal(seeding.length, 8);
+        assert.equal(seeding[0].position, 1);
+        assert.equal(seeding[1], null);
+        assert.equal(seeding[2].position, 3);
+        assert.equal(seeding[5], null);
     });
 });

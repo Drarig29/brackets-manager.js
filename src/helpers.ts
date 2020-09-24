@@ -555,7 +555,21 @@ export function mapParticipantsIdsToDatabase(seeding: SeedingIds, database: Part
  */
 export function matchesToSeeding(matches: Match[]): ParticipantSlot[] {
     const flattened = ([] as ParticipantSlot[]).concat(...matches.map(match => [match.opponent1, match.opponent2]));
-    return flattened.sort((slotA, slotB) => (slotA && slotA.position || 0) - (slotB && slotB.position || 0));
+    return sortSeeding(flattened);
+}
+
+/**
+ * Sorts the seeding with the BYEs in the correct position.
+ * @param slots A list of slots to sort.
+ */
+export function sortSeeding(slots: ParticipantSlot[]) {
+    const withoutByes = slots.filter(v => v !== null);
+    withoutByes.sort((a, b) => a!.position! - b!.position!);
+
+    const placed = Object.fromEntries(withoutByes.map(v => [v!.position! - 1, v]));
+    const sortedWithByes = Array.from({ length: slots.length }, (_, i) => placed[i] || null);
+
+    return sortedWithByes;
 }
 
 /**
