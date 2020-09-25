@@ -13,28 +13,49 @@ export class Create {
 
     private storage: IStorage;
     private stage: InputStage;
+    private seedOrdering: SeedOrdering[];
     private updateSeeding: boolean;
 
     constructor(storage: IStorage, stage: InputStage, updateSeeding?: boolean) {
         this.storage = storage;
         this.stage = stage;
+        this.stage.settings = this.stage.settings || {};
+        this.seedOrdering = this.stage.settings.seedOrdering || [];
         this.updateSeeding = updateSeeding || false;
+
+        if (stage.type === 'single_elimination')
+            this.stage.settings.consolationFinal = this.stage.settings.consolationFinal || false;
+
+        if (stage.type === 'double_elimination')
+            this.stage.settings.grandFinal = this.stage.settings.grandFinal || 'none';
+
+        this.stage.settings.matchesChildCount = this.stage.settings.matchesChildCount || 0;
     }
 
     /**
      * Run the creation process.
      */
-    public run() {
+    public async run() {
+        let stageId = -1;
+
         switch (this.stage.type) {
             case 'round_robin':
-                return this.roundRobin();
+                stageId = await this.roundRobin();
+                break;
             case 'single_elimination':
-                return this.singleElimination();
+                stageId = await this.singleElimination();
+                break;
             case 'double_elimination':
-                return this.doubleElimination();
+                stageId = await this.doubleElimination();
+                break;
             default:
                 throw Error('Unknown stage type.');
         }
+
+        if (stageId === -1)
+            throw Error('Something went wrong when creating the stage.');
+
+        await this.ensureSeedOrdering(stageId);
     }
 
     /**
@@ -48,6 +69,8 @@ export class Create {
 
         for (let i = 0; i < groups.length; i++)
             await this.createRoundRobinGroup(stageId, i + 1, groups[i]);
+
+        return stageId;
     }
 
     /**
@@ -63,6 +86,8 @@ export class Create {
         const stageId = await this.createStage();
         const { losers } = await this.createStandardBracket(stageId, 1, slots);
         await this.createConsolationFinal(stageId, losers);
+
+        return stageId;
     }
 
     /**
@@ -80,6 +105,8 @@ export class Create {
         const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, slots);
         const winnerLb = await this.createLowerBracket(stageId, 2, losersWb);
         await this.createGrandFinal(stageId, winnerWb, winnerLb);
+
+        return stageId;
     }
 
     /**
@@ -392,12 +419,17 @@ export class Create {
      * @param orderingIndex Index of the ordering.
      * @param stageType A value indicating if the method should be a group method or not.
      */
-    private getOrdering(orderingIndex: number, stageType: 'elimination' | 'groups'): SeedOrdering | null {
-        if (!this.stage.settings?.seedOrdering)
-            return null;
+    private getOrdering(orderingIndex: number, stageType: 'elimination' | 'groups', defaultMethod: SeedOrdering): SeedOrdering {
+        if (!this.stage.settings?.seedOrdering) {
+            this.seedOrdering.push(defaultMethod);
+            return defaultMethod;
+        }
 
         const method = this.stage.settings.seedOrdering[orderingIndex];
-        if (!method) return null;
+        if (!method) {
+            this.seedOrdering.push(defaultMethod);
+            return defaultMethod;
+        }
 
         if (stageType === 'elimination' && method.match(/^groups\./))
             throw Error('You must specify a seed ordering method without a \'groups\' prefix');
@@ -428,14 +460,14 @@ export class Create {
      * Returns the ordering method for the groups in a round-robin stage.
      */
     public getRoundRobinOrdering() {
-        return this.getOrdering(0, 'groups') || 'groups.effort_balanced';
+        return this.getOrdering(0, 'groups', 'groups.effort_balanced');
     }
 
     /**
      * Returns the ordering method for the first round of the upper bracket of an elimination stage.
      */
     public getStandardBracketFirstRoundOrdering() {
-        return this.getOrdering(0, 'elimination') || 'inner_outer';
+        return this.getOrdering(0, 'elimination', 'inner_outer');
     }
 
     /**
@@ -443,8 +475,7 @@ export class Create {
      * @param participantCount Number of participants in the stage.
      */
     private getMajorOrdering(participantCount: number): SeedOrdering {
-        const value = this.getOrdering(1, 'elimination');
-        return value || defaultMinorOrdering[participantCount][0];
+        return this.getOrdering(1, 'elimination', defaultMinorOrdering[participantCount][0]);
     }
 
     /**
@@ -453,8 +484,7 @@ export class Create {
      * @param index Index of the minor round.
      */
     private getMinorOrdering(participantCount: number, index: number): SeedOrdering {
-        const value = this.getOrdering(2 + index, 'elimination');
-        return value || defaultMinorOrdering[participantCount][1 + index];
+        return this.getOrdering(2 + index, 'elimination', defaultMinorOrdering[participantCount][1 + index]);
     }
 
     /**
@@ -635,5 +665,23 @@ export class Create {
             finalDuels.push([{ id: null }, { id: null }]);
 
         await this.createUniqueMatchBracket(stageId, 3, finalDuels);
+    }
+
+    /**
+     * Ensures that the seed ordering list is stored even if it was not given in the first place.
+     * @param stageId ID of the stage.
+     */
+    private async ensureSeedOrdering(stageId: number) {
+        if (this.stage.settings?.seedOrdering?.length === this.seedOrdering.length) return;
+
+        const stage = await this.storage.select<Stage>('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
+
+        stage.settings = {
+            ...stage.settings,
+            seedOrdering: this.seedOrdering,
+        };
+
+        await this.storage.update<Stage>('stage', stageId, stage);
     }
 }
