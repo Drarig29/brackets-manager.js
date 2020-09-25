@@ -226,17 +226,21 @@ export function getMatchResult(match: MatchResults): Side | null {
     return winner;
 }
 
+/**
+ * Returns the status of a match based on the presence of the opponents.
+ * @param opponents The opponents of a match.
+ */
 export function getMatchStatus(opponents: Duel): Status {
-    if (opponents[0] === null || opponents[1] === null)
-        return Status.Completed;
-
-    if (opponents[0].id === null && opponents[1].id === null)
+    if (opponents[0] === null || opponents[1] === null) // At least one BYE.
         return Status.Locked;
 
-    if (opponents[0].id === null || opponents[1].id === null)
+    if (opponents[0].id === null && opponents[1].id === null) // Two TBD opponents.
+        return Status.Locked;
+
+    if (opponents[0].id === null || opponents[1].id === null) // One TBD opponent.
         return Status.Waiting;
 
-    if (opponents[0].id !== null && opponents[1].id !== null)
+    if (opponents[0].id !== null && opponents[1].id !== null) // All opponents set.
         return Status.Ready;
 
     return Status.Locked;
@@ -359,6 +363,14 @@ export function resetMatchResults(stored: MatchResults) {
     stored.status = getMatchStatus([stored.opponent1, stored.opponent2]);
 }
 
+/**
+ * Sets an opponent in the next match he has to go.
+ * @param match The current match.
+ * @param nextMatches The matches which follow the current one.
+ * @param index Index of the match to set in the next matches.
+ * @param currentSide The side the opponent is currently on.
+ * @param nextSide The side the opponent will be on in the next match.
+ */
 export function setNextOpponent(match: Match, nextMatches: Match[], index: number, currentSide: Side, nextSide: Side) {
     nextMatches[index][nextSide] = getOpponent(match, currentSide);
 
@@ -366,6 +378,12 @@ export function setNextOpponent(match: Match, nextMatches: Match[], index: numbe
         nextMatches[index].status++;
 }
 
+/**
+ * Resets an opponent in the match following the current one.
+ * @param nextMatches The matches which follow the current one.
+ * @param index Index of the match to set in the next matches.
+ * @param nextSide The side the opponent will be on in the next match.
+ */
 export function resetNextOpponent(nextMatches: Match[], index: number, nextSide: Side) {
     nextMatches[index][nextSide] = { id: null };
     nextMatches[index].status = Status.Locked;
@@ -565,6 +583,9 @@ export function matchesToSeeding(matches: Match[]): ParticipantSlot[] {
 export function sortSeeding(slots: ParticipantSlot[]) {
     const withoutByes = slots.filter(v => v !== null);
     withoutByes.sort((a, b) => a!.position! - b!.position!);
+
+    if (withoutByes.length === slots.length)
+        return withoutByes;
 
     const placed = Object.fromEntries(withoutByes.map(v => [v!.position! - 1, v]));
     const sortedWithByes = Array.from({ length: slots.length }, (_, i) => placed[i] || null);
