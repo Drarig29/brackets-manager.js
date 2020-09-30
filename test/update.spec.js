@@ -337,6 +337,20 @@ describe('Seeding', () => {
         assert.equal((await storage.select('participant')).length, 8);
     });
 
+    it('should reset the seeding of a stage', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
+        await manager.update.resetSeeding(0);
+
+        assert.equal((await storage.select('match', 0)).opponent1.id, null);
+        assert.equal((await storage.select('participant')).length, 8); // Participants aren't removed.
+    });
+
     it('should update the seeding in a stage with participants already', async () => {
         await manager.update.seeding(0, [
             'Team 1', 'Team 2',
