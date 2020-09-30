@@ -43,8 +43,10 @@ describe('Create a round-robin stage', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
-            size: 16,
-            settings: { groupCount: 4 },
+            settings: {
+                groupCount: 4,
+                size: 16,
+            },
         });
 
         assert.equal((await storage.select('group')).length, 4);

@@ -251,8 +251,8 @@ describe('Update match games', () => {
             name: 'With match games',
             tournamentId: 0,
             type: 'single_elimination',
-            size: 4,
             settings: {
+                size: 4,
                 matchesChildCount: 3, // Bo3.
             },
         });
@@ -318,8 +318,8 @@ describe('Seeding', () => {
             name: 'Without participants',
             tournamentId: 0,
             type: 'double_elimination',
-            size: 8,
             settings: {
+                size: 8,
                 seedOrdering: ['natural'],
             },
         });

@@ -46,8 +46,11 @@ describe('Position checks', () => {
             name: 'Example with double grand final',
             tournamentId: 0,
             type: 'double_elimination',
-            size: 8,
-            settings: { grandFinal: 'simple', seedOrdering: ['natural'] },
+            settings: {
+                size: 8,
+                grandFinal: 'simple',
+                seedOrdering: ['natural']
+            },
         });
     });
 
@@ -103,7 +106,7 @@ describe('Special cases', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
-            size: 8,
+            settings: { size: 8 },
         });
 
         // Update seeding with already existing ids.
@@ -248,9 +251,9 @@ describe('Get module', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
-            size: 32,
             settings: {
                 groupCount: 8,
+                size: 32,
                 seedOrdering: ['groups.snake'],
             },
         });
@@ -268,7 +271,7 @@ describe('Get module', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
-            size: 16,
+            settings: { size: 16 },
         });
 
         const seeding = await manager.get.seeding(0);
