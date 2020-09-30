@@ -749,3 +749,11 @@ export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: nu
         (inLoserBracket && !(roundNumber === 1 || roundNumber % 2 === 0))) // Loser bracket and not round 1 or not minor round.
         throw Error('This round does not support ordering.');
 }
+
+/**
+ * Returns the number of rounds an upper bracket must have, given the number of participants in the stage.
+ * @param participantCount 
+ */
+export function upperBracketRoundCount(participantCount: number) {
+    return Math.log2(participantCount);
+}

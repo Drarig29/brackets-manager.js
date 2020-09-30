@@ -149,7 +149,7 @@ export class Create {
         const method = this.getStandardBracketFirstRoundOrdering();
         const ordered = ordering[method](slots);
 
-        const roundCount = Math.log2(slots.length);
+        const roundCount = helpers.upperBracketRoundCount(slots.length);
         const groupId = await this.insertGroup({
             stage_id: stageId,
             number,
