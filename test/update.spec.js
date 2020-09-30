@@ -423,4 +423,20 @@ describe('Seeding', () => {
             'Team G', 'Team H', // Match 3.
         ]), 'A match is locked.');
     });
+
+    it('should throw if the new seeding doesn\'t have the correct size', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
+        await assert.isRejected(manager.update.seeding(0, [
+            'Team A', 'Team B',
+            'Team C', 'Team D',
+            'Team E', 'Team F',
+            'Team G', // Missing value.
+        ]), 'The size of the seeding is incorrect.');
+    });
 });
