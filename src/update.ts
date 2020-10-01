@@ -94,6 +94,23 @@ export class Update {
      * @param seeding The new seeding.
      */
     public async seeding(stageId: number, seeding: Seeding | SeedingIds) {
+        return this.updateSeeding(stageId, seeding);
+    }
+
+    /**
+     * Resets the seeding of a stage.
+     * @param stageId ID of the stage.
+     */
+    public async resetSeeding(stageId: number) {
+        return this.updateSeeding(stageId, null);
+    }
+
+    /**
+     * Updates or resets the seeding of a stage.
+     * @param stageId ID of the stage.
+     * @param seeding A new seeding or null to reset the existing seeding.
+     */
+    private async updateSeeding(stageId: number, seeding: Seeding | SeedingIds | null) {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -105,7 +122,7 @@ export class Update {
             tournamentId: stage.tournament_id,
             type: stage.type,
             settings: stage.settings,
-            seeding,
+            seeding: seeding || undefined,
         }, true);
 
         const method = this.getSeedingOrdering(stage.type, create);
@@ -113,7 +130,7 @@ export class Update {
 
         const matches = await this.getSeedingMatches(stage.id, stage.type);
         if (!matches)
-            throw Error('Error getting first matches.');
+            throw Error('Error getting matches associated to the seeding.');
 
         const ordered = ordering[method](slots);
         await this.assertCanUpdateSeeding(matches, ordered);
