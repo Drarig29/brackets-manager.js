@@ -21,13 +21,10 @@ export class Update {
      * @param match Values to change in a match.
      */
     public async match(match: Partial<Match>) {
-        if (match.id === undefined) throw Error('No match id given.');
+        if (match.id === undefined)
+            throw Error('No match id given.');
 
-        const stored = await this.storage.select<Match>('match', match.id);
-        if (!stored) throw Error('Match not found.');
-
-        const inRoundRobin = await this.isRoundRobin(stored.stage_id);
-        if (!inRoundRobin && helpers.isMatchUpdateLocked(stored)) throw Error('The match is locked.');
+        const { stored, inRoundRobin } = await this.getMatchData(match.id);
 
         const completed = helpers.setMatchResults(stored, match);
         await this.storage.update('match', match.id, stored);
@@ -43,13 +40,7 @@ export class Update {
      * @param matchId ID of the match.
      */
     public async resetMatch(matchId: number) {
-        if (matchId === undefined) throw Error('No match id given.');
-
-        const stored = await this.storage.select<Match>('match', matchId);
-        if (!stored) throw Error('Match not found.');
-
-        const inRoundRobin = await this.isRoundRobin(stored.stage_id);
-        if (!inRoundRobin && helpers.isMatchUpdateLocked(stored)) throw Error('The match is locked.');
+        const { stored, inRoundRobin } = await this.getMatchData(matchId);
 
         helpers.resetMatchResults(stored);
         await this.storage.update('match', matchId, stored);
@@ -86,6 +77,76 @@ export class Update {
         helpers.setMatchResults(storedParent, parent);
 
         await this.storage.update('match', storedParent.id, storedParent);
+    }
+
+    /**
+     * Updates the seed ordering of every ordered round in a stage.
+     * @param stageId ID of the stage.
+     * @param seedOrdering A list of ordering methods.
+     */
+    public async ordering(stageId: number, seedOrdering: SeedOrdering[]) {
+        const stage = await this.storage.select<Stage>('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
+
+        helpers.ensureNotRoundRobin(stage);
+
+        const rounds = await this.getOrderedRounds(stage);
+
+        for (let i = 0; i < rounds.length; i++)
+            await this.updateRoundOrdering(rounds[i].id, rounds[i], seedOrdering[i]);
+    }
+
+    /**
+     * Updates the seed ordering of a round.
+     * @param roundId ID of the round.
+     * @param method Seed ordering method.
+     */
+    public async roundOrdering(roundId: number, method: SeedOrdering) {
+        const round = await this.storage.select<Round>('round', roundId);
+        if (!round) throw Error('This round does not exist.');
+
+        const stage = await this.storage.select<Stage>('stage', round.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        helpers.ensureNotRoundRobin(stage);
+        
+        await this.updateRoundOrdering(roundId, round, method);
+    }
+
+    private async updateRoundOrdering(roundId: number, round: Round, method: SeedOrdering) {
+        const matches = await this.storage.select<Match>('match', { round_id: roundId });
+        if (!matches) throw Error('This round has no match.');
+
+        if (matches.some(match => match.status > Status.Ready))
+            throw Error('At least one match has started or is completed.');
+
+        const group = await this.storage.select<Group>('group', round.group_id);
+        if (!group) throw Error('Group not found.');
+
+        const inLoserBracket = helpers.isLoserBracket(group);
+        const seeds = helpers.getSeeds(inLoserBracket, round.number, matches.length);
+        const positions = ordering[method](seeds);
+
+        await this.applyRoundOrdering(round.number, matches, positions);
+    }
+
+    /**
+     * Updates child count of all matches of a given level.
+     * @param level The level at which to act.
+     * @param id ID of the chosen level.
+     * @param childCount The target child count.
+     */
+    public async matchChildCount(level: Level, id: number, childCount: number) {
+        switch (level) {
+            case 'stage':
+                return this.updateStageMatchChildCount(id, childCount);
+            case 'group':
+                return this.updateGroupMatchChildCount(id, childCount);
+            case 'round':
+                return this.updateRoundMatchChildCount(id, childCount);
+            case 'match':
+                return this.updateMatchChildCount(id, childCount);
+        }
     }
 
     /**
@@ -154,12 +215,35 @@ export class Update {
      */
     private async getSeedingMatches(stageId: number, stageType: StageType) {
         if (stageType === 'round_robin')
-            return this.storage.select<Match>('match');
+            return this.storage.select<Match>('match', { stage_id: stageId });
 
-        const firstRound = await this.storage.selectFirst<Round>('round', { stage_id: stageId, number: 1 });
-        if (!firstRound) throw Error('First round not found.');
-
+        const firstRound = await this.getUpperBracketFirstRound(stageId);
         return this.storage.select<Match>('match', { round_id: firstRound.id });
+    }
+
+    private async getOrderedRounds(stage: Stage) {
+        if (!stage?.settings.size) throw Error('The stage has no size.');
+
+        if (stage.type === 'single_elimination')
+            return this.getOrderedRoundsSingleElimination(stage.id);
+
+        return this.getOrderedRoundsDoubleElimination(stage.id, stage.settings.size);
+    }
+
+    private async getOrderedRoundsSingleElimination(stageId: number) {
+        return [await this.getUpperBracketFirstRound(stageId)];
+    }
+
+    private async getOrderedRoundsDoubleElimination(stageId: number, stageSize: number) {
+        // Getting all rounds instead of cherry-picking them is the least expensive.
+        const rounds = await this.storage.select<Round>('round', { stage_id: stageId });
+        if (!rounds) throw Error('Error getting rounds.');
+
+        const roundCountWB = helpers.upperBracketRoundCount(stageSize);
+        const roundsLB = rounds.slice(roundCountWB);
+
+        // TODO: do not order the last minor round of a loser bracket --> it's useless (everywhere)
+        return [rounds[0], ...roundsLB.filter((_, i) => i === 0 || i % 2 === 1)];
     }
 
     /**
@@ -179,50 +263,6 @@ export class Update {
 
             if (match.opponent1?.id !== opponent1?.id || match.opponent2?.id !== opponent2?.id)
                 throw Error('A match is locked.');
-        }
-    }
-
-    /**
-     * Updates the seed ordering of a round.
-     * @param id ID of the round.
-     * @param method Seed ordering method.
-     */
-    public async roundOrdering(id: number, method: SeedOrdering) {
-        const round = await this.storage.select<Round>('round', id);
-        if (!round) throw Error('This round does not exist.');
-
-        const inRoundRobin = await this.isRoundRobin(round.stage_id);
-        if (inRoundRobin) throw Error('Impossible to update ordering in a round-robin stage.');
-
-        const matches = await this.storage.select<Match>('match', { round_id: id });
-        if (!matches) throw Error('This round has no match.');
-
-        if (matches.some(match => match.status > Status.Ready))
-            throw Error('At least one match has started or is completed.');
-
-        const inLoserBracket = await this.isLoserBracket(round.group_id);
-        const seeds = helpers.getSeeds(inLoserBracket, round.number, matches.length);
-        const positions = ordering[method](seeds);
-
-        await this.updateRoundOrdering(round, matches, positions);
-    }
-
-    /**
-     * Updates child count of all matches of a given level.
-     * @param level The level at which to act.
-     * @param id ID of the chosen level.
-     * @param childCount The target child count.
-     */
-    public async matchChildCount(level: Level, id: number, childCount: number) {
-        switch (level) {
-            case 'stage':
-                return this.updateStageMatchChildCount(id, childCount);
-            case 'group':
-                return this.updateGroupMatchChildCount(id, childCount);
-            case 'round':
-                return this.updateRoundMatchChildCount(id, childCount);
-            case 'match':
-                return this.updateMatchChildCount(id, childCount);
         }
     }
 
@@ -273,16 +313,17 @@ export class Update {
 
     /**
      * Updates the ordering of participants in a round's matches.
-     * @param round The round to update.
+     * @param roundNumber The number of the round.
      * @param matches The matches of the round.
      * @param positions The new positions.
      */
-    private async updateRoundOrdering(round: Round, matches: Match[], positions: number[]) {
+    private async applyRoundOrdering(roundNumber: number, matches: Match[], positions: number[]) {
         for (const match of matches) {
             const updated = { ...match }; // Create a copy of the match... workaround for node-json-db, which returns a reference to data.
             updated.opponent1 = helpers.findPosition(matches, positions.shift()!);
 
-            if (round.number === 1)
+            // The only rounds where we have a second ordered participant are first rounds of brackets (upper and lower).
+            if (roundNumber === 1)
                 updated.opponent2 = helpers.findPosition(matches, positions.shift()!);
 
             await this.storage.update<Match>('match', updated.id, updated);
@@ -327,8 +368,11 @@ export class Update {
     private async updateRelatedMatches(stored: Match) {
         const roundNumber = await this.getRoundNumber(stored.round_id);
 
-        const inWinnerBracket = await this.isWinnerBracket(stored.group_id);
-        const inLoserBracket = await this.isLoserBracket(stored.group_id);
+        const group = await this.storage.select<Group>('group', stored.group_id);
+        if (!group) throw Error('Group not found.');
+
+        const inWinnerBracket = helpers.isWinnerBracket(group);
+        const inLoserBracket = helpers.isLoserBracket(group);
 
         await this.updatePrevious(stored, roundNumber, inLoserBracket);
         await this.updateNext(stored, roundNumber, inWinnerBracket, inLoserBracket);
@@ -524,7 +568,7 @@ export class Update {
         if (inWinnerBracket)
             return await this.getNextMatchesWB(match, roundNumber);
 
-        return await this.getNextMatchesSingleBracket(match, roundNumber);
+        return await this.getNextMatchesUpperBracket(match, roundNumber);
     }
 
     /**
@@ -538,7 +582,7 @@ export class Update {
         const matchNumberLB = roundNumber > 1 ? match.number : Math.ceil(match.number / 2);
 
         return [
-            ...await this.getNextMatchesSingleBracket(match, roundNumber),
+            ...await this.getNextMatchesUpperBracket(match, roundNumber),
             await this.findMatch(loserBracket.id, roundNumberLB, matchNumberLB),
         ];
     }
@@ -548,7 +592,7 @@ export class Update {
      * @param match The current match.
      * @param roundNumber The number of the current round.
      */
-    private async getNextMatchesSingleBracket(match: Match, roundNumber: number): Promise<Match[]> {
+    private async getNextMatchesUpperBracket(match: Match, roundNumber: number): Promise<Match[]> {
         return [await this.findMatch(match.group_id, roundNumber + 1, Math.ceil(match.number / 2))];
     }
 
@@ -583,25 +627,32 @@ export class Update {
     }
 
     /**
-     * Checks if a stage is a round-robin stage.
-     * @param stageId ID of the stage.
+     * Returns what is needed to update a match.
+     * @param matchId ID of the match.
      */
-    private async isRoundRobin(stageId: number): Promise<boolean> {
-        const stage = await this.storage.select<Stage>('stage', stageId);
+    private async getMatchData(matchId: number) {
+        const stored = await this.storage.select<Match>('match', matchId);
+        if (!stored) throw Error('Match not found.');
+
+        const stage = await this.storage.select<Stage>('stage', stored.stage_id);
         if (!stage) throw Error('Stage not found.');
-        return stage.type === 'round_robin';
+
+        const inRoundRobin = helpers.isRoundRobin(stage);
+        if (!inRoundRobin && helpers.isMatchUpdateLocked(stored))
+            throw Error('The match is locked.');
+
+        return { stored, inRoundRobin };
     }
 
     /**
-     * Checks if a group is a winner bracket.
-     * 
-     * It's not always the opposite of `inLoserBracket()`: it could be the only bracket of a single elimination stage.
-     * @param groupId ID of the group.
+     * Gets the first round of the upper bracket.
+     * @param stageId ID of the stage.
      */
-    private async isWinnerBracket(groupId: number): Promise<boolean> {
-        const group = await this.storage.select<Group>('group', groupId);
-        if (!group) throw Error('Group not found.');
-        return group.number === 1;
+    private async getUpperBracketFirstRound(stageId: number) {
+        // Considering the database is ordered, this round will always be the first round of the upper bracket.
+        const firstRound = await this.storage.selectFirst<Round>('round', { stage_id: stageId, number: 1 });
+        if (!firstRound) throw Error('Round not found.');
+        return firstRound;
     }
 
     /**
@@ -615,16 +666,6 @@ export class Update {
     }
 
     /**
-     * Checks if a group is a loser bracket.
-     * @param groupId ID of the group.
-     */
-    private async isLoserBracket(groupId: number): Promise<boolean> {
-        const group = await this.storage.select<Group>('group', groupId);
-        if (!group) throw Error('Group not found.');
-        return group.number === 2;
-    }
-
-    /**
      * Gets the loser bracket.
      * @param stageId ID of the stage.
      */
@@ -635,27 +676,27 @@ export class Update {
     }
 
     /**
-     * Finds a match in a given group. The match must have the given number in a round which number in group is given.
+     * Finds a match in a given group. The match must have the given number in a round of which the number in group is given.
      * 
      * **Example:** In group of id 1, give me the 4th match in the 3rd round.
-     * @param group ID of the group.
+     * @param groupId ID of the group.
      * @param roundNumber Number of the round in its parent group.
      * @param matchNumber Number of the match in its parent round.
      */
-    private async findMatch(group: number, roundNumber: number, matchNumber: number): Promise<Match> {
-        const round = await this.storage.select<Round>('round', {
-            group_id: group,
+    private async findMatch(groupId: number, roundNumber: number, matchNumber: number): Promise<Match> {
+        const round = await this.storage.selectFirst<Round>('round', {
+            group_id: groupId,
             number: roundNumber,
         });
 
-        if (!round || round.length === 0) throw Error('This round does not exist.');
+        if (!round) throw Error('Round not found.');
 
-        const match = await this.storage.select<Match>('match', {
-            round_id: round[0].id,
+        const match = await this.storage.selectFirst<Match>('match', {
+            round_id: round.id,
             number: matchNumber,
         });
 
-        if (!match || match.length === 0) throw Error('This match does not exist.');
-        return match[0];
+        if (!match) throw Error('Match not found.');
+        return match;
     }
 }

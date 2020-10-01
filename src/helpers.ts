@@ -1,4 +1,4 @@
-import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame } from "brackets-model";
+import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Group, Stage } from "brackets-model";
 import { ordering } from "./ordering";
 
 /**
@@ -748,4 +748,47 @@ export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: nu
     if ((!inLoserBracket && roundNumber !== 1) || // Upper bracket and not round 1.
         (inLoserBracket && !(roundNumber === 1 || roundNumber % 2 === 0))) // Loser bracket and not round 1 or not minor round.
         throw Error('This round does not support ordering.');
+}
+
+/**
+ * Returns the number of rounds an upper bracket must have, given the number of participants in the stage.
+ * @param participantCount 
+ */
+export function upperBracketRoundCount(participantCount: number) {
+    return Math.log2(participantCount);
+}
+
+/**
+ * Checks if a stage is a round-robin stage.
+ * @param stage The stage to check.
+ */
+export function isRoundRobin(stage: Stage) {
+    return stage.type === 'round_robin';
+}
+
+/**
+ * Throws if a stage is round-robin.
+ * @param stageId ID of the stage.
+ */
+export function ensureNotRoundRobin(stage: Stage) {
+    const inRoundRobin = isRoundRobin(stage);
+    if (inRoundRobin) throw Error('Impossible to update ordering in a round-robin stage.');
+}
+
+/**
+ * Checks if a group is a winner bracket.
+ * 
+ * It's not always the opposite of `inLoserBracket()`: it could be the only bracket of a single elimination stage.
+ * @param group The group to check.
+ */
+export function isWinnerBracket(group: Group) {
+    return group.number === 1;
+}
+
+/**
+ * Checks if a group is a loser bracket.
+ * @param group The group to check.
+ */
+export function isLoserBracket(group: Group) {
+    return group.number === 2;
 }

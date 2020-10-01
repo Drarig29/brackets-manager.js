@@ -266,10 +266,10 @@ describe('Update match games', () => {
             },
         });
 
-        let match = await storage.select('match', 0);
-        assert.equal(match.status, Status.Running);
-        assert.equal(match.opponent1.score, 1);
-        assert.equal(match.opponent2.score, 0);
+        const firstChildCompleted = await storage.select('match', 0);
+        assert.equal(firstChildCompleted.status, Status.Running);
+        assert.equal(firstChildCompleted.opponent1.score, 1);
+        assert.equal(firstChildCompleted.opponent2.score, 0);
 
         await manager.update.matchGame({
             id: 1,
@@ -278,10 +278,10 @@ describe('Update match games', () => {
             },
         });
 
-        match = await storage.select('match', 0);
-        assert.equal(match.status, Status.Running);
-        assert.equal(match.opponent1.score, 2);
-        assert.equal(match.opponent2.score, 0);
+        const secondChildCompleted = await storage.select('match', 0);
+        assert.equal(secondChildCompleted.status, Status.Running);
+        assert.equal(secondChildCompleted.opponent1.score, 2);
+        assert.equal(secondChildCompleted.opponent2.score, 0);
 
         await manager.update.matchGame({
             id: 2,
@@ -290,10 +290,10 @@ describe('Update match games', () => {
             },
         });
 
-        match = await storage.select('match', 0);
-        assert.equal(match.status, Status.Completed);
-        assert.equal(match.opponent1.score, 2);
-        assert.equal(match.opponent2.score, 1);
+        const lastChildCompleted = await storage.select('match', 0);
+        assert.equal(lastChildCompleted.status, Status.Completed);
+        assert.equal(lastChildCompleted.opponent1.score, 2);
+        assert.equal(lastChildCompleted.opponent2.score, 1);
 
         await manager.update.matchGame({
             id: 2,
@@ -302,10 +302,10 @@ describe('Update match games', () => {
             },
         });
 
-        match = await storage.select('match', 0);
-        assert.equal(match.status, Status.Running);
-        assert.equal(match.opponent1.score, 2);
-        assert.equal(match.opponent2.score, 0);
+        const lastChildReset = await storage.select('match', 0);
+        assert.equal(lastChildReset.status, Status.Running);
+        assert.equal(lastChildReset.opponent1.score, 2);
+        assert.equal(lastChildReset.opponent2.score, 0);
     });
 });
 
