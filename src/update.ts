@@ -175,7 +175,7 @@ export class Update {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
-        if (seeding.length !== stage.settings.size)
+        if (seeding?.length !== stage.settings.size)
             throw Error('The size of the seeding is incorrect.');
 
         const create = new Create(this.storage, {
@@ -242,7 +242,6 @@ export class Update {
         const roundCountWB = helpers.upperBracketRoundCount(stageSize);
         const roundsLB = rounds.slice(roundCountWB);
 
-        // TODO: do not order the last minor round of a loser bracket --> it's useless (everywhere)
         return [rounds[0], ...roundsLB.filter((_, i) => i === 0 || i % 2 === 1)];
     }
 
