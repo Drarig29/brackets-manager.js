@@ -114,6 +114,20 @@ describe('Special cases', () => {
 
         assert.equal((await storage.select('match', 0)).opponent1.id, 0);
     });
+
+    it('should throw if the name of the stage is not provided', async () => {
+        await assert.isRejected(manager.create({
+            tournamentId: 0,
+            type: 'single_elimination',
+        }));
+    });
+
+    it('should throw if the tournament id of the stage is not provided', async () => {
+        await assert.isRejected(manager.create({
+            name:'Example',
+            type: 'single_elimination',
+        }));
+    });
 });
 
 describe('Update match child count', () => {

@@ -23,6 +23,12 @@ export class Create {
         this.seedOrdering = this.stage.settings.seedOrdering || [];
         this.updateSeeding = updateSeeding || false;
 
+        if (!this.stage.name)
+            throw Error('You must provide a name for the stage.');
+
+        if (!Number.isInteger(this.stage.tournamentId))
+            throw Error('You must provide a tournament id for the stage.');
+
         if (stage.type === 'single_elimination')
             this.stage.settings.consolationFinal = this.stage.settings.consolationFinal || false;
 

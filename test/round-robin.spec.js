@@ -77,6 +77,7 @@ describe('Create a round-robin stage', () => {
 
     it('should throw if no group count given', async () => {
         await assert.isRejected(manager.create({
+            name: 'Example',
             tournamentId: 0,
             type: 'round_robin'
         }), 'You must specify a group count for round-robin stages.');
