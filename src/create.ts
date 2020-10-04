@@ -109,8 +109,12 @@ export class Create {
         const slots = await this.getSlots();
         const stageId = await this.createStage();
         const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, slots);
-        const winnerLb = await this.createLowerBracket(stageId, 2, losersWb);
-        await this.createGrandFinal(stageId, winnerWb, winnerLb);
+
+        // If the size is only two (less is impossible), then a lower bracket and a grand final are not necessary.
+        if (this.stage.settings?.size! > 2) {
+            const winnerLb = await this.createLowerBracket(stageId, 2, losersWb);
+            await this.createGrandFinal(stageId, winnerWb, winnerLb);
+        }
 
         return stageId;
     }

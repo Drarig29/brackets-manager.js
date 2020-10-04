@@ -1,4 +1,5 @@
 const chai = require('chai');
+const { sign } = require('crypto');
 chai.use(require("chai-as-promised"));
 
 const assert = chai.assert;
@@ -40,6 +41,27 @@ describe('Create double elimination stage', () => {
         assert.equal((await storage.select('group')).length, 3);
         assert.equal((await storage.select('round')).length, 4 + 6 + 1);
         assert.equal((await storage.select('match')).length, 30);
+    });
+
+    it('should create a double elimination stage with only two participants', async () => {
+        // This is an edge case. No lower bracket nor grand final will be created.
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            settings: { size: 2 },
+        });
+
+        assert.equal((await storage.select('group')).length, 1);
+        assert.equal((await storage.select('round')).length, 1);
+        assert.equal((await storage.select('match')).length, 1);
+
+        // Ensure update works.
+        await manager.update.seeding(0, ['Team 1', 'Team 2']);
+        await manager.update.match({
+            id: 0,
+            opponent1: { result: 'win' },
+        });
     });
 
     it('should create a tournament with a double grand final', async () => {

@@ -13,6 +13,9 @@ export const ordering: OrderingMap = {
         return result;
     },
     'inner_outer': <T>(array: T[]) => {
+        if (array.length === 2)
+            return array;
+        
         const size = array.length / 4;
 
         const innerPart = [array.slice(size, 2 * size), array.slice(2 * size, 3 * size)]; // [_, X, X, _]

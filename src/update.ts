@@ -109,7 +109,7 @@ export class Update {
         if (!stage) throw Error('Stage not found.');
 
         helpers.ensureNotRoundRobin(stage);
-        
+
         await this.updateRoundOrdering(roundId, round, method);
     }
 
@@ -577,6 +577,9 @@ export class Update {
      */
     private async getNextMatchesWB(match: Match, roundNumber: number) {
         const loserBracket = await this.getLoserBracket(match.stage_id);
+        if (loserBracket === null) // Only one match in the stage, there is no loser bracket.
+            return [];
+
         const roundNumberLB = roundNumber > 1 ? (roundNumber - 1) * 2 : 1;
         const matchNumberLB = roundNumber > 1 ? match.number : Math.ceil(match.number / 2);
 
@@ -669,9 +672,7 @@ export class Update {
      * @param stageId ID of the stage.
      */
     private async getLoserBracket(stageId: number) {
-        const loserBracket = await this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 2 });
-        if (!loserBracket) throw Error('Loser bracket not found.');
-        return loserBracket;
+        return this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 2 });
     }
 
     /**
