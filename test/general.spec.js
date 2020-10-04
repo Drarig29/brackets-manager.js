@@ -84,14 +84,16 @@ describe('Position checks', () => {
 });
 
 describe('Special cases', () => {
-    it('should create a stage and add participants ids in seeding', async () => {
+    beforeEach(() => {
         storage.reset();
+    });
 
+    it('should create a stage and add participants ids in seeding', async () => {
         const teams = [
-            "Team 1", "Team 2",
-            "Team 3", "Team 4",
-            "Team 5", "Team 6",
-            "Team 7", "Team 8"
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
         ];
 
         const participants = teams.map(name => ({
@@ -126,6 +128,43 @@ describe('Special cases', () => {
         await assert.isRejected(manager.create({
             name:'Example',
             type: 'single_elimination',
+        }));
+    });
+
+    it('should throw if the participant count of a stage is not a power of two', async () => {
+        await assert.isRejected(manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7',
+            ]
+        }));
+
+        await assert.isRejected(manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: { size: 3 },
+        }));
+    });
+
+    it('should throw if the participant count of a stage is less than two', async () => {
+        await assert.isRejected(manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: { size: 0 },
+        }));
+
+        await assert.isRejected(manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: { size: 1 },
         }));
     });
 });

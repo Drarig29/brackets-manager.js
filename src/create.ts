@@ -366,14 +366,17 @@ export class Create {
      * - If `size` was given, only returns a list of empty slots.
      */
     public async getSlots(): Promise<ParticipantSlot[]> {
-        if (this.stage.settings?.size && !this.stage.seeding)
-            return Array.from(Array(this.stage.settings?.size), (_: ParticipantSlot, i) => ({ id: null, position: i + 1 }));
+        const size = this.stage.settings?.size || this.stage.seeding?.length || 0;
+        helpers.ensureValidSize(size);
+
+        if (size && !this.stage.seeding)
+            return Array.from(Array(size), (_: ParticipantSlot, i) => ({ id: null, position: i + 1 }));
 
         if (!this.stage.seeding) throw Error('Either size or seeding must be given.');
 
         this.stage.settings = {
             ...this.stage.settings,
-            size: this.stage.seeding.length, // Force size.
+            size, // Always set the size.
         }
 
         if (helpers.isSeedingWithIds(this.stage.seeding))

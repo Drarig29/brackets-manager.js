@@ -134,16 +134,22 @@ export function ensureEvenSized<T>(array: T[]) {
  */
 export function ensureEquallySized<T>(left: T[], right: T[]) {
     if (left.length !== right.length)
-        throw Error('Arrays size must be equal.');
+        throw Error('Arrays\' size must be equal.');
 }
 
 /**
- * Ensures that a list of elements has a size which is a power of two.
- * @param array A list of elements.
+ * Ensures that the participant count is valid.
+ * @param participantCount The number to test.
  */
-export function ensurePowerOfTwoSized<T>(array: T[]) {
-    if (!Number.isInteger(Math.log2(array.length)))
-        throw Error('Array size must be a power of 2.');
+export function ensureValidSize(participantCount: number) {
+    if (participantCount === 0)
+        throw Error('Impossible to create an empty stage. If you want an empty seeding, just set the size of the stage.');
+
+    if (participantCount < 2)
+        throw Error('bka')
+
+    if (!Number.isInteger(Math.log2(participantCount)))
+        throw Error('The library only supports a participant count which is a power of two.');
 }
 
 /**
