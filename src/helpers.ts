@@ -1,5 +1,6 @@
-import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Group, Stage } from "brackets-model";
+import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Stage, StageType } from "brackets-model";
 import { ordering } from "./ordering";
+import { MatchLocation } from "./update";
 
 /**
  * Distributes participants in rounds for a round-robin group.
@@ -278,16 +279,6 @@ export function getSide(match: Match): Side {
 }
 
 /**
- * Gets the opponent at the given side of the given match.
- * @param match The match to get the opponent from.
- * @param side The side where to get the opponent from.
- */
-export function getOpponent(match: Match, side: Side): ParticipantResult {
-    const opponent = match[side];
-    return { id: opponent && opponent.id };
-}
-
-/**
  * Gets the other side of a match.
  * @param side The side that we don't want.
  */
@@ -332,6 +323,7 @@ export function isMatchParticipantLocked(match: MatchResults): boolean {
  * Updates a match results based on an input.
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
+ * @returns `true` if the result of the match changed, `false` otherwise.
  */
 export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>) {
     const completed = isMatchCompleted(match);
@@ -342,11 +334,13 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
 
     if (completed) {
         setCompleted(stored, match);
+        return true;
     } else if (isMatchCompleted(stored)) {
         removeCompleted(stored);
+        return true;
     }
 
-    return completed;
+    return false;
 }
 
 /**
@@ -370,6 +364,36 @@ export function resetMatchResults(stored: MatchResults) {
 }
 
 /**
+ * Gets the id of the opponent at the given side of the given match.
+ * @param match The match to get the opponent from.
+ * @param side The side where to get the opponent from.
+ */
+export function getOpponentId(match: Match, side: Side): number | null {
+    const opponent = match[side];
+    return opponent && opponent.id;
+}
+
+/**
+ * 
+ * @param matchLocation Location of the match.
+ * @param match The current match.
+ */
+export function getNextSide(match: Match, matchLocation: MatchLocation) {
+    // For loser-bracket, the nextSide is always opponent2 because it comes from the same bracket and it's a better representation in the viewer.
+    return matchLocation === 'loser-bracket' ? 'opponent2' : getSide(match);
+}
+
+/**
+ * 
+ * @param roundNumber Number of the current round.
+ * @param nextSide The side the opponent will be on in the next match.
+ */
+export function getNextSideLoserBracket(roundNumber: number, nextSide: Side) {
+    // For rounds other than the first, the nextSide is always opponent1 because it comes from the upper bracket and it's a better representation in the viewer.
+    return roundNumber === 1 ? nextSide : 'opponent1';
+}
+
+/**
  * Sets an opponent in the next match he has to go.
  * @param match The current match.
  * @param nextMatches The matches which follow the current one.
@@ -378,10 +402,14 @@ export function resetMatchResults(stored: MatchResults) {
  * @param nextSide The side the opponent will be on in the next match.
  */
 export function setNextOpponent(match: Match, nextMatches: Match[], index: number, currentSide: Side, nextSide: Side) {
-    nextMatches[index][nextSide] = getOpponent(match, currentSide);
+    const nextMatch = nextMatches[index];
+    nextMatch[nextSide] = {
+        id: getOpponentId(match, currentSide),
+        position: nextMatch[nextSide]?.position,
+    };
 
-    if (nextMatches[index].status < Status.Ready)
-        nextMatches[index].status++;
+    if (nextMatch.status < Status.Ready)
+        nextMatch.status++;
 }
 
 /**
@@ -391,8 +419,12 @@ export function setNextOpponent(match: Match, nextMatches: Match[], index: numbe
  * @param nextSide The side the opponent will be on in the next match.
  */
 export function resetNextOpponent(nextMatches: Match[], index: number, nextSide: Side) {
-    nextMatches[index][nextSide] = { id: null };
-    nextMatches[index].status = Status.Locked;
+    const nextMatch = nextMatches[index];
+    nextMatch.status = Status.Locked;
+    nextMatch[nextSide] = {
+        id: null,
+        position: nextMatch[nextSide]?.position,
+    };
 }
 
 /**
@@ -785,16 +817,46 @@ export function ensureNotRoundRobin(stage: Stage) {
  * Checks if a group is a winner bracket.
  * 
  * It's not always the opposite of `inLoserBracket()`: it could be the only bracket of a single elimination stage.
- * @param group The group to check.
+ * @param stageType Type of the stage.
+ * @param groupNumber The number of the group.
  */
-export function isWinnerBracket(group: Group) {
-    return group.number === 1;
+export function isWinnerBracket(stageType: StageType, groupNumber: number) {
+    return stageType === 'double_elimination' && groupNumber === 1;
 }
 
 /**
  * Checks if a group is a loser bracket.
- * @param group The group to check.
+ * @param stageType Type of the stage.
+ * @param group The number of the group.
  */
-export function isLoserBracket(group: Group) {
-    return group.number === 2;
+export function isLoserBracket(stageType: StageType, groupNumber: number) {
+    return stageType === 'double_elimination' && groupNumber === 2;
+}
+
+/**
+ * Checks if a group is a final group (consolation final or grand final).
+ * @param stageType Type of the stage.
+ * @param group The number of the group.
+ */
+export function isFinalGroup(stageType: StageType, groupNumber: number) {
+    return stageType === 'single_elimination' && groupNumber === 2 ||
+        stageType === 'double_elimination' && groupNumber === 3;
+}
+
+/**
+ * Returns the type of group the match is located into.
+ * @param stageType Type of the stage.
+ * @param groupNumber The number of the group.
+ */
+export function getMatchLocation(stageType: StageType, groupNumber: number): MatchLocation {
+    if (isWinnerBracket(stageType, groupNumber))
+        return 'winner-bracket';
+
+    if (isLoserBracket(stageType, groupNumber))
+        return 'loser-bracket';
+
+    if (isFinalGroup(stageType, groupNumber))
+        return 'final-group';
+
+    return 'single-bracket';
 }

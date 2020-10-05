@@ -82,16 +82,10 @@ describe('Create double elimination stage', () => {
         assert.equal((await storage.select('round')).length, 3 + 4 + 2);
         assert.equal((await storage.select('match')).length, 15);
     });
-});
-
-describe('Winner bracket', () => {
-
-    before(async () => {
-        storage.reset();
-        await manager.create(example);
-    });
 
     it('should end a match and determine next matches', async () => {
+        await manager.create(example);
+
         const before = await storage.select('match', 8); // First match of WB round 2
         assert.equal(before.opponent2.id, null);
 
@@ -129,8 +123,101 @@ describe('Winner bracket', () => {
         );
 
         assert.equal(
-            (await storage.select('match', 19)).opponent1.id, // Determined opponent for LB round 2
+            (await storage.select('match', 19)).opponent2.id, // Determined opponent for LB round 2
             (await storage.select('match', 0)).opponent2.id, // Loser of second match round 1
         );
+    });
+
+    it('should determine matches in grand final', async () => {
+        // TODO: do the same test for consolation final
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { grandFinal: 'double' },
+        });
+
+        await manager.update.match({
+            id: 0, // First match of WB round 1
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await manager.update.match({
+            id: 1, // Second match of WB round 1
+            opponent1: { score: 13 },
+            opponent2: { score: 16, result: 'win' },
+        });
+
+        await manager.update.match({
+            id: 2, // WB Final
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 9 },
+        });
+
+        assert.equal(
+            (await storage.select('match', 5)).opponent1.id, // Determined opponent for the grand final (round 1)
+            (await storage.select('match', 0)).opponent1.id, // Winner of WB Final
+        );
+
+        await manager.update.match({
+            id: 3, // Only match of LB round 1
+            opponent1: { score: 12, result: 'win' }, // Team 4
+            opponent2: { score: 8 },
+        });
+
+        await manager.update.match({
+            id: 4, // LB Final
+            opponent1: { score: 14, result: 'win' }, // Team 3
+            opponent2: { score: 7 },
+        });
+
+        assert.equal(
+            (await storage.select('match', 5)).opponent2.id, // Determined opponent for the grand final (round 1)
+            (await storage.select('match', 1)).opponent2.id, // Winner of LB Final
+        );
+
+        await manager.update.match({
+            id: 5, // Grand Final round 1
+            opponent1: { score: 10 },
+            opponent2: { score: 16, result: 'win' }, // Team 3
+        });
+
+        assert.equal(
+            (await storage.select('match', 6)).opponent2.id, // Determined opponent for the grand final (round 2)
+            (await storage.select('match', 1)).opponent2.id, // Winner of LB Final
+        );
+    });
+
+    it('should determine next matches and reset them', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { grandFinal: 'double' },
+        });
+
+        await manager.update.match({
+            id: 0, // First match of WB round 1
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        const beforeReset = await storage.select('match', 3); // Determined opponent for LB round 1
+        assert.equal(beforeReset.opponent1.id, (await storage.select('match', 0)).opponent2.id);
+        assert.equal(beforeReset.opponent1.position, 1); // Must be set.
+
+        await manager.update.match({
+            id: 0, // First match of WB round 1
+            opponent1: { score: 16, result: undefined },
+            opponent2: { score: 12 },
+        });
+
+        const afterReset = await storage.select('match', 3); // Determined opponent for LB round 1
+        assert.equal(afterReset.opponent1.id, null);
+        assert.equal(afterReset.opponent1.position, 1); // It must stay.
     });
 });
