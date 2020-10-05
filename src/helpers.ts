@@ -393,6 +393,8 @@ export function getNextSideLoserBracket(roundNumber: number, nextSide: Side) {
     return roundNumber === 1 ? nextSide : 'opponent1';
 }
 
+export type SetNextOpponent = (nextMatches: Match[], index: number, nextSide: Side, match?: Match, currentSide?: Side) => void;
+
 /**
  * Sets an opponent in the next match he has to go.
  * @param match The current match.
@@ -401,10 +403,10 @@ export function getNextSideLoserBracket(roundNumber: number, nextSide: Side) {
  * @param currentSide The side the opponent is currently on.
  * @param nextSide The side the opponent will be on in the next match.
  */
-export function setNextOpponent(match: Match, nextMatches: Match[], index: number, currentSide: Side, nextSide: Side) {
+export function setNextOpponent(nextMatches: Match[], index: number, nextSide: Side, match?: Match, currentSide?: Side) {
     const nextMatch = nextMatches[index];
     nextMatch[nextSide] = {
-        id: getOpponentId(match, currentSide),
+        id: getOpponentId(match!, currentSide!),
         position: nextMatch[nextSide]?.position,
     };
 
@@ -794,6 +796,14 @@ export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: nu
  */
 export function upperBracketRoundCount(participantCount: number) {
     return Math.log2(participantCount);
+}
+
+/**
+ * Returns the match number of the corresponding match in the next round by dividing by two.
+ * @param matchNumber The current match number.
+ */
+export function getDiagonalMatchNumber(matchNumber: number) {
+    return Math.ceil(matchNumber / 2);
 }
 
 /**

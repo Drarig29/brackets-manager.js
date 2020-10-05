@@ -3,6 +3,7 @@ import { ordering } from './ordering';
 import { IStorage } from "./storage";
 import * as helpers from './helpers';
 import { Create } from "./create";
+import { SetNextOpponent } from "./helpers";
 
 export type Level = 'stage' | 'group' | 'round' | 'match';
 export type MatchLocation = 'single-bracket' | 'winner-bracket' | 'loser-bracket' | 'final-group';
@@ -431,56 +432,31 @@ export class Update {
         if (match.status === Status.Completed && !winnerSide) throw Error('Cannot find a winner.');
 
         if (winnerSide)
-            this.setNext(match, matchLocation, roundNumber, nextMatches, winnerSide);
+            this.applyToNextMatches(helpers.setNextOpponent, match, matchLocation, roundNumber, nextMatches, winnerSide);
         else
-            this.resetNext(match, matchLocation, roundNumber, nextMatches);
+            this.applyToNextMatches(helpers.resetNextOpponent, match, matchLocation, roundNumber, nextMatches);
     }
 
-    /**
-     * Sets the participants and status in the match(es) following a match.
-     * @param match The current match.
-     * @param nextMatches The next match(es).
-     * @param winnerSide The side of the winner in the current match.
-     */
-    private setNext(match: Match, matchLocation: MatchLocation, roundNumber: number, nextMatches: Match[], winnerSide: Side) {
+    private applyToNextMatches(setNextOpponent: SetNextOpponent, match: Match, matchLocation: MatchLocation, roundNumber: number, nextMatches: Match[], winnerSide?: Side) {
         if (matchLocation === 'final-group') {
-            helpers.setNextOpponent(match, nextMatches, 0, 'opponent1', 'opponent1');
-            helpers.setNextOpponent(match, nextMatches, 0, 'opponent2', 'opponent2');
+            setNextOpponent(nextMatches, 0, 'opponent1', match, 'opponent1');
+            setNextOpponent(nextMatches, 0, 'opponent2', match, 'opponent2');
             this.storage.update('match', nextMatches[0].id, nextMatches[0]);
             return;
         }
 
         const nextSide = helpers.getNextSide(match, matchLocation);
-        helpers.setNextOpponent(match, nextMatches, 0, winnerSide, nextSide);
+        setNextOpponent(nextMatches, 0, nextSide, match, winnerSide);
         this.storage.update('match', nextMatches[0].id, nextMatches[0]);
 
-        if (nextMatches.length === 2) {
-            const nextSideLB = helpers.getNextSideLoserBracket(roundNumber, nextSide);
-            helpers.setNextOpponent(match, nextMatches, 1, helpers.getOtherSide(winnerSide), nextSideLB);
+        if (nextMatches.length < 2) return;
+
+        if (matchLocation === 'single-bracket') {
+            setNextOpponent(nextMatches, 1, nextSide, match, winnerSide && helpers.getOtherSide(winnerSide));
             this.storage.update('match', nextMatches[1].id, nextMatches[1]);
-        }
-    }
-
-    /**
-     * Resets the participants and status in the match(es) following a match.
-     * @param match The current match.
-     * @param nextMatches The next match(es).
-     */
-    private resetNext(match: Match, matchLocation: MatchLocation, roundNumber: number, nextMatches: Match[]) {
-        if (matchLocation === 'final-group') {
-            helpers.resetNextOpponent(nextMatches, 0, 'opponent1');
-            helpers.resetNextOpponent(nextMatches, 0, 'opponent2');
-            this.storage.update('match', nextMatches[0].id, nextMatches[0]);
-            return;
-        }
-
-        const nextSide = helpers.getNextSide(match, matchLocation);
-        helpers.resetNextOpponent(nextMatches, 0, nextSide);
-        this.storage.update('match', nextMatches[0].id, nextMatches[0]);
-
-        if (nextMatches.length === 2) {
+        } else {
             const nextSideLB = helpers.getNextSideLoserBracket(roundNumber, nextSide);
-            helpers.resetNextOpponent(nextMatches, 1, nextSideLB);
+            setNextOpponent(nextMatches, 1, nextSideLB, match, winnerSide && helpers.getOtherSide(winnerSide));
             this.storage.update('match', nextMatches[1].id, nextMatches[1]);
         }
     }
@@ -511,14 +487,13 @@ export class Update {
 
         if (matchLocation === 'loser-bracket') {
             const winnerBracket = await this.getWinnerBracket(match.stage_id);
-            return await this.getPreviousMatchesLB(roundNumber, winnerBracket.id, match.number, match.group_id);
+            return this.getPreviousMatchesLB(roundNumber, winnerBracket.id, match.number, match.group_id);
         }
 
-        if (roundNumber === 1) {
+        if (roundNumber === 1)
             return []; // The match is in the first round of an upper bracket.
-        }
 
-        return await this.getMatchesBeforeMajorRound(roundNumber, match.group_id, match.number);
+        return this.getMatchesBeforeMajorRound(roundNumber, match.group_id, match.number);
     }
 
     /**
@@ -532,12 +507,12 @@ export class Update {
         const roundNumberWB = Math.ceil((roundNumber + 1) / 2);
 
         if (roundNumber === 1)
-            return await this.getMatchesBeforeFirstRoundLB(winnerBracketId, matchNumber, roundNumberWB);
+            return this.getMatchesBeforeFirstRoundLB(winnerBracketId, matchNumber, roundNumberWB);
 
         if (roundNumber % 2 === 0)
-            return await this.getMatchesBeforeMinorRoundLB(roundNumber, winnerBracketId, matchNumber, roundNumberWB, groupId);
+            return this.getMatchesBeforeMinorRoundLB(roundNumber, winnerBracketId, matchNumber, roundNumberWB, groupId);
 
-        return await this.getMatchesBeforeMajorRound(roundNumber, groupId, matchNumber);
+        return this.getMatchesBeforeMajorRound(roundNumber, groupId, matchNumber);
     }
 
     /**
@@ -608,7 +583,7 @@ export class Update {
             return [];
 
         const roundNumberLB = roundNumber > 1 ? (roundNumber - 1) * 2 : 1;
-        const matchNumberLB = roundNumber > 1 ? match.number : Math.ceil(match.number / 2);
+        const matchNumberLB = roundNumber > 1 ? match.number : helpers.getDiagonalMatchNumber(match.number);
 
         return [
             ...await this.getNextMatchesUpperBracket(match, stageType, roundNumber, roundCount),
@@ -617,15 +592,32 @@ export class Update {
     }
 
     /**
-     * Gets the match(es) where the opponents of the current match of a standard upper bracket will go just after.
+     * Gets the match(es) where the opponents of the current match of an upper bracket will go just after.
      * @param match The current match.
      * @param roundNumber The number of the current round.
      */
     private async getNextMatchesUpperBracket(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<Match[]> {
-        if (roundNumber === roundCount)
-            return this.getFinalMatches(match, stageType);
+        if (stageType === 'single_elimination')
+            return this.getNextMatchesUpperBracketSingleElimination(match, stageType, roundNumber, roundCount);
 
-        return [await this.findMatch(match.group_id, roundNumber + 1, Math.ceil(match.number / 2))];
+        if (stageType === 'double_elimination' && roundNumber === roundCount)
+            return this.getFirstMatchFinal(match, stageType);
+
+        return [await this.getDiagonalMatch(match.group_id, roundNumber, match.number)];
+    }
+
+    private async getNextMatchesUpperBracketSingleElimination(match: Match, stageType: StageType, roundNumber: number, roundCount: number) {
+        if (roundNumber == roundCount - 1) {
+            return [
+                await this.getDiagonalMatch(match.group_id, roundNumber, match.number),
+                ...await this.getFirstMatchFinal(match, stageType),
+            ]
+        }
+
+        if (roundNumber === roundCount)
+            return [];
+
+        return [await this.getDiagonalMatch(match.group_id, roundNumber, match.number)];
     }
 
     /**
@@ -635,15 +627,15 @@ export class Update {
      */
     private async getNextMatchesLB(match: Match, stageType: StageType, roundNumber: number, roundCount: number) {
         if (roundNumber === roundCount)
-            return this.getFinalMatches(match, stageType);
+            return this.getFirstMatchFinal(match, stageType);
 
         if (roundNumber % 2 === 1)
-            return await this.getMatchesAfterMajorRoundLB(match, roundNumber);
+            return this.getMatchAfterMajorRoundLB(match, roundNumber);
 
-        return await this.getMatchesAfterMinorRoundLB(match, roundNumber);
+        return this.getMatchAfterMinorRoundLB(match, roundNumber);
     }
 
-    private async getFinalMatches(match: Match, stageType: StageType) {
+    private async getFirstMatchFinal(match: Match, stageType: StageType) {
         const finalGroupId = await this.getFinalGroupId(match.stage_id, stageType);
         if (finalGroupId === null)
             return [];
@@ -651,7 +643,7 @@ export class Update {
         return [await this.findMatch(finalGroupId, 1, 1)];
     }
 
-    private async getNextMatchesFinal(match: Match, roundNumber: number, roundCount: number): Promise<Match[]> {
+    private async getNextMatchesFinal(match: Match, roundNumber: number, roundCount: number) {
         if (roundNumber === roundCount)
             return [];
 
@@ -663,8 +655,8 @@ export class Update {
      * @param match The current match.
      * @param roundNumber The number of the current round.
      */
-    private async getMatchesAfterMajorRoundLB(match: Match, roundNumber: number): Promise<Match[]> {
-        return [await this.findMatch(match.group_id, roundNumber + 1, match.number)];
+    private async getMatchAfterMajorRoundLB(match: Match, roundNumber: number) {
+        return [await this.getParallelMatch(match.group_id, roundNumber, match.number)];
     }
 
     /**
@@ -672,8 +664,8 @@ export class Update {
      * @param match The current match.
      * @param roundNumber The number of the current round.
      */
-    private async getMatchesAfterMinorRoundLB(match: Match, roundNumber: number): Promise<Match[]> {
-        return [await this.findMatch(match.group_id, roundNumber + 1, Math.ceil(match.number / 2))];
+    private async getMatchAfterMinorRoundLB(match: Match, roundNumber: number) {
+        return [await this.getDiagonalMatch(match.group_id, roundNumber, match.number)];
     }
 
     /**
@@ -733,6 +725,30 @@ export class Update {
      */
     private async getLoserBracket(stageId: number) {
         return this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 2 });
+    }
+
+    /**
+     * Gets the corresponding match in the next round ("diagonal match") the usual way.
+     * 
+     * Just like from Round 1 to Round 2 in a single elimination stage.
+     * @param groupId ID of the group.
+     * @param roundNumber Number of the round in its parent group.
+     * @param matchNumber Number of the match in its parent round.
+     */
+    private async getDiagonalMatch(groupId: number, roundNumber: number, matchNumber: number) {
+        return this.findMatch(groupId, roundNumber + 1, helpers.getDiagonalMatchNumber(matchNumber));
+    }
+
+    /**
+     * Gets the corresponding match in the next round ("parallel match") the "major round to minor round" way.
+     * 
+     * Just like from Round 1 to Round 2 in the loser bracket of a double elimination stage.
+     * @param groupId ID of the group.
+     * @param roundNumber Number of the round in its parent group.
+     * @param matchNumber Number of the match in its parent round.
+     */
+    private async getParallelMatch(groupId: number, roundNumber: number, matchNumber: number) {
+        return this.findMatch(groupId, roundNumber + 1, matchNumber);
     }
 
     /**

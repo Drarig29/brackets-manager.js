@@ -129,8 +129,6 @@ describe('Create double elimination stage', () => {
     });
 
     it('should determine matches in grand final', async () => {
-        // TODO: do the same test for consolation final
-
         await manager.create({
             name: 'Example',
             tournamentId: 0,

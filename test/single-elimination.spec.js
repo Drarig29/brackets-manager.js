@@ -119,4 +119,42 @@ describe('Create single elimination stage', () => {
         assert.equal((await storage.select('match')).length, 7);
         assert.equal((await storage.select('match_game')).length, 7 * 3);
     });
+
+    it('should determine matches in consolation final', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { consolationFinal: true },
+        });
+
+        await manager.update.match({
+            id: 0, // First match of round 1
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await manager.update.match({
+            id: 1, // Second match of round 1
+            opponent1: { score: 13 },
+            opponent2: { score: 16, result: 'win' },
+        });
+
+        await manager.update.match({
+            id: 2, // Final
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 9 },
+        });
+
+        assert.equal(
+            (await storage.select('match', 3)).opponent1.id, // Determined opponent for the consolation final
+            (await storage.select('match', 0)).opponent2.id, // Loser of Semi 1
+        );
+
+        assert.equal(
+            (await storage.select('match', 3)).opponent2.id, // Determined opponent for the consolation final
+            (await storage.select('match', 1)).opponent1.id, // Loser of Semi 2
+        );
+    });
 });
