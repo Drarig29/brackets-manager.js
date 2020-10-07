@@ -4,10 +4,12 @@ import { MatchLocation } from "./update";
 
 /**
  * Distributes participants in rounds for a round-robin group.
- * 
+ *
  * Conditions:
- *   - Each participant matches each other only once.
- *   - Each participant plays once in each round.
+ * - Each participant matches each other only once.
+ * - Each participant plays once in each round.
+ *
+ * @param participants The participants to distribute.
  */
 export function roundRobinMatches<T>(participants: T[]): T[][][] {
     const n = participants.length;
@@ -42,8 +44,11 @@ export function roundRobinMatches<T>(participants: T[]): T[][][] {
 
 /**
  * A helper to assert our generated round-robin is correct.
+ *
+ * @param input The input seeding.
+ * @param output The resulting distribution of seeds in grounps.
  */
-export function assertRoundRobin<T>(input: T[], output: T[][][]) {
+export function assertRoundRobin<T>(input: T[], output: T[][][]): void {
     const n = input.length;
     const matchPerRound = Math.floor(n / 2);
     const roundCount = n % 2 === 0 ? n - 1 : n;
@@ -76,6 +81,7 @@ export function assertRoundRobin<T>(input: T[], output: T[][][]) {
 
 /**
  * Distributes elements in groups of equal size.
+ *
  * @param elements A list of elements to distribute in groups.
  * @param groupCount The group count.
  */
@@ -95,54 +101,42 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
 
 /**
  * Makes pairs with each element and its next one.
+ *
  * @example [1, 2, 3, 4] --> [[1, 2], [3, 4]]
  * @param array A list of elements.
  */
-export function makePairs<T>(array: T[]): T[][];
-
-/**
- * Makes pairs with one element from `left` and the other from `right`.
- * @example [1, 2] + [3, 4] --> [[1, 3], [2, 4]]
- * @param left The first list of elements.
- * @param right The second list of elements.
- */
-export function makePairs<T>(left: T[], right: T[]): T[][];
-
-export function makePairs<T>(left: T[], right?: T[]): T[][] {
-    if (!right) {
-        ensureEvenSized(left);
-        return left.map((current, i) => (i % 2 === 0) ? [current, left[i + 1]] : [])
-            .filter(v => v.length > 0);
-    }
-
-    ensureEquallySized(left, right);
-    return left.map((current, i) => [current, right[i]]);
+export function makePairs<T>(array: T[]): T[][] {
+    ensureEvenSized(array);
+    return array.map((current, i) => (i % 2 === 0) ? [current, array[i + 1]] : []).filter(v => v.length > 0);
 }
 
 /**
  * Ensures that a list of elements has an even size.
+ *
  * @param array A list of elements.
  */
-export function ensureEvenSized<T>(array: T[]) {
+export function ensureEvenSized<T>(array: T[]): void {
     if (array.length % 2 === 1)
         throw Error('Array size must be even.');
 }
 
 /**
  * Ensures that two lists of elements have the same size.
+ *
  * @param left The first list of elements.
  * @param right The second list of elements.
  */
-export function ensureEquallySized<T>(left: T[], right: T[]) {
+export function ensureEquallySized<T>(left: T[], right: T[]): void {
     if (left.length !== right.length)
         throw Error('Arrays\' size must be equal.');
 }
 
 /**
  * Ensures that the participant count is valid.
+ *
  * @param participantCount The number to test.
  */
-export function ensureValidSize(participantCount: number) {
+export function ensureValidSize(participantCount: number): void {
     if (participantCount === 0)
         throw Error('Impossible to create an empty stage. If you want an empty seeding, just set the size of the stage.');
 
@@ -155,15 +149,17 @@ export function ensureValidSize(participantCount: number) {
 
 /**
  * Ensures that a match scores aren't tied.
+ *
  * @param scores Two numbers which are scores.
  */
-export function ensureNotTied(scores: number[]) {
+export function ensureNotTied(scores: number[]): void {
     if (scores[0] === scores[1])
         throw Error(`${scores[0]} and ${scores[1]} are tied. It cannot be.`);
 }
 
 /**
  * Converts a participant slot to a result stored in storage.
+ *
  * @param slot A participant slot.
  */
 export function toResult(slot: ParticipantSlot): ParticipantResult | null {
@@ -175,6 +171,7 @@ export function toResult(slot: ParticipantSlot): ParticipantResult | null {
 
 /**
  * Returns the pre-computed winner for a match because of BYEs.
+ *
  * @param opponents Two opponents.
  */
 export function byeWinner(opponents: Duel): ParticipantSlot {
@@ -192,6 +189,7 @@ export function byeWinner(opponents: Duel): ParticipantSlot {
 
 /**
  * Returns the pre-computed winner for a match because of BYEs in a lower bracket.
+ *
  * @param opponents Two opponents.
  */
 export function byeWinnerToGrandFinal(opponents: Duel): ParticipantSlot {
@@ -204,6 +202,7 @@ export function byeWinnerToGrandFinal(opponents: Duel): ParticipantSlot {
  * Returns the pre-computed loser for a match because of BYEs.
  * 
  * Only used for loser bracket.
+ *
  * @param opponents Two opponents.
  * @param index The index of the duel in the round.
  */
@@ -216,14 +215,14 @@ export function byeLoser(opponents: Duel, index: number): ParticipantSlot {
 
 /**
  * Returns the winner side or `null` if no winner.
+ *
  * @param match A match's results.
  */
 export function getMatchResult(match: MatchResults): Side | null {
     let winner: Side | null = null;
 
-    if (match.opponent1?.result === 'win') {
+    if (match.opponent1?.result === 'win')
         winner = 'opponent1';
-    }
 
     if (match.opponent2?.result === 'win') {
         if (winner !== null) throw Error('There are two winners.')
@@ -235,6 +234,7 @@ export function getMatchResult(match: MatchResults): Side | null {
 
 /**
  * Finds a position in a list of matches.
+ *
  * @param matches A list of matches to search into.
  * @param position The position to find.
  */
@@ -252,6 +252,7 @@ export function findPosition(matches: Match[], position: number): ParticipantRes
 
 /**
  * Gets the side where the winner of the given match will go in the next match.
+ *
  * @param match The current match.
  */
 export function getSide(match: Match): Side {
@@ -260,6 +261,7 @@ export function getSide(match: Match): Side {
 
 /**
  * Gets the other side of a match.
+ *
  * @param side The side that we don't want.
  */
 export function getOtherSide(side: Side): Side {
@@ -268,6 +270,7 @@ export function getOtherSide(side: Side): Side {
 
 /**
  * Checks if a match is started.
+ *
  * @param match Partial match results.
  */
 export function isMatchStarted(match: Partial<MatchResults>): boolean {
@@ -276,6 +279,7 @@ export function isMatchStarted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed.
+ *
  * @param match Partial match results.
  */
 export function isMatchCompleted(match: Partial<MatchResults>): boolean {
@@ -285,6 +289,7 @@ export function isMatchCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match's results can't be updated.
+ *
  * @param match The match to check.
  */
 export function isMatchUpdateLocked(match: MatchResults): boolean {
@@ -293,6 +298,7 @@ export function isMatchUpdateLocked(match: MatchResults): boolean {
 
 /**
  * Checks if a match's participants can't be updated.
+ *
  * @param match The match to check.
  */
 export function isMatchParticipantLocked(match: MatchResults): boolean {
@@ -301,6 +307,7 @@ export function isMatchParticipantLocked(match: MatchResults): boolean {
 
 /**
  * Returns the status of a match based on the presence of the opponents.
+ *
  * @param opponents The opponents of a match.
  */
 export function getMatchByeStatus(opponents: Duel): Status {
@@ -312,6 +319,7 @@ export function getMatchByeStatus(opponents: Duel): Status {
 
 /**
  * Returns the status of a match based on the results of a match.
+ *
  * @param match Partial match results.
  */
 export function getMatchStatus(match: Partial<MatchResults>): Status {
@@ -335,11 +343,12 @@ export function getMatchStatus(match: Partial<MatchResults>): Status {
 
 /**
  * Updates a match results based on an input.
+ *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  * @returns `true` if the result of the match changed, `false` otherwise.
  */
-export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>) {
+export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>): boolean {
     const completed = isMatchCompleted(match);
 
     if (match.status === Status.Completed && !completed) throw Error('The match is not really completed.');
@@ -359,9 +368,10 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
 
 /**
  * Resets the results of a match. (status, score, forfeit, result)
+ *
  * @param stored A reference to what will be updated in the storage.
  */
-export function resetMatchResults(stored: MatchResults) {
+export function resetMatchResults(stored: MatchResults): void {
     if (stored.opponent1) {
         stored.opponent1.score = undefined;
         stored.opponent1.forfeit = undefined;
@@ -379,6 +389,7 @@ export function resetMatchResults(stored: MatchResults) {
 
 /**
  * Gets the id of the opponent at the given side of the given match.
+ *
  * @param match The match to get the opponent from.
  * @param side The side where to get the opponent from.
  */
@@ -388,21 +399,23 @@ export function getOpponentId(match: Match, side: Side): number | null {
 }
 
 /**
+ * Gets the side the winner of the current match will go to in the next match.
  * 
- * @param matchLocation Location of the match.
  * @param match The current match.
+ * @param matchLocation Location of the current match.
  */
-export function getNextSide(match: Match, matchLocation: MatchLocation) {
+export function getNextSide(match: Match, matchLocation: MatchLocation): Side {
     // For loser-bracket, the nextSide is always opponent2 because it comes from the same bracket and it's a better representation in the viewer.
     return matchLocation === 'loser-bracket' ? 'opponent2' : getSide(match);
 }
 
 /**
+ * Gets the side the winner of the current match in loser bracket will go in the next match.
  * 
  * @param roundNumber Number of the current round.
  * @param nextSide The side the opponent will be on in the next match.
  */
-export function getNextSideLoserBracket(roundNumber: number, nextSide: Side) {
+export function getNextSideLoserBracket(roundNumber: number, nextSide: Side): Side {
     // For rounds other than the first, the nextSide is always opponent1 because it comes from the upper bracket and it's a better representation in the viewer.
     return roundNumber === 1 ? nextSide : 'opponent1';
 }
@@ -411,16 +424,17 @@ export type SetNextOpponent = (nextMatches: Match[], index: number, nextSide: Si
 
 /**
  * Sets an opponent in the next match he has to go.
- * @param match The current match.
+ *
  * @param nextMatches The matches which follow the current one.
  * @param index Index of the match to set in the next matches.
- * @param currentSide The side the opponent is currently on.
  * @param nextSide The side the opponent will be on in the next match.
+ * @param match The current match.
+ * @param currentSide The side the opponent is currently on.
  */
-export function setNextOpponent(nextMatches: Match[], index: number, nextSide: Side, match?: Match, currentSide?: Side) {
+export function setNextOpponent(nextMatches: Match[], index: number, nextSide: Side, match?: Match, currentSide?: Side): void {
     const nextMatch = nextMatches[index];
     nextMatch[nextSide] = {
-        id: getOpponentId(match!, currentSide!),
+        id: getOpponentId(match!, currentSide!), // This implementation of SetNextOpponent always has those arguments.
         position: nextMatch[nextSide]?.position,
     };
 
@@ -430,11 +444,12 @@ export function setNextOpponent(nextMatches: Match[], index: number, nextSide: S
 
 /**
  * Resets an opponent in the match following the current one.
+ *
  * @param nextMatches The matches which follow the current one.
  * @param index Index of the match to set in the next matches.
  * @param nextSide The side the opponent will be on in the next match.
  */
-export function resetNextOpponent(nextMatches: Match[], index: number, nextSide: Side) {
+export function resetNextOpponent(nextMatches: Match[], index: number, nextSide: Side): void {
     const nextMatch = nextMatches[index];
     nextMatch.status = Status.Locked;
     nextMatch[nextSide] = {
@@ -445,10 +460,11 @@ export function resetNextOpponent(nextMatches: Match[], index: number, nextSide:
 
 /**
  * Updates the scores of a match.
+ *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  */
-export function setScores(stored: MatchResults, match: Partial<MatchResults>) {
+export function setScores(stored: MatchResults, match: Partial<MatchResults>): void {
     if (match.opponent1?.score === undefined && match.opponent2?.score === undefined) {
         // No score update.
         if (match.status) stored.status = match.status;
@@ -471,10 +487,11 @@ export function setScores(stored: MatchResults, match: Partial<MatchResults>) {
 
 /**
  * Completes a match and handles results and forfeits.
+ *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  */
-export function setCompleted(stored: MatchResults, match: Partial<MatchResults>) {
+export function setCompleted(stored: MatchResults, match: Partial<MatchResults>): void {
     stored.status = Status.Completed;
 
     setResults(stored, match, 'win', 'loss');
@@ -486,9 +503,10 @@ export function setCompleted(stored: MatchResults, match: Partial<MatchResults>)
 
 /**
  * Removes the completed status of a match, set it back to running and removes results.
+ *
  * @param stored A reference to what will be updated in the storage.
  */
-export function removeCompleted(stored: MatchResults) {
+export function removeCompleted(stored: MatchResults): void {
     stored.status = Status.Running;
 
     if (stored.opponent1) {
@@ -506,21 +524,20 @@ export function removeCompleted(stored: MatchResults) {
  * Ensures the symmetry between opponents.
  * 
  * Sets an opponent's result to something, based on the result on the other opponent.
+ *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  * @param check A result to check in each opponent.
  * @param change A result to set in each other opponent if `check` is correct.
  */
-export function setResults(stored: MatchResults, match: Partial<MatchResults>, check: Result, change: Result) {
+export function setResults(stored: MatchResults, match: Partial<MatchResults>, check: Result, change: Result): void {
     if (match.opponent1 && match.opponent2) {
         if ((match.opponent1.result === 'win' && match.opponent2.result === 'win') ||
-            (match.opponent1.result === 'loss' && match.opponent2.result === 'loss')) {
+            (match.opponent1.result === 'loss' && match.opponent2.result === 'loss'))
             throw Error('There are two winners.');
-        }
 
-        if (match.opponent1.forfeit === true && match.opponent2.forfeit === true) {
+        if (match.opponent1.forfeit === true && match.opponent2.forfeit === true)
             throw Error('There are two forfeits.');
-        }
     }
 
     if (match.opponent1?.result === check) {
@@ -542,10 +559,11 @@ export function setResults(stored: MatchResults, match: Partial<MatchResults>, c
 
 /**
  * Sets forfeits for each opponent (if needed).
+ *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  */
-export function setForfeits(stored: MatchResults, match: Partial<MatchResults>) {
+export function setForfeits(stored: MatchResults, match: Partial<MatchResults>): void {
     if (match.opponent1?.forfeit === true) {
         if (stored.opponent1) stored.opponent1.forfeit = true;
 
@@ -563,19 +581,21 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>) 
 
 /**
  * Indicates if a seeding is filled with participants' names or ids.
+ *
  * @param seeding The seeding.
  */
-export function isSeedingWithIds(seeding: Seeding | SeedingIds) {
-    return seeding.some((value: any) => typeof value === 'number');
+export function isSeedingWithIds(seeding: Seeding | SeedingIds): boolean {
+    return seeding.some((value: string | number | null) => typeof value === 'number');
 }
 
 /**
  * Extracts participants from a seeding, without the byes.
+ *
  * @param tournamentId ID of the tournament.
  * @param seeding The seeding.
  */
-export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding) {
-    const withoutByes: string[] = seeding.filter(name => name !== null) as any;
+export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding): OmitId<Participant>[] {
+    const withoutByes = seeding.filter(name => name !== null) as string[];
 
     const participants = withoutByes.map<OmitId<Participant>>(name => ({
         tournament_id: tournamentId,
@@ -587,6 +607,7 @@ export function extractParticipantsFromSeeding(tournamentId: number, seeding: Se
 
 /**
  * Returns participant slots mapped to the instances stored in the database thanks to their name.
+ *
  * @param seeding The seeding.
  * @param database The participants stored in the database.
  */
@@ -605,6 +626,7 @@ export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Parti
 
 /**
  * Returns participant slots mapped to the instances stored in the database thanks to their id.
+ *
  * @param seeding The seeding.
  * @param database The participants stored in the database.
  */
@@ -623,6 +645,7 @@ export function mapParticipantsIdsToDatabase(seeding: SeedingIds, database: Part
 
 /**
  * Converts a list of matches to a seeding.
+ *
  * @param matches The input matches.
  */
 export function matchesToSeeding(matches: Match[]): ParticipantSlot[] {
@@ -632,15 +655,20 @@ export function matchesToSeeding(matches: Match[]): ParticipantSlot[] {
 
 /**
  * Sorts the seeding with the BYEs in the correct position.
+ *
  * @param slots A list of slots to sort.
  */
-export function sortSeeding(slots: ParticipantSlot[]) {
+export function sortSeeding(slots: ParticipantSlot[]): ParticipantSlot[] {
     const withoutByes = slots.filter(v => v !== null);
+
+    // a and b are not null because of the filter.
+    // The slots are from seeding slots, thus they have a position.
     withoutByes.sort((a, b) => a!.position! - b!.position!);
 
     if (withoutByes.length === slots.length)
         return withoutByes;
 
+    // Same for v and position.
     const placed = Object.fromEntries(withoutByes.map(v => [v!.position! - 1, v]));
     const sortedWithByes = Array.from({ length: slots.length }, (_, i) => placed[i] || null);
 
@@ -649,10 +677,11 @@ export function sortSeeding(slots: ParticipantSlot[]) {
 
 /**
  * Returns a list of objects which have unique values of a specific key.
+ *
  * @param array The array to process.
  * @param key The key to filter by.
  */
-export function uniqueBy<T>(array: T[], key: (obj: T) => any): T[] {
+export function uniqueBy<T>(array: T[], key: (obj: T) => unknown): T[] {
     const seen = new Set();
     return array.filter(item => {
         const value = key(item);
@@ -662,8 +691,8 @@ export function uniqueBy<T>(array: T[], key: (obj: T) => any): T[] {
 
 /**
  * Makes the transition to a major round for duels of the previous round. The duel count is divided by 2.
+ *
  * @param previousDuels The previous duels to transition from.
- * @param currentDuelCount The next (current) count of duels to transition to.
  */
 export function transitionToMajor(previousDuels: Duels): Duels {
     const currentDuelCount = previousDuels.length / 2;
@@ -682,8 +711,10 @@ export function transitionToMajor(previousDuels: Duels): Duels {
 
 /**
  * Makes the transition to a minor round for duels of the previous round. The duel count stays the same.
+ *
  * @param previousDuels The previous duels to transition from.
- * @param currentDuelCount The next (current) count of duels to transition to.
+ * @param losers Losers from the previous major round.
+ * @param method The ordering method for the losers.
  */
 export function transitionToMinor(previousDuels: Duels, losers: ParticipantSlot[], method: SeedOrdering): Duels {
     const orderedLosers = ordering[method](losers);
@@ -703,11 +734,12 @@ export function transitionToMinor(previousDuels: Duels, losers: ParticipantSlot[
 
 /**
  * Sets the parent match to a completed status if all its child games are completed.
+ *
  * @param storedParent The parent match stored in the database.
  * @param parent The partial parent match to update.
  * @param scores The scores of the match child games.
  */
-export function setParentMatchCompleted(storedParent: Match, parent: Partial<MatchResults>, scores: Scores) {
+export function setParentMatchCompleted(storedParent: Match, parent: Partial<MatchResults>, scores: Scores): void {
     const parentCompleted = scores.opponent1 + scores.opponent2 === storedParent.child_count;
     if (!parentCompleted) return;
 
@@ -721,6 +753,7 @@ export function setParentMatchCompleted(storedParent: Match, parent: Partial<Mat
 
 /**
  * Returns a parent match results based on its child games scores.
+ *
  * @param storedParent The parent match stored in the database.
  * @param scores The scores of the match child games.
  */
@@ -739,6 +772,7 @@ export function getParentMatchResults(storedParent: Match, scores: Scores): Part
 
 /**
  * Gets the values which need to be updated in a match when it's updated on insertion.
+ *
  * @param match The up to date match.
  */
 export function getUpdatedMatchResults(match: OmitId<MatchResults>): MatchResults {
@@ -751,7 +785,8 @@ export function getUpdatedMatchResults(match: OmitId<MatchResults>): MatchResult
 
 /**
  * Calculates the score of a parent match based on its child games.
- * @param parentId ID of the parent match.
+ *
+ * @param games The child games to process.
  */
 export function getChildGamesResults(games: MatchGame[]): Scores {
     const scores = {
@@ -770,22 +805,24 @@ export function getChildGamesResults(games: MatchGame[]): Scores {
 
 /**
  * Gets the default list of seeds for a round's matches.
+ *
  * @param inLoserBracket Whether the match is in the loser bracket.
  * @param roundNumber The number of the current round.
  * @param matchCount The count of matches in the round.
  */
-export function getSeeds(inLoserBracket: boolean, roundNumber: number, matchCount: number) {
+export function getSeeds(inLoserBracket: boolean, roundNumber: number, matchCount: number): number[] {
     const seedCount = getSeedCount(inLoserBracket, roundNumber, matchCount);
     return Array.from(Array(seedCount), (_, i) => i + 1);
 }
 
 /**
  * Gets the number of seeds for a round's matches.
+ *
  * @param inLoserBracket Whether the match is in the loser bracket.
  * @param roundNumber The number of the current round.
  * @param matchCount The count of matches in the round.
  */
-export function getSeedCount(inLoserBracket: boolean, roundNumber: number, matchCount: number) {
+export function getSeedCount(inLoserBracket: boolean, roundNumber: number, matchCount: number): number {
     ensureOrderingSupported(inLoserBracket, roundNumber);
 
     return roundNumber === 1 ?
@@ -795,10 +832,11 @@ export function getSeedCount(inLoserBracket: boolean, roundNumber: number, match
 
 /**
  * Throws if the ordering is not supported on the current round.
+ *
  * @param inLoserBracket Whether the match is in the loser bracket.
  * @param roundNumber The number of the current round.
  */
-export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: number) {
+export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: number): void {
     if ((!inLoserBracket && roundNumber !== 1) || // Upper bracket and not round 1.
         (inLoserBracket && !(roundNumber === 1 || roundNumber % 2 === 0))) // Loser bracket and not round 1 or not minor round.
         throw Error('This round does not support ordering.');
@@ -806,33 +844,37 @@ export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: nu
 
 /**
  * Returns the number of rounds an upper bracket must have, given the number of participants in the stage.
- * @param participantCount 
+ *
+ * @param participantCount The number of participants in the stage.
  */
-export function upperBracketRoundCount(participantCount: number) {
+export function upperBracketRoundCount(participantCount: number): number {
     return Math.log2(participantCount);
 }
 
 /**
  * Returns the match number of the corresponding match in the next round by dividing by two.
+ *
  * @param matchNumber The current match number.
  */
-export function getDiagonalMatchNumber(matchNumber: number) {
+export function getDiagonalMatchNumber(matchNumber: number): number {
     return Math.ceil(matchNumber / 2);
 }
 
 /**
  * Checks if a stage is a round-robin stage.
+ *
  * @param stage The stage to check.
  */
-export function isRoundRobin(stage: Stage) {
+export function isRoundRobin(stage: Stage): boolean {
     return stage.type === 'round_robin';
 }
 
 /**
  * Throws if a stage is round-robin.
- * @param stageId ID of the stage.
+ *
+ * @param stage The stage to check.
  */
-export function ensureNotRoundRobin(stage: Stage) {
+export function ensureNotRoundRobin(stage: Stage): void {
     const inRoundRobin = isRoundRobin(stage);
     if (inRoundRobin) throw Error('Impossible to update ordering in a round-robin stage.');
 }
@@ -841,36 +883,40 @@ export function ensureNotRoundRobin(stage: Stage) {
  * Checks if a group is a winner bracket.
  * 
  * It's not always the opposite of `inLoserBracket()`: it could be the only bracket of a single elimination stage.
+ *
  * @param stageType Type of the stage.
- * @param groupNumber The number of the group.
+ * @param groupNumber Number of the group.
  */
-export function isWinnerBracket(stageType: StageType, groupNumber: number) {
+export function isWinnerBracket(stageType: StageType, groupNumber: number): boolean {
     return stageType === 'double_elimination' && groupNumber === 1;
 }
 
 /**
  * Checks if a group is a loser bracket.
+ *
  * @param stageType Type of the stage.
- * @param group The number of the group.
+ * @param groupNumber Number of the group.
  */
-export function isLoserBracket(stageType: StageType, groupNumber: number) {
+export function isLoserBracket(stageType: StageType, groupNumber: number): boolean {
     return stageType === 'double_elimination' && groupNumber === 2;
 }
 
 /**
  * Checks if a group is a final group (consolation final or grand final).
+ *
  * @param stageType Type of the stage.
- * @param group The number of the group.
+ * @param groupNumber Number of the group.
  */
-export function isFinalGroup(stageType: StageType, groupNumber: number) {
+export function isFinalGroup(stageType: StageType, groupNumber: number): boolean {
     return stageType === 'single_elimination' && groupNumber === 2 ||
         stageType === 'double_elimination' && groupNumber === 3;
 }
 
 /**
  * Returns the type of group the match is located into.
+ *
  * @param stageType Type of the stage.
- * @param groupNumber The number of the group.
+ * @param groupNumber Number of the group.
  */
 export function getMatchLocation(stageType: StageType, groupNumber: number): MatchLocation {
     if (isWinnerBracket(stageType, groupNumber))

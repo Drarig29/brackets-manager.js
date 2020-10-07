@@ -1,7 +1,7 @@
 /**
  * Type of an object implementing every ordering method.
  */
-type OrderingMap = { [key in import('brackets-model').SeedOrdering]: <T>(array: T[], ...args: any) => T[] };
+type OrderingMap = { [key in import('brackets-model').SeedOrdering]: <T>(array: T[], ...args: number[]) => T[] };
 
 /**
  * Omits the `id` property of a type.

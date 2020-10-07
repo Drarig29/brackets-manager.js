@@ -2,21 +2,35 @@ import { Group, Match, MatchGame, Participant, Round, Stage } from "brackets-mod
 import { IStorage } from "./storage";
 import * as helpers from "./helpers";
 
+interface StageData {
+    stage: Stage,
+    groups: Group[],
+    rounds: Round[],
+    matches: Match[],
+    participants: Participant[],
+}
+
 export class Get {
 
     private storage: IStorage;
 
+    /**
+     * Creates an instance of Get, which will handle retrieving information from the stage.
+     *
+     * @param storage The implementation of IStorage.
+     */
     constructor(storage: IStorage) {
         this.storage = storage;
     }
 
     /**
      * Returns the data needed to display a stage.
+     *
      * @param stageId ID of the stage.
      * 
      * For performance reasons, match games are not retrieved here. Use `matchChildren()` for that.
      */
-    public async stageData(stageId: number) {
+    public async stageData(stageId: number): Promise<StageData> {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -37,9 +51,10 @@ export class Get {
 
     /**
      * Returns the match games of a match.
+     *
      * @param parentId ID of the parent match.
      */
-    public async matchChildren(parentId: number) {
+    public async matchChildren(parentId: number): Promise<MatchGame[]> {
         const games = await this.storage.select<MatchGame>('match_game', { parent_id: parentId });
         if (!games) throw Error('Error getting match games (children).');
 
@@ -48,6 +63,7 @@ export class Get {
 
     /**
      * Returns the seeding of a stage.
+     *
      * @param stageId ID of the stage.
      */
     public async seeding(stageId: number): Promise<ParticipantSlot[]> {
@@ -62,6 +78,7 @@ export class Get {
 
     /**
      * Returns the seeding of a round-robin stage.
+     *
      * @param stageId ID of the stage.
      */
     private async roundRobinSeeding(stageId: number): Promise<ParticipantSlot[]> {
@@ -76,6 +93,7 @@ export class Get {
 
     /**
      * Returns the seeding of an elimination stage.
+     *
      * @param stageId ID of the stage.
      */
     private async eliminationSeeding(stageId: number): Promise<ParticipantSlot[]> {

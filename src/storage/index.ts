@@ -6,6 +6,7 @@ export type Table = 'participant' | 'stage' | 'group' | 'round' | 'match' | 'mat
 export interface CrudInterface {
     /**
      * Inserts a value in the database and returns its id.
+     *
      * @param table Where to insert.
      * @param value What to insert.
      */
@@ -13,6 +14,7 @@ export interface CrudInterface {
 
     /**
      * Inserts multiple values in the database.
+     *
      * @param table Where to insert.
      * @param values What to insert.
      */
@@ -20,12 +22,14 @@ export interface CrudInterface {
 
     /**
      * Gets all data from a table in the database. 
+     *
      * @param table Where to get from.
      */
     select<T>(table: Table): Promise<T[] | null>
 
     /**
      * Gets specific data from a table in the database.
+     *
      * @param table Where to get from.
      * @param id What to get.
      */
@@ -33,6 +37,7 @@ export interface CrudInterface {
 
     /**
      * Gets data from a table in the database with a filter.
+     *
      * @param table Where to get from.
      * @param filter An object to filter data.
      */
@@ -40,6 +45,7 @@ export interface CrudInterface {
 
     /**
      * Updates data in a table.
+     *
      * @param table Where to update.
      * @param id What to update.
      * @param value How to update.
@@ -48,6 +54,7 @@ export interface CrudInterface {
 
     /**
      * Updates data in a table.
+     *
      * @param table Where to update.
      * @param filter An object to filter data.
      * @param value How to update.
@@ -56,6 +63,7 @@ export interface CrudInterface {
 
     /**
      * Delete data in a table, based on a filter.
+     *
      * @param table Where to delete in.
      * @param filter An object to filter data.
      */

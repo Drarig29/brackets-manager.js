@@ -15,7 +15,7 @@ export const ordering: OrderingMap = {
     'inner_outer': <T>(array: T[]) => {
         if (array.length === 2)
             return array;
-        
+
         const size = array.length / 4;
 
         const innerPart = [array.slice(size, 2 * size), array.slice(2 * size, 3 * size)]; // [_, X, X, _]
@@ -32,6 +32,12 @@ export const ordering: OrderingMap = {
 
         const result: T[] = [];
 
+        /**
+         * Adds a part (inner or outer) of a part.
+         *
+         * @param part The part to process.
+         * @param method The method to use.
+         */
         function add(part: T[][], method: 'inner' | 'outer') {
             if (part[0].length > 0 && part[1].length > 0)
                 result.push(...methods[method](part));
@@ -63,19 +69,21 @@ export const ordering: OrderingMap = {
 
         for (let run = 0; run < array.length / groupCount; run++) {
             if (run % 2 === 0) {
-                for (let group = 0; group < groupCount; group++) {
+                for (let group = 0; group < groupCount; group++)
                     groups[group].push(array[run * groupCount + group]);
-                }
+
             } else {
-                for (let group = 0; group < groupCount; group++) {
+                for (let group = 0; group < groupCount; group++)
                     groups[groupCount - group - 1].push(array[run * groupCount + group]);
-                }
+
             }
         }
 
         return groups.flat();
     },
-    'groups.bracket_optimized': () => { throw Error('Not implemented.') },
+    'groups.bracket_optimized': () => {
+        throw Error('Not implemented.');
+    },
 }
 
 export const defaultMinorOrdering: { [key: number]: SeedOrdering[] } = {

@@ -13,6 +13,11 @@ export class BracketsManager {
     public update: Update;
     public get: Get;
 
+    /**
+     * Creates an instance of BracketsManager, which will handle all the stuff from the library.
+     *
+     * @param storageInterface An implementation of CrudInterface.
+     */
     constructor(storageInterface: CrudInterface) {
         const storage = (storageInterface as IStorage);
 
