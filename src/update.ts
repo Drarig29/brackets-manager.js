@@ -415,7 +415,7 @@ export class Update {
      */
     private async resetPrevious(previousMatches: Match[]) {
         for (const match of previousMatches) {
-            match.status = helpers.getMatchStatus([match.opponent1, match.opponent2]);
+            match.status = helpers.getMatchStatus(match);
             await this.storage.update('match', match.id, match);
         }
     }
@@ -478,16 +478,37 @@ export class Update {
         }
     }
 
+    //TODO: trouver des endroits où j'utilise plusieurs ids, et ne GARDER QUE LE DERNIER
+
     /**
      * Gets the matches leading to the given match.
      * @param match The current match.
      */
     private async getPreviousMatches(match: Match, matchLocation: MatchLocation, roundNumber: number): Promise<Match[]> {
-        // TODO: fix this method for cross group refs
-
         if (matchLocation === 'loser-bracket') {
-            const winnerBracket = await this.getWinnerBracket(match.stage_id);
+            const winnerBracket = await this.getUpperBracket(match.stage_id);
             return this.getPreviousMatchesLB(roundNumber, winnerBracket.id, match.number, match.group_id);
+        }
+
+        if (matchLocation === 'final-group') {
+            if (roundNumber === 1) {// TODO: do better.
+
+                const winnerBracket = await this.getUpperBracket(match.stage_id);
+                const rounds = await this.storage.select<Round>('round', { group_id: winnerBracket.id });
+                if (!rounds) throw Error('Error getting rounds.');
+
+                const upperBracketFinalMatch = await this.storage.selectFirst<Match>('match', {
+                    round_id: rounds[rounds.length - 1].id,
+                    number: 1
+                });
+
+                if (upperBracketFinalMatch === null)
+                    throw Error('Match not found.');
+
+                return [upperBracketFinalMatch];
+            } else {
+                return [await this.findMatch(match.group_id, roundNumber - 1, 1)];
+            }
         }
 
         if (roundNumber === 1)
@@ -710,10 +731,10 @@ export class Update {
     }
 
     /**
-     * Gets the winner bracket.
+     * Gets the upper bracket (the only bracket if single elimination or the winner bracket in double elimination).
      * @param stageId ID of the stage.
      */
-    private async getWinnerBracket(stageId: number) {
+    private async getUpperBracket(stageId: number) {
         const winnerBracket = await this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 1 });
         if (!winnerBracket) throw Error('Winner bracket not found.');
         return winnerBracket;

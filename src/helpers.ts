@@ -234,26 +234,6 @@ export function getMatchResult(match: MatchResults): Side | null {
 }
 
 /**
- * Returns the status of a match based on the presence of the opponents.
- * @param opponents The opponents of a match.
- */
-export function getMatchStatus(opponents: Duel): Status {
-    if (opponents[0] === null || opponents[1] === null) // At least one BYE.
-        return Status.Locked;
-
-    if (opponents[0].id === null && opponents[1].id === null) // Two TBD opponents.
-        return Status.Locked;
-
-    if (opponents[0].id === null || opponents[1].id === null) // One TBD opponent.
-        return Status.Waiting;
-
-    if (opponents[0].id !== null && opponents[1].id !== null) // All opponents set.
-        return Status.Ready;
-
-    return Status.Locked;
-}
-
-/**
  * Finds a position in a list of matches.
  * @param matches A list of matches to search into.
  * @param position The position to find.
@@ -320,6 +300,40 @@ export function isMatchParticipantLocked(match: MatchResults): boolean {
 }
 
 /**
+ * Returns the status of a match based on the presence of the opponents.
+ * @param opponents The opponents of a match.
+ */
+export function getMatchByeStatus(opponents: Duel): Status {
+    return getMatchStatus({
+        opponent1: opponents[0],
+        opponent2: opponents[1],
+    });
+}
+
+/**
+ * Returns the status of a match based on the results of a match.
+ * @param match Partial match results.
+ */
+export function getMatchStatus(match: Partial<MatchResults>): Status {
+    if (match.opponent1 === null || match.opponent2 === null) // At least one BYE.
+        return Status.Locked;
+
+    if (match.opponent1?.id === null && match.opponent2?.id === null) // Two TBD opponents.
+        return Status.Locked;
+
+    if (match.opponent1?.id === null || match.opponent2?.id === null) // One TBD opponent.
+        return Status.Waiting;
+
+    if (isMatchCompleted(match))
+        return Status.Completed;
+
+    if (isMatchStarted(match))
+        return Status.Running;
+
+    return Status.Ready;
+}
+
+/**
  * Updates a match results based on an input.
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
@@ -360,7 +374,7 @@ export function resetMatchResults(stored: MatchResults) {
         stored.opponent2.result = undefined;
     }
 
-    stored.status = getMatchStatus([stored.opponent1, stored.opponent2]);
+    stored.status = getMatchStatus(stored);
 }
 
 /**

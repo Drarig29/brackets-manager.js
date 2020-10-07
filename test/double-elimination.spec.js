@@ -1,3 +1,4 @@
+const { Status } = require('brackets-model');
 const chai = require('chai');
 const { sign } = require('crypto');
 chai.use(require("chai-as-promised"));
@@ -81,6 +82,12 @@ describe('Create double elimination stage', () => {
         assert.equal((await storage.select('group')).length, 3);
         assert.equal((await storage.select('round')).length, 3 + 4 + 2);
         assert.equal((await storage.select('match')).length, 15);
+    });
+});
+
+describe('Previous and next match update in double elimination stage', () => {
+    beforeEach(() => {
+        storage.reset();
     });
 
     it('should end a match and determine next matches', async () => {
@@ -210,12 +217,100 @@ describe('Create double elimination stage', () => {
 
         await manager.update.match({
             id: 0, // First match of WB round 1
-            opponent1: { score: 16, result: undefined },
-            opponent2: { score: 12 },
+            opponent1: { result: undefined },
         });
 
         const afterReset = await storage.select('match', 3); // Determined opponent for LB round 1
         assert.equal(afterReset.opponent1.id, null);
         assert.equal(afterReset.opponent1.position, 1); // It must stay.
+    });
+
+    it('should archive previous matches', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { grandFinal: 'double' },
+        });
+
+        await manager.update.match({
+            id: 0, // First match of WB round 1
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await manager.update.match({
+            id: 1, // Second match of WB round 1
+            opponent1: { score: 13 },
+            opponent2: { score: 16, result: 'win' },
+        });
+
+        await manager.update.match({
+            id: 2, // WB Final
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 9 },
+        });
+
+        // WB Final archived both WB round 1 matches
+        assert.equal((await storage.select('match', 0)).status, Status.Archived);
+        assert.equal((await storage.select('match', 1)).status, Status.Archived);
+
+        // Reset the result
+        await manager.update.match({
+            id: 2, // WB Final
+            opponent1: { result: undefined },
+        });
+
+        // Should remove the archived status
+        assert.equal((await storage.select('match', 0)).status, Status.Completed);
+        assert.equal((await storage.select('match', 1)).status, Status.Completed);
+
+        await manager.update.match({
+            id: 3, // Only match of LB round 1
+            opponent1: { score: 12, result: 'win' }, // Team 4
+            opponent2: { score: 8 },
+        });
+
+        // First round of LB archived both WB round 1 matches
+        assert.equal((await storage.select('match', 0)).status, Status.Archived);
+        assert.equal((await storage.select('match', 1)).status, Status.Archived);
+
+        await manager.update.match({
+            id: 2, // WB Final
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 9 },
+        });
+
+        await manager.update.match({
+            id: 4, // LB Final
+            opponent1: { score: 14, result: 'win' }, // Team 3
+            opponent2: { score: 7 },
+        });
+
+        assert.equal((await storage.select('match', 2)).status, Status.Archived);
+        assert.equal((await storage.select('match', 3)).status, Status.Archived);
+
+        // Force status of WB Final to completed to make sure the Grand Final sets it to Archived.
+        await storage.update('match', 2, {
+            ...await storage.select('match', 2),
+            status: Status.Completed,
+        });
+
+        await manager.update.match({
+            id: 5, // Grand Final round 1
+            opponent1: { score: 10 },
+            opponent2: { score: 16, result: 'win' }, // Team 3
+        });
+
+        assert.equal((await storage.select('match', 2)).status, Status.Archived);
+
+        await manager.update.match({
+            id: 6, // Grand Final round 2
+            opponent1: { score: 10 },
+            opponent2: { score: 16, result: 'win' }, // Team 3
+        });
+
+        assert.equal((await storage.select('match', 5)).status, Status.Archived);
     });
 });

@@ -290,7 +290,7 @@ export class Create {
      * @param childCount Child count for this match (number of games).
      */
     private async createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number) {
-        const status = helpers.getMatchStatus(opponents);
+        const status = helpers.getMatchByeStatus(opponents);
 
         const parentId = await this.insertMatch({
             number: matchNumber,
