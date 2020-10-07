@@ -367,7 +367,7 @@ export class Update {
      * @param stored The match stored in database.
      */
     private async updateRelatedMatches(stored: Match) {
-        const { roundNumber, roundCount } = await this.getRoundInfos(stored.stage_id, stored.group_id, stored.round_id);
+        const { roundNumber, roundCount } = await this.getRoundInfos(stored.group_id, stored.round_id);
 
         const stage = await this.storage.select<Stage>('stage', stored.stage_id);
         if (!stage) throw Error('Stage not found.');
@@ -465,8 +465,8 @@ export class Update {
      * Gets the number of a round based on its id and the count of rounds in the group.
      * @param roundId ID of the round.
      */
-    private async getRoundInfos(stageId: number, groupId: number, roundId: number) {
-        const rounds = await this.storage.select<Round>('round', { stage_id: stageId, group_id: groupId });
+    private async getRoundInfos(groupId: number, roundId: number) {
+        const rounds = await this.storage.select<Round>('round', { group_id: groupId });
         if (!rounds) throw Error('Error getting rounds.');
 
         const round = rounds.find(r => r.id === roundId);
@@ -478,74 +478,64 @@ export class Update {
         }
     }
 
-    //TODO: trouver des endroits où j'utilise plusieurs ids, et ne GARDER QUE LE DERNIER
-
     /**
      * Gets the matches leading to the given match.
      * @param match The current match.
      */
     private async getPreviousMatches(match: Match, matchLocation: MatchLocation, roundNumber: number): Promise<Match[]> {
-        if (matchLocation === 'loser-bracket') {
-            const winnerBracket = await this.getUpperBracket(match.stage_id);
-            return this.getPreviousMatchesLB(roundNumber, winnerBracket.id, match.number, match.group_id);
-        }
+        if (matchLocation === 'loser-bracket')
+            return this.getPreviousMatchesLB(match, roundNumber);
 
-        if (matchLocation === 'final-group') {
-            if (roundNumber === 1) {// TODO: do better.
-
-                const winnerBracket = await this.getUpperBracket(match.stage_id);
-                const rounds = await this.storage.select<Round>('round', { group_id: winnerBracket.id });
-                if (!rounds) throw Error('Error getting rounds.');
-
-                const upperBracketFinalMatch = await this.storage.selectFirst<Match>('match', {
-                    round_id: rounds[rounds.length - 1].id,
-                    number: 1
-                });
-
-                if (upperBracketFinalMatch === null)
-                    throw Error('Match not found.');
-
-                return [upperBracketFinalMatch];
-            } else {
-                return [await this.findMatch(match.group_id, roundNumber - 1, 1)];
-            }
-        }
+        if (matchLocation === 'final-group')
+            return this.getPreviousMatchesFinal(match, roundNumber);
 
         if (roundNumber === 1)
             return []; // The match is in the first round of an upper bracket.
 
-        return this.getMatchesBeforeMajorRound(roundNumber, match.group_id, match.number);
+        return this.getMatchesBeforeMajorRound(match, roundNumber);
+    }
+
+    private async getPreviousMatchesFinal(match: Match, roundNumber: number) {
+        if (roundNumber > 1)
+            return [await this.findMatch(match.group_id, roundNumber - 1, 1)];
+
+        const upperBracket = await this.getUpperBracket(match.stage_id);
+        const lastRound = await this.getLastRound(upperBracket.id);
+
+        const upperBracketFinalMatch = await this.storage.selectFirst<Match>('match', {
+            round_id: lastRound.id,
+            number: 1
+        });
+
+        if (upperBracketFinalMatch === null)
+            throw Error('Match not found.');
+
+        return [upperBracketFinalMatch];
     }
 
     /**
-     * Gets the matches leading to a given match from the loser bracket. 
-     * @param roundNumber Number of the current round.
-     * @param winnerBracketId ID of the winner bracket.
-     * @param matchNumber Number of the current match.
-     * @param groupId ID of the current group.
+     * Gets the matches leading to a given match from the loser bracket.
      */
-    private async getPreviousMatchesLB(roundNumber: number, winnerBracketId: number, matchNumber: number, groupId: number) {
+    private async getPreviousMatchesLB(match: Match, roundNumber: number) {
+        const winnerBracket = await this.getUpperBracket(match.stage_id);
         const roundNumberWB = Math.ceil((roundNumber + 1) / 2);
 
         if (roundNumber === 1)
-            return this.getMatchesBeforeFirstRoundLB(winnerBracketId, matchNumber, roundNumberWB);
+            return this.getMatchesBeforeFirstRoundLB(match, winnerBracket.id, roundNumberWB);
 
         if (roundNumber % 2 === 0)
-            return this.getMatchesBeforeMinorRoundLB(roundNumber, winnerBracketId, matchNumber, roundNumberWB, groupId);
+            return this.getMatchesBeforeMinorRoundLB(match, winnerBracket.id, roundNumber, roundNumberWB);
 
-        return this.getMatchesBeforeMajorRound(roundNumber, groupId, matchNumber);
+        return this.getMatchesBeforeMajorRound(match, roundNumber);
     }
 
     /**
      * Gets the matches leading to a given match in a major round.
-     * @param roundNumber Number of the current round.
-     * @param groupId ID of the current group.
-     * @param matchNumber Number of the current match.
      */
-    private async getMatchesBeforeMajorRound(roundNumber: number, groupId: number, matchNumber: number) {
+    private async getMatchesBeforeMajorRound(match: Match, roundNumber: number) {
         return [
-            await this.findMatch(groupId, roundNumber - 1, matchNumber * 2 - 1),
-            await this.findMatch(groupId, roundNumber - 1, matchNumber * 2),
+            await this.findMatch(match.group_id, roundNumber - 1, match.number * 2 - 1),
+            await this.findMatch(match.group_id, roundNumber - 1, match.number * 2),
         ];
     }
 
@@ -555,10 +545,10 @@ export class Update {
      * @param matchNumber Number of the current match.
      * @param roundNumberWB The number of the previous round in the winner bracket.
      */
-    private async getMatchesBeforeFirstRoundLB(winnerBracketId: number, matchNumber: number, roundNumberWB: number) {
+    private async getMatchesBeforeFirstRoundLB(match: Match, winnerBracketId: number, roundNumberWB: number) {
         return [
-            await this.findMatch(winnerBracketId, roundNumberWB, matchNumber * 2 - 1),
-            await this.findMatch(winnerBracketId, roundNumberWB, matchNumber * 2),
+            await this.findMatch(winnerBracketId, roundNumberWB, match.number * 2 - 1),
+            await this.findMatch(winnerBracketId, roundNumberWB, match.number * 2),
         ];
     }
 
@@ -570,10 +560,10 @@ export class Update {
      * @param roundNumberWB The number of the previous round in the winner bracket.
      * @param groupId ID of the current group.
      */
-    private async getMatchesBeforeMinorRoundLB(roundNumber: number, winnerBracketId: number, matchNumber: number, roundNumberWB: number, groupId: number) {
+    private async getMatchesBeforeMinorRoundLB(match: Match, winnerBracketId: number, roundNumber: number, roundNumberWB: number) {
         return [
-            await this.findMatch(winnerBracketId, roundNumberWB, matchNumber),
-            await this.findMatch(groupId, roundNumber - 1, matchNumber),
+            await this.findMatch(winnerBracketId, roundNumberWB, match.number),
+            await this.findMatch(match.group_id, roundNumber - 1, match.number),
         ];
     }
 
@@ -716,6 +706,16 @@ export class Update {
         const firstRound = await this.storage.selectFirst<Round>('round', { stage_id: stageId, number: 1 });
         if (!firstRound) throw Error('Round not found.');
         return firstRound;
+    }
+
+    /**
+     * Gets the last round of a group.
+     * @param groupId ID of the group.
+     */
+    private async getLastRound(groupId: number) {
+        const round = await this.storage.selectLast<Round>('round', { group_id: groupId });
+        if (!round) throw Error('Error getting rounds.');
+        return round;
     }
 
     /**

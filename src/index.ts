@@ -13,17 +13,22 @@ export class BracketsManager {
     public update: Update;
     public get: Get;
 
-    constructor(storage: CrudInterface) {
-        (storage as IStorage).selectFirst = async <T>(table: Table, filter: Partial<T>) => {
+    constructor(storageInterface: CrudInterface) {
+        const storage = (storageInterface as IStorage);
+
+        storage.selectFirst = async <T>(table: Table, filter: Partial<T>) => {
             const results = await this.storage.select<T>(table, filter);
-
-            if (!results || results.length === 0)
-                return null;
-
+            if (!results || results.length === 0) return null;
             return results[0];
         }
 
-        this.storage = storage as IStorage;
+        storage.selectLast = async <T>(table: Table, filter: Partial<T>) => {
+            const results = await this.storage.select<T>(table, filter);
+            if (!results || results.length === 0) return null;
+            return results[results.length - 1];
+        }
+
+        this.storage = storage;
         this.create = create;
         this.update = new Update(this.storage);
         this.get = new Get(this.storage);

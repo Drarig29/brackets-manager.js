@@ -64,4 +64,5 @@ export interface CrudInterface {
 
 export interface IStorage extends CrudInterface {
     selectFirst<T>(table: Table, filter: Partial<T>): Promise<T | null>
+    selectLast<T>(table: Table, filter: Partial<T>): Promise<T | null>
 }
