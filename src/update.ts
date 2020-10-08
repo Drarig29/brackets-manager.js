@@ -112,10 +112,12 @@ export class Update {
 
         helpers.ensureNotRoundRobin(stage);
 
-        const rounds = await this.getOrderedRounds(stage);
+        const roundsToOrder = await this.getOrderedRounds(stage);
+        if (seedOrdering.length !== roundsToOrder.length)
+            throw Error('The count of seed orderings is incorrect.');
 
-        for (let i = 0; i < rounds.length; i++)
-            await this.updateRoundOrdering(rounds[i], seedOrdering[i]);
+        for (let i = 0; i < roundsToOrder.length; i++)
+            await this.updateRoundOrdering(roundsToOrder[i], seedOrdering[i]);
     }
 
     /**
@@ -151,12 +153,14 @@ export class Update {
 
         const stage = await this.storage.select<Stage>('stage', round.stage_id);
         if (!stage) throw Error('Stage not found.');
+        if (stage.settings.size === undefined) throw Error('Undefined stage size.');
 
         const group = await this.storage.select<Group>('group', round.group_id);
         if (!group) throw Error('Group not found.');
 
         const inLoserBracket = helpers.isLoserBracket(stage.type, group.number);
-        const seeds = helpers.getSeeds(inLoserBracket, round.number, matches.length);
+        const roundCountLB = helpers.lowerBracketRoundCount(stage.settings.size);
+        const seeds = helpers.getSeeds(inLoserBracket, round.number, roundCountLB, matches.length);
         const positions = ordering[method](seeds);
 
         await this.applyRoundOrdering(round.number, matches, positions);
@@ -266,7 +270,7 @@ export class Update {
         if (stage.type === 'single_elimination')
             return this.getOrderedRoundsSingleElimination(stage.id);
 
-        return this.getOrderedRoundsDoubleElimination(stage.id, stage.settings.size);
+        return this.getOrderedRoundsDoubleElimination(stage.id);
     }
 
     /**
@@ -282,17 +286,21 @@ export class Update {
      * Gets all the rounds that contain ordered participants in a double elimination stage.
      *
      * @param stageId ID of the stage.
-     * @param stageSize Size of the stage.
      */
-    private async getOrderedRoundsDoubleElimination(stageId: number, stageSize: number): Promise<Round[]> {
+    private async getOrderedRoundsDoubleElimination(stageId: number): Promise<Round[]> {
         // Getting all rounds instead of cherry-picking them is the least expensive.
         const rounds = await this.storage.select<Round>('round', { stage_id: stageId });
         if (!rounds) throw Error('Error getting rounds.');
 
-        const roundCountWB = helpers.upperBracketRoundCount(stageSize);
-        const roundsLB = rounds.slice(roundCountWB);
+        const loserBracket = await this.getLoserBracket(stageId);
+        if (!loserBracket) throw Error('Loser bracket not found.');
 
-        return [rounds[0], ...roundsLB.filter((_, i) => i === 0 || i % 2 === 1)];
+        const firstRoundWB = rounds[0];
+
+        const roundsLB = rounds.filter(r => r.group_id === loserBracket.id);
+        const orderedRoundsLB = roundsLB.filter(r => helpers.isOrderingSupportedLoserBracket(r.number, roundsLB.length));
+
+        return [firstRoundWB, ...orderedRoundsLB];
     }
 
     /**

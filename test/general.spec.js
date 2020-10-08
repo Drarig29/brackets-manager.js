@@ -126,7 +126,7 @@ describe('Special cases', () => {
 
     it('should throw if the tournament id of the stage is not provided', async () => {
         await assert.isRejected(manager.create({
-            name:'Example',
+            name: 'Example',
             type: 'single_elimination',
         }));
     });
@@ -279,7 +279,15 @@ describe('Seeding and ordering in elimination', () => {
     });
 
     it('should throw if round does not support ordering', async () => {
-        await assert.isRejected(manager.update.roundOrdering(6, 'natural'), 'This round does not support ordering.');
+        await assert.isRejected(
+            manager.update.roundOrdering(6, 'natural'), // LB Round 2
+            'This round does not support ordering.',
+        );
+
+        await assert.isRejected(
+            manager.update.roundOrdering(9, 'natural'), // LB Round 6 (last minor round)
+            'This round does not support ordering.',
+        );
     });
 
     it('should throw if at least one match is running or completed', async () => {
@@ -299,7 +307,7 @@ describe('Seeding and ordering in elimination', () => {
     });
 
     it('should update all the ordering of a stage at once', async () => {
-        await manager.update.ordering(0, ['pair_flip', 'half_shift', 'reverse', 'natural', 'reverse']);
+        await manager.update.ordering(0, ['pair_flip', 'half_shift', 'reverse', 'natural']);
 
         const firstRoundMatchWB = await storage.select('match', 0);
         assert.equal(firstRoundMatchWB.opponent1.position, 2);

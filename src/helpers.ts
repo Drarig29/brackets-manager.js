@@ -716,8 +716,8 @@ export function transitionToMajor(previousDuels: Duels): Duels {
  * @param losers Losers from the previous major round.
  * @param method The ordering method for the losers.
  */
-export function transitionToMinor(previousDuels: Duels, losers: ParticipantSlot[], method: SeedOrdering): Duels {
-    const orderedLosers = ordering[method](losers);
+export function transitionToMinor(previousDuels: Duels, losers: ParticipantSlot[], method: SeedOrdering | null): Duels {
+    const orderedLosers = method ? ordering[method](losers) : losers;
     const currentDuelCount = previousDuels.length;
     const currentDuels = [];
 
@@ -808,10 +808,11 @@ export function getChildGamesResults(games: MatchGame[]): Scores {
  *
  * @param inLoserBracket Whether the match is in the loser bracket.
  * @param roundNumber The number of the current round.
+ * @param roundCountLB The count of rounds in loser bracket.
  * @param matchCount The count of matches in the round.
  */
-export function getSeeds(inLoserBracket: boolean, roundNumber: number, matchCount: number): number[] {
-    const seedCount = getSeedCount(inLoserBracket, roundNumber, matchCount);
+export function getSeeds(inLoserBracket: boolean, roundNumber: number, roundCountLB: number, matchCount: number): number[] {
+    const seedCount = getSeedCount(inLoserBracket, roundNumber, roundCountLB, matchCount);
     return Array.from(Array(seedCount), (_, i) => i + 1);
 }
 
@@ -820,10 +821,11 @@ export function getSeeds(inLoserBracket: boolean, roundNumber: number, matchCoun
  *
  * @param inLoserBracket Whether the match is in the loser bracket.
  * @param roundNumber The number of the current round.
+ * @param roundCountLB The count of rounds in loser bracket.
  * @param matchCount The count of matches in the round.
  */
-export function getSeedCount(inLoserBracket: boolean, roundNumber: number, matchCount: number): number {
-    ensureOrderingSupported(inLoserBracket, roundNumber);
+export function getSeedCount(inLoserBracket: boolean, roundNumber: number, roundCountLB: number, matchCount: number): number {
+    ensureOrderingSupported(inLoserBracket, roundNumber, roundCountLB);
 
     return roundNumber === 1 ?
         matchCount * 2 : // Two per match for upper or lower bracket round 1.
@@ -831,24 +833,56 @@ export function getSeedCount(inLoserBracket: boolean, roundNumber: number, match
 }
 
 /**
- * Throws if the ordering is not supported on the current round.
+ * Throws if the ordering is not supported on the given round number.
  *
  * @param inLoserBracket Whether the match is in the loser bracket.
- * @param roundNumber The number of the current round.
+ * @param roundNumber The number of the round.
+ * @param roundCountLB The count of rounds in loser bracket.
  */
-export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: number): void {
-    if ((!inLoserBracket && roundNumber !== 1) || // Upper bracket and not round 1.
-        (inLoserBracket && !(roundNumber === 1 || roundNumber % 2 === 0))) // Loser bracket and not round 1 or not minor round.
+export function ensureOrderingSupported(inLoserBracket: boolean, roundNumber: number, roundCountLB: number): void {
+    if (inLoserBracket && !isOrderingSupportedLoserBracket(roundNumber, roundCountLB))
+        throw Error('This round does not support ordering.');
+
+    if (!inLoserBracket && !isOrderingSupportedUpperBracket(roundNumber))
         throw Error('This round does not support ordering.');
 }
 
 /**
- * Returns the number of rounds an upper bracket must have, given the number of participants in the stage.
+ * Indicates whether the ordering is supported in upper bracket, given the round number.
+ *
+ * @param roundNumber The number of the round.
+ */
+export function isOrderingSupportedUpperBracket(roundNumber: number): boolean {
+    return roundNumber === 1;
+}
+
+/**
+ * Indicates whether the ordering is supported in loser bracket, given the round number.
+ *
+ * @param roundNumber The number of the round.
+ * @param roundCount The count of rounds.
+ */
+export function isOrderingSupportedLoserBracket(roundNumber: number, roundCount: number): boolean {
+    return roundNumber === 1 || (roundNumber % 2 === 0 && roundNumber < roundCount);
+}
+
+/**
+ * Returns the number of rounds an upper bracket has given the number of participants in the stage.
  *
  * @param participantCount The number of participants in the stage.
  */
 export function upperBracketRoundCount(participantCount: number): number {
     return Math.log2(participantCount);
+}
+
+/**
+ * Returns the number of rounds a lower bracket has given the number of participants in a double elimination stage.
+ *
+ * @param participantCount The number of participants in the stage.
+ */
+export function lowerBracketRoundCount(participantCount: number): number {
+    const roundPairCount = upperBracketRoundCount(participantCount) - 1;
+    return roundPairCount * 2;
 }
 
 /**
