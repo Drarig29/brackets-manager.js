@@ -67,7 +67,7 @@ describe('Create a round-robin stage', () => {
             ],
             settings: {
                 groupCount: 2,
-                seedOrdering: ['groups.snake'],
+                seedOrdering: ['groups.seed_optimized'],
             },
         });
 

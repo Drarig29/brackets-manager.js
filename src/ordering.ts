@@ -64,7 +64,7 @@ export const ordering: OrderingMap = {
 
         return result;
     },
-    'groups.snake': <T>(array: T[], groupCount: number) => {
+    'groups.seed_optimized': <T>(array: T[], groupCount: number) => {
         const groups = Array.from(Array(groupCount), (_): T[] => []);
 
         for (let run = 0; run < array.length / groupCount; run++) {

@@ -342,7 +342,7 @@ describe('Get module', () => {
             settings: {
                 groupCount: 8,
                 size: 32,
-                seedOrdering: ['groups.snake'],
+                seedOrdering: ['groups.seed_optimized'],
             },
         });
 

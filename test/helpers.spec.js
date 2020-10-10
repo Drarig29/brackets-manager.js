@@ -102,21 +102,21 @@ describe('Helpers', () => {
     });
 
     it('should make a snake ordering for groups', () => {
-        assert.deepEqual(ordering["groups.snake"]([1, 2, 3, 4, 5, 6, 7, 8], 4), [
+        assert.deepEqual(ordering["groups.seed_optimized"]([1, 2, 3, 4, 5, 6, 7, 8], 4), [
             1, 8, // 1st group
             2, 7, // 2nd group
             3, 6, // 3rd group
             4, 5, // 4th group
         ]);
 
-        assert.deepEqual(ordering["groups.snake"]([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], 4), [
+        assert.deepEqual(ordering["groups.seed_optimized"]([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], 4), [
             1, 8, 9, 16,  // 1st group
             2, 7, 10, 15, // 2nd group
             3, 6, 11, 14, // 3rd group
             4, 5, 12, 13, // 4th group
         ]);
 
-        assert.deepEqual(ordering["groups.snake"]([1, 2, 3, 4, 5, 6, 7, 8], 2), [
+        assert.deepEqual(ordering["groups.seed_optimized"]([1, 2, 3, 4, 5, 6, 7, 8], 2), [
             1, 4, 5, 8, // 1st group
             2, 3, 6, 7, // 2nd group
         ]);
