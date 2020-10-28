@@ -103,7 +103,10 @@ export class Create {
 
         const slots = await this.getSlots();
         const stageId = await this.createStage();
-        const { losers } = await this.createStandardBracket(stageId, 1, slots);
+        const method = this.getStandardBracketFirstRoundOrdering();
+        const ordered = ordering[method](slots);
+
+        const { losers } = await this.createStandardBracket(stageId, 1, ordered);
         await this.createConsolationFinal(stageId, losers);
 
         return stageId;
@@ -121,8 +124,26 @@ export class Create {
 
         const slots = await this.getSlots();
         const stageId = await this.createStage();
-        const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, slots);
+        const method = this.getStandardBracketFirstRoundOrdering();
+        const ordered = ordering[method](slots);
 
+        if (this.stage.settings?.skipFirstRound) {
+            const directInWb = ordered.filter((_, i) => i % 2 === 0);
+            const directInLb = ordered.filter((_, i) => i % 2 === 1);
+
+            const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, directInWb);
+
+            if (this.stage.settings?.size! > 2) {
+                const winnerLb = await this.createLowerBracket(stageId, 2, [directInLb, ...losersWb]);
+                await this.createGrandFinal(stageId, winnerWb, winnerLb);
+            }
+    
+            return stageId;    
+        }
+
+        const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, ordered);
+
+        // TODO: remove this comment and do a "isdoubleEliminationNecessary()"
         // If the size is only two (less is impossible), then a lower bracket and a grand final are not necessary.
         // Here, the size has already been checked by getSlots().
         if (this.stage.settings?.size! > 2) {
@@ -170,9 +191,6 @@ export class Create {
         losers: ParticipantSlot[][],
         winner: ParticipantSlot,
     }> {
-        const method = this.getStandardBracketFirstRoundOrdering();
-        const ordered = ordering[method](slots);
-
         const roundCount = helpers.upperBracketRoundCount(slots.length);
         const groupId = await this.insertGroup({
             stage_id: stageId,
@@ -182,7 +200,7 @@ export class Create {
         if (groupId === -1)
             throw Error('Could not insert the group.');
 
-        let duels = helpers.makePairs(ordered);
+        let duels = helpers.makePairs(slots);
         let roundNumber = 1;
 
         const losers: ParticipantSlot[][] = [];
@@ -720,7 +738,7 @@ export class Create {
     private async createGrandFinal(stageId: number, winnerWb: ParticipantSlot, winnerLb: ParticipantSlot) {
         // No Grand Final by default.
         const grandFinal = this.stage.settings?.grandFinal;
-        if (grandFinal === undefined) return;
+        if (grandFinal === 'none') return;
 
         // One duel by default.
         const finalDuels: Duels = [[winnerWb, winnerLb]];
