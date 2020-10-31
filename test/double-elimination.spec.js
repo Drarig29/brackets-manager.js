@@ -348,18 +348,50 @@ describe('Skip first round', () => {
             settings: {
                 seedOrdering: ['natural'],
                 skipFirstRound: true,
+                grandFinal: 'double',
             },
         });
     });
 
     it('should create a double elimination stage with skip first round option', async () => {
-        assert.equal((await storage.select('group')).length, 2);
-        assert.equal((await storage.select('round')).length, 3 + 6); // One round less in WB.
-        assert.equal((await storage.select('match')).length, (4 + 2 + 1) + (4 + 4 + 2 + 2 + 1 + 1));
+        assert.equal((await storage.select('group')).length, 3);
+        assert.equal((await storage.select('round')).length, 3 + 6 + 2); // One round less in WB.
+        assert.equal((await storage.select('match')).length, (4 + 2 + 1) + (4 + 4 + 2 + 2 + 1 + 1) + (1 + 1));
 
         assert.equal((await storage.select('round', 0)).number, 1); // Even though the "real" first round is skipped, the stored first round's number should be 1.
 
         assert.equal((await storage.select('match', 0)).opponent1.id, 0); // First match of WB.
         assert.equal((await storage.select('match', 7)).opponent1.id, 1); // First match of LB.
+    });
+
+    it('should choose the correct previous and next matches', async () => {
+        await manager.update.match({ id: 0, opponent1: { result: 'win' } });
+        assert.equal((await storage.select('match', 7)).opponent1.id, 1); // First match of LB Round 1 (must stay).
+        assert.equal((await storage.select('match', 11)).opponent1.id, 2); // First match of LB Round 2 (must be updated).
+
+        await manager.update.match({ id: 1, opponent1: { result: 'win' } });
+        assert.equal((await storage.select('match', 7)).opponent2.id, 3); // First match of LB Round 1 (must stay).
+        assert.equal((await storage.select('match', 12)).opponent1.id, 6); // Second match of LB Round 2 (must be updated).
+
+        await manager.update.match({ id: 4, opponent1: { result: 'win' } }); // First match of WB Round 2.
+        assert.equal((await storage.select('match', 17)).opponent1.id, 4); // First match of LB Round 4.
+
+        await manager.update.match({ id: 7, opponent1: { result: 'win' } }); // First match of LB Round 1.
+        assert.equal((await storage.select('match', 11)).opponent2.id, 1); // First match of LB Round 2.
+
+        for (let i = 2; i < 21; i++)
+            await manager.update.match({ id: i, opponent1: { result: 'win' } });
+
+        assert.equal((await storage.select('match', 15)).opponent1.id, 2); // First match of LB Round 3.
+
+        assert.equal((await storage.select('match', 21)).opponent1.id, 0); // GF Round 1.
+        assert.equal((await storage.select('match', 21)).opponent2.id, 8); // GF Round 1.
+
+        await manager.update.match({ id: 21, opponent2: { result: 'win' } });
+
+        assert.equal((await storage.select('match', 21)).opponent1.id, 0); // GF Round 2.
+        assert.equal((await storage.select('match', 22)).opponent2.id, 8); // GF Round 2.
+
+        await manager.update.match({ id: 22, opponent2: { result: 'win' } });
     });
 });

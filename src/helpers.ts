@@ -252,11 +252,9 @@ export function findPosition(matches: Match[], position: number): ParticipantRes
 
 /**
  * Gets the side where the winner of the given match will go in the next match.
- *
- * @param match The current match.
  */
-export function getSide(match: Match): Side {
-    return match.number % 2 === 1 ? 'opponent1' : 'opponent2';
+export function getSide(matchNumber: number): Side {
+    return matchNumber % 2 === 1 ? 'opponent1' : 'opponent2';
 }
 
 /**
@@ -401,12 +399,18 @@ export function getOpponentId(match: Match, side: Side): number | null {
 /**
  * Gets the side the winner of the current match will go to in the next match.
  * 
- * @param match The current match.
  * @param matchLocation Location of the current match.
  */
-export function getNextSide(match: Match, matchLocation: MatchLocation): Side {
-    // For loser-bracket, the nextSide is always opponent2 because it comes from the same bracket and it's a better representation in the viewer.
-    return matchLocation === 'loser-bracket' ? 'opponent2' : getSide(match);
+export function getNextSide(matchNumber: number, roundNumber: number, roundCount: number, matchLocation: MatchLocation): Side {
+    // The nextSide comes from the same bracket.
+    if (matchLocation === 'loser-bracket' && roundNumber % 2 === 1)
+        return 'opponent2';
+
+    // The nextSide comes from the loser bracket to the final group.
+    if (matchLocation === 'loser-bracket' && roundNumber === roundCount)
+        return 'opponent2';
+
+    return getSide(matchNumber);
 }
 
 /**
@@ -416,7 +420,7 @@ export function getNextSide(match: Match, matchLocation: MatchLocation): Side {
  * @param nextSide The side the opponent will be on in the next match.
  */
 export function getNextSideLoserBracket(roundNumber: number, nextSide: Side): Side {
-    // For rounds other than the first, the nextSide is always opponent1 because it comes from the upper bracket and it's a better representation in the viewer.
+    // For rounds other than the first, the nextSide is always opponent1 because it comes from the upper bracket.
     return roundNumber === 1 ? nextSide : 'opponent1';
 }
 
