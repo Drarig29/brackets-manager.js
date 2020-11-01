@@ -1,6 +1,6 @@
 import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Stage, StageType } from "brackets-model";
 import { ordering } from "./ordering";
-import { MatchLocation } from "./update";
+import { BracketType } from "./update";
 
 /**
  * Distributes participants in rounds for a round-robin group.
@@ -141,7 +141,7 @@ export function ensureValidSize(participantCount: number): void {
         throw Error('Impossible to create an empty stage. If you want an empty seeding, just set the size of the stage.');
 
     if (participantCount < 2)
-        throw Error('bka')
+        throw Error('Impossible to create a stage with less than 2 participants.');
 
     if (!Number.isInteger(Math.log2(participantCount)))
         throw Error('The library only supports a participant count which is a power of two.');
@@ -252,6 +252,8 @@ export function findPosition(matches: Match[], position: number): ParticipantRes
 
 /**
  * Gets the side where the winner of the given match will go in the next match.
+ *
+ * @param matchNumber Number of the match.
  */
 export function getSide(matchNumber: number): Side {
     return matchNumber % 2 === 1 ? 'opponent1' : 'opponent2';
@@ -397,11 +399,28 @@ export function getOpponentId(match: Match, side: Side): number | null {
 }
 
 /**
+ * Gets the origin position of a side of a match.
+ *
+ * @param match The match.
+ * @param side The side.
+ */
+export function getOriginPosition(match: Match, side: Side): number {
+    const matchNumber = match[side]?.position;
+    if (matchNumber === undefined)
+        throw Error('Position is undefined.');
+
+    return matchNumber;
+}
+
+/**
  * Gets the side the winner of the current match will go to in the next match.
- * 
+ *
+ * @param matchNumber Number of the current match.
+ * @param roundNumber Number of the current round.
+ * @param roundCount Count of rounds.
  * @param matchLocation Location of the current match.
  */
-export function getNextSide(matchNumber: number, roundNumber: number, roundCount: number, matchLocation: MatchLocation): Side {
+export function getNextSide(matchNumber: number, roundNumber: number, roundCount: number, matchLocation: BracketType): Side {
     // The nextSide comes from the same bracket.
     if (matchLocation === 'loser-bracket' && roundNumber % 2 === 1)
         return 'opponent2';
@@ -415,13 +434,21 @@ export function getNextSide(matchNumber: number, roundNumber: number, roundCount
 
 /**
  * Gets the side the winner of the current match in loser bracket will go in the next match.
- * 
+ *
+ * @param matchNumber Number of the match.
+ * @param nextMatch The next match.
  * @param roundNumber Number of the current round.
- * @param nextSide The side the opponent will be on in the next match.
  */
-export function getNextSideLoserBracket(roundNumber: number, nextSide: Side): Side {
-    // For rounds other than the first, the nextSide is always opponent1 because it comes from the upper bracket.
-    return roundNumber === 1 ? nextSide : 'opponent1';
+export function getNextSideLoserBracket(matchNumber: number, nextMatch: Match, roundNumber: number): Side {
+    // The nextSide comes from the WB.
+    if (roundNumber > 1)
+        return 'opponent1';
+
+    // The nextSide comes from the WB round 1. 
+    if (nextMatch.opponent1?.position === matchNumber)
+        return 'opponent1';
+
+    return 'opponent2';
 }
 
 export type SetNextOpponent = (nextMatches: Match[], index: number, nextSide: Side, match?: Match, currentSide?: Side) => void;
@@ -720,7 +747,7 @@ export function transitionToMajor(previousDuels: Duels): Duels {
  * @param losers Losers from the previous major round.
  * @param method The ordering method for the losers.
  */
-export function transitionToMinor(previousDuels: Duels, losers: ParticipantSlot[], method: SeedOrdering | null): Duels {
+export function transitionToMinor(previousDuels: Duels, losers: ParticipantSlot[], method?: SeedOrdering): Duels {
     const orderedLosers = method ? ordering[method](losers) : losers;
     const currentDuelCount = previousDuels.length;
     const currentDuels = [];
@@ -875,8 +902,57 @@ export function isOrderingSupportedLoserBracket(roundNumber: number, roundCount:
  *
  * @param participantCount The number of participants in the stage.
  */
-export function upperBracketRoundCount(participantCount: number): number {
+export function getUpperBracketRoundCount(participantCount: number): number {
     return Math.log2(participantCount);
+}
+
+/**
+ * Returns the count of round pairs (major & minor) in a loser bracket.
+ *
+ * @param participantCount The number of participants in the stage.
+ */
+export function getRoundPairCount(participantCount: number): number {
+    return getUpperBracketRoundCount(participantCount) - 1;
+}
+
+/**
+ * Returns the real (because of loser ordering) number of a match in a loser bracket.
+ *
+ * @param participantCount The number of participants in a stage.
+ * @param roundNumber Number of the round.
+ * @param matchNumber Number of the match.
+ * @param method The method used for the round.
+ */
+export function findLoserMatchNumber(participantCount: number, roundNumber: number, matchNumber: number, method?: SeedOrdering): number {
+    const matchCount = getLoserRoundMatchCount(participantCount, roundNumber);
+    const matchNumbers = Array.from(Array(matchCount), (_, i) => i + 1);
+    const ordered = method ? ordering[method](matchNumbers) : matchNumbers;
+    const actualMatchNumberLB = ordered.indexOf(matchNumber) + 1;
+    return actualMatchNumberLB;
+}
+
+/**
+ * Returns the count of matches in a round of a loser bracket.
+ *
+ * @param participantCount The number of participants in a stage.
+ * @param roundNumber Number of the round.
+ */
+export function getLoserRoundMatchCount(participantCount: number, roundNumber: number): number {
+    const roundPairIndex = Math.ceil(roundNumber / 2) - 1;
+    const roundPairCount = getRoundPairCount(participantCount);
+    const matchCount = Math.pow(2, roundPairCount - roundPairIndex - 1);
+    return matchCount;
+}
+
+/**
+ * Returns the ordering method of a round of a loser bracket.
+ *
+ * @param seedOrdering The list of seed orderings.
+ * @param roundNumber Number of the round.
+ */
+export function getLoserOrdering(seedOrdering: SeedOrdering[], roundNumber: number): SeedOrdering | undefined {
+    const orderingIndex = 1 + Math.floor(roundNumber / 2);
+    return seedOrdering[orderingIndex];
 }
 
 /**
@@ -885,7 +961,7 @@ export function upperBracketRoundCount(participantCount: number): number {
  * @param participantCount The number of participants in the stage.
  */
 export function lowerBracketRoundCount(participantCount: number): number {
-    const roundPairCount = upperBracketRoundCount(participantCount) - 1;
+    const roundPairCount = getRoundPairCount(participantCount);
     return roundPairCount * 2;
 }
 
@@ -956,7 +1032,7 @@ export function isFinalGroup(stageType: StageType, groupNumber: number): boolean
  * @param stageType Type of the stage.
  * @param groupNumber Number of the group.
  */
-export function getMatchLocation(stageType: StageType, groupNumber: number): MatchLocation {
+export function getMatchLocation(stageType: StageType, groupNumber: number): BracketType {
     if (isWinnerBracket(stageType, groupNumber))
         return 'winner-bracket';
 

@@ -137,8 +137,8 @@ export class Create {
                 const winnerLb = await this.createLowerBracket(stageId, 2, [directInLb, ...losersWb]);
                 await this.createGrandFinal(stageId, winnerWb, winnerLb);
             }
-    
-            return stageId;    
+
+            return stageId;
         }
 
         const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, ordered);
@@ -191,7 +191,7 @@ export class Create {
         losers: ParticipantSlot[][],
         winner: ParticipantSlot,
     }> {
-        const roundCount = helpers.upperBracketRoundCount(slots.length);
+        const roundCount = helpers.getUpperBracketRoundCount(slots.length);
         const groupId = await this.insertGroup({
             stage_id: stageId,
             number,
@@ -226,11 +226,8 @@ export class Create {
      * @param losers One list of losers per upper bracket round.
      */
     private async createLowerBracket(stageId: number, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
-        // The first pair of rounds (major & minor) takes the **first two** lists of losers (hence the -1).
-        const roundPairCount = losers.length - 1;
-
-        // The first list of losers contains the input for the bracket.
-        const participantCount = losers[0].length * 4;
+        const participantCount = this.stage.settings?.size!;
+        const roundPairCount = helpers.getRoundPairCount(participantCount);
 
         let losersId = 0;
 
@@ -379,7 +376,7 @@ export class Create {
      * @param losers The losers going from the WB.
      * @param method The ordering method to apply to the losers.
      */
-    private getCurrentDuels(previousDuels: Duels, currentDuelCount: number, major: false, losers: ParticipantSlot[], method: SeedOrdering | null): Duels;
+    private getCurrentDuels(previousDuels: Duels, currentDuelCount: number, major: false, losers: ParticipantSlot[], method?: SeedOrdering): Duels;
 
     /**
      * Generic implementation.
@@ -390,7 +387,7 @@ export class Create {
      * @param losers Only for minor rounds of loser bracket.
      * @param method Only for minor rounds. Ordering method for the losers.
      */
-    private getCurrentDuels(previousDuels: Duels, currentDuelCount: number, major?: boolean, losers?: ParticipantSlot[], method?: SeedOrdering | null): Duels {
+    private getCurrentDuels(previousDuels: Duels, currentDuelCount: number, major?: boolean, losers?: ParticipantSlot[], method?: SeedOrdering): Duels {
         if ((major === undefined || major === true) && previousDuels.length === currentDuelCount) {
             // First round.
             return previousDuels;
@@ -403,7 +400,7 @@ export class Create {
 
         // From major to minor (LB).
         // Losers and method won't be undefined.
-        return helpers.transitionToMinor(previousDuels, losers!, method!);
+        return helpers.transitionToMinor(previousDuels, losers!, method);
     }
 
     /**
@@ -554,10 +551,10 @@ export class Create {
      * @param index Index of the minor round.
      * @param minorRoundCount Number of minor rounds.
      */
-    private getMinorOrdering(participantCount: number, index: number, minorRoundCount: number): SeedOrdering | null {
+    private getMinorOrdering(participantCount: number, index: number, minorRoundCount: number): SeedOrdering | undefined {
         // No ordering for the last minor round. There is only one participant to order.
         if (index === minorRoundCount - 1)
-            return null;
+            return undefined;
 
         return this.getOrdering(2 + index, 'elimination', defaultMinorOrdering[participantCount][1 + index]);
     }

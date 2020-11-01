@@ -143,7 +143,7 @@ describe('Previous and next match update in double elimination stage', () => {
 
         assert.equal(
             (await storage.select('match', 19)).opponent2.id, // Determined opponent for LB round 2
-            (await storage.select('match', 0)).opponent2.id, // Loser of second match round 1
+            (await storage.select('match', 0)).opponent2.id, // Loser of first match round 1
         );
     });
 
@@ -325,6 +325,55 @@ describe('Previous and next match update in double elimination stage', () => {
 
         assert.equal((await storage.select('match', 5)).status, Status.Archived);
     });
+
+    it('should choose the correct previous and next matches based on losers ordering', async () => {
+        await manager.create({
+            name: 'Amateur',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+                'Team 9', 'Team 10',
+                'Team 11', 'Team 12',
+                'Team 13', 'Team 14',
+                'Team 15', 'Team 16',
+            ],
+            settings: {
+                seedOrdering: ['natural', 'reverse', 'reverse'],
+                grandFinal: 'simple',
+            },
+        });
+
+        await manager.update.match({ id: 0, opponent1: { result: 'win' } }); // WB 1.1
+        assert.equal(
+            (await storage.select('match', 18)).opponent2.id, // Determined opponent for last match of LB round 1 (reverse ordering for losers)
+            (await storage.select('match', 0)).opponent2.id, // Loser of first match round 1
+        );
+
+        await manager.update.match({ id: 1, opponent1: { result: 'win' } }); // WB 1.2
+        assert.equal(
+            (await storage.select('match', 18)).opponent1.id, // Determined opponent for last match of LB round 1 (reverse ordering for losers)
+            (await storage.select('match', 1)).opponent2.id, // Loser of second match round 1
+        );
+
+        await manager.update.match({ id: 8, opponent1: { result: 'win' } }); // WB 2.1
+        assert.equal(
+            (await storage.select('match', 22)).opponent1.id, // Determined opponent for last match of LB round 2 (reverse ordering for losers)
+            (await storage.select('match', 8)).opponent2.id, // Loser of first match round 2
+        );
+
+        await manager.update.match({ id: 6, opponent1: { result: 'win' } }); // WB 1.7
+        await manager.update.match({ id: 7, opponent1: { result: 'win' } }); // WB 1.8
+        await manager.update.match({ id: 11, opponent1: { result: 'win' } }); // WB 2.4
+        await manager.update.match({ id: 15, opponent1: { result: 'win' } }); // LB 1.1
+        await manager.update.match({ id: 19, opponent1: { result: 'win' } }); // LB 2.1
+
+        assert.equal((await storage.select('match', 8)).status, Status.Completed); // WB 2.1
+        assert.equal((await storage.select('match', 11)).status, Status.Archived); // WB 2.4
+    });
 });
 
 describe('Skip first round', () => {
@@ -367,14 +416,14 @@ describe('Skip first round', () => {
     it('should choose the correct previous and next matches', async () => {
         await manager.update.match({ id: 0, opponent1: { result: 'win' } });
         assert.equal((await storage.select('match', 7)).opponent1.id, 1); // First match of LB Round 1 (must stay).
-        assert.equal((await storage.select('match', 11)).opponent1.id, 2); // First match of LB Round 2 (must be updated).
+        assert.equal((await storage.select('match', 12)).opponent1.id, 2); // First match of LB Round 2 (must be updated).
 
         await manager.update.match({ id: 1, opponent1: { result: 'win' } });
         assert.equal((await storage.select('match', 7)).opponent2.id, 3); // First match of LB Round 1 (must stay).
-        assert.equal((await storage.select('match', 12)).opponent1.id, 6); // Second match of LB Round 2 (must be updated).
+        assert.equal((await storage.select('match', 11)).opponent1.id, 6); // Second match of LB Round 2 (must be updated).
 
         await manager.update.match({ id: 4, opponent1: { result: 'win' } }); // First match of WB Round 2.
-        assert.equal((await storage.select('match', 17)).opponent1.id, 4); // First match of LB Round 4.
+        assert.equal((await storage.select('match', 18)).opponent1.id, 4); // First match of LB Round 4.
 
         await manager.update.match({ id: 7, opponent1: { result: 'win' } }); // First match of LB Round 1.
         assert.equal((await storage.select('match', 11)).opponent2.id, 1); // First match of LB Round 2.
@@ -382,7 +431,7 @@ describe('Skip first round', () => {
         for (let i = 2; i < 21; i++)
             await manager.update.match({ id: i, opponent1: { result: 'win' } });
 
-        assert.equal((await storage.select('match', 15)).opponent1.id, 2); // First match of LB Round 3.
+        assert.equal((await storage.select('match', 15)).opponent1.id, 6); // First match of LB Round 3.
 
         assert.equal((await storage.select('match', 21)).opponent1.id, 0); // GF Round 1.
         assert.equal((await storage.select('match', 21)).opponent2.id, 8); // GF Round 1.

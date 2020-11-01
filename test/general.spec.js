@@ -76,7 +76,7 @@ describe('Position checks', () => {
         assert.equal(matchFromLbRound1.opponent2.position, 2);
 
         const matchFromLbRound2 = await storage.select('match', 9);
-        assert.equal(matchFromLbRound2.opponent1.position, 1);
+        assert.equal(matchFromLbRound2.opponent1.position, 2);
 
         const matchFromGrandFinal = await storage.select('match', 13);
         assert.equal(matchFromGrandFinal.opponent2.position, 1);
