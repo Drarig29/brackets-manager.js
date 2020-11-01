@@ -1,5 +1,5 @@
-import { JsonDB } from "node-json-db";
-import { CrudInterface, Table } from ".";
+import { JsonDB } from 'node-json-db';
+import { CrudInterface, Table } from '.';
 
 type Obj = {
     [key: string]: unknown;
@@ -171,7 +171,7 @@ class JsonDatabase implements CrudInterface {
             if (arg === undefined)
                 return this.internal.getData(this.makePath(table));
 
-            if (typeof arg === "number")
+            if (typeof arg === 'number')
                 return this.internal.getData(this.makeArrayIndexPath(table, arg));
 
             return this.internal.filter(this.makePath(table), this.makeFilter(arg)) || null;

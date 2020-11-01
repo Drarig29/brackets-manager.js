@@ -11,6 +11,15 @@ module.exports = {
   rules: {
     "curly": ["error", "multi-or-nest"],
     "brace-style": ["error", "1tbs"],
+    "quotes": ["error", "single"],
+    
+    "comma-dangle": ["error", {
+      "arrays": "always-multiline",
+      "objects": "always-multiline",
+      "imports": "always-multiline",
+      "exports": "always-multiline",
+      "functions": "always-multiline"
+    }],
 
     "jsdoc/require-jsdoc": ["error", { require: { "MethodDefinition": true } }],
     "jsdoc/require-param-type": 0,

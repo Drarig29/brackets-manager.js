@@ -1,9 +1,9 @@
-import { Match, Round, Group, Stage, MatchGame, SeedOrdering, Seeding, SeedingIds, Status, StageType } from "brackets-model";
+import { Match, Round, Group, Stage, MatchGame, SeedOrdering, Seeding, SeedingIds, Status, StageType } from 'brackets-model';
 import { ordering } from './ordering';
-import { IStorage } from "./storage";
+import { IStorage } from './storage';
 import * as helpers from './helpers';
-import { Create } from "./create";
-import { SetNextOpponent } from "./helpers";
+import { Create } from './create';
+import { SetNextOpponent } from './helpers';
 
 export type Level = 'stage' | 'group' | 'round' | 'match';
 export type BracketType = 'single-bracket' | 'winner-bracket' | 'loser-bracket' | 'final-group';
@@ -605,7 +605,7 @@ export class Update {
 
         const upperBracketFinalMatch = await this.storage.selectFirst<Match>('match', {
             round_id: lastRound.id,
-            number: 1
+            number: 1,
         });
 
         if (upperBracketFinalMatch === null)

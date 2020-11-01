@@ -1,6 +1,6 @@
-import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Stage, StageType } from "brackets-model";
-import { ordering } from "./ordering";
-import { BracketType } from "./update";
+import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Stage, StageType } from 'brackets-model';
+import { ordering } from './ordering';
+import { BracketType } from './update';
 
 /**
  * Distributes participants in rounds for a round-robin group.
@@ -797,7 +797,7 @@ export function getParentMatchResults(storedParent: Match, scores: Scores): Part
         opponent2: {
             id: storedParent.opponent2 && storedParent.opponent2.id,
             score: scores.opponent2,
-        }
+        },
     };
 }
 
