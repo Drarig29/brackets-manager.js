@@ -87,6 +87,8 @@ export const ordering: OrderingMap = {
 }
 
 export const defaultMinorOrdering: { [key: number]: SeedOrdering[] } = {
+    // 1 or 2: Not possible.
+    4: ['natural', 'reverse'],
     8: ['natural', 'reverse', 'natural'],
     16: ['natural', 'reverse_half_shift', 'reverse', 'natural'],
     32: ['natural', 'reverse', 'half_shift', 'natural', 'natural'],

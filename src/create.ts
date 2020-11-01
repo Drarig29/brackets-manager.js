@@ -103,7 +103,10 @@ export class Create {
 
         const slots = await this.getSlots();
         const stageId = await this.createStage();
-        const { losers } = await this.createStandardBracket(stageId, 1, slots);
+        const method = this.getStandardBracketFirstRoundOrdering();
+        const ordered = ordering[method](slots);
+
+        const { losers } = await this.createStandardBracket(stageId, 1, ordered);
         await this.createConsolationFinal(stageId, losers);
 
         return stageId;
@@ -121,8 +124,26 @@ export class Create {
 
         const slots = await this.getSlots();
         const stageId = await this.createStage();
-        const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, slots);
+        const method = this.getStandardBracketFirstRoundOrdering();
+        const ordered = ordering[method](slots);
 
+        if (this.stage.settings?.skipFirstRound) {
+            const directInWb = ordered.filter((_, i) => i % 2 === 0);
+            const directInLb = ordered.filter((_, i) => i % 2 === 1);
+
+            const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, directInWb);
+
+            if (this.stage.settings?.size! > 2) {
+                const winnerLb = await this.createLowerBracket(stageId, 2, [directInLb, ...losersWb]);
+                await this.createGrandFinal(stageId, winnerWb, winnerLb);
+            }
+
+            return stageId;
+        }
+
+        const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, ordered);
+
+        // TODO: remove this comment and do a "isdoubleEliminationNecessary()"
         // If the size is only two (less is impossible), then a lower bracket and a grand final are not necessary.
         // Here, the size has already been checked by getSlots().
         if (this.stage.settings?.size! > 2) {
@@ -170,10 +191,7 @@ export class Create {
         losers: ParticipantSlot[][],
         winner: ParticipantSlot,
     }> {
-        const method = this.getStandardBracketFirstRoundOrdering();
-        const ordered = ordering[method](slots);
-
-        const roundCount = helpers.upperBracketRoundCount(slots.length);
+        const roundCount = helpers.getUpperBracketRoundCount(slots.length);
         const groupId = await this.insertGroup({
             stage_id: stageId,
             number,
@@ -182,7 +200,7 @@ export class Create {
         if (groupId === -1)
             throw Error('Could not insert the group.');
 
-        let duels = helpers.makePairs(ordered);
+        let duels = helpers.makePairs(slots);
         let roundNumber = 1;
 
         const losers: ParticipantSlot[][] = [];
@@ -208,11 +226,8 @@ export class Create {
      * @param losers One list of losers per upper bracket round.
      */
     private async createLowerBracket(stageId: number, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
-        // The first pair of rounds (major & minor) takes the **first two** lists of losers (hence the -1).
-        const roundPairCount = losers.length - 1;
-
-        // The first list of losers contains the input for the bracket.
-        const participantCount = losers[0].length * 4;
+        const participantCount = this.stage.settings?.size!;
+        const roundPairCount = helpers.getRoundPairCount(participantCount);
 
         let losersId = 0;
 
@@ -361,7 +376,7 @@ export class Create {
      * @param losers The losers going from the WB.
      * @param method The ordering method to apply to the losers.
      */
-    private getCurrentDuels(previousDuels: Duels, currentDuelCount: number, major: false, losers: ParticipantSlot[], method: SeedOrdering | null): Duels;
+    private getCurrentDuels(previousDuels: Duels, currentDuelCount: number, major: false, losers: ParticipantSlot[], method?: SeedOrdering): Duels;
 
     /**
      * Generic implementation.
@@ -372,7 +387,7 @@ export class Create {
      * @param losers Only for minor rounds of loser bracket.
      * @param method Only for minor rounds. Ordering method for the losers.
      */
-    private getCurrentDuels(previousDuels: Duels, currentDuelCount: number, major?: boolean, losers?: ParticipantSlot[], method?: SeedOrdering | null): Duels {
+    private getCurrentDuels(previousDuels: Duels, currentDuelCount: number, major?: boolean, losers?: ParticipantSlot[], method?: SeedOrdering): Duels {
         if ((major === undefined || major === true) && previousDuels.length === currentDuelCount) {
             // First round.
             return previousDuels;
@@ -385,7 +400,7 @@ export class Create {
 
         // From major to minor (LB).
         // Losers and method won't be undefined.
-        return helpers.transitionToMinor(previousDuels, losers!, method!);
+        return helpers.transitionToMinor(previousDuels, losers!, method);
     }
 
     /**
@@ -536,10 +551,10 @@ export class Create {
      * @param index Index of the minor round.
      * @param minorRoundCount Number of minor rounds.
      */
-    private getMinorOrdering(participantCount: number, index: number, minorRoundCount: number): SeedOrdering | null {
+    private getMinorOrdering(participantCount: number, index: number, minorRoundCount: number): SeedOrdering | undefined {
         // No ordering for the last minor round. There is only one participant to order.
         if (index === minorRoundCount - 1)
-            return null;
+            return undefined;
 
         return this.getOrdering(2 + index, 'elimination', defaultMinorOrdering[participantCount][1 + index]);
     }
@@ -720,7 +735,7 @@ export class Create {
     private async createGrandFinal(stageId: number, winnerWb: ParticipantSlot, winnerLb: ParticipantSlot) {
         // No Grand Final by default.
         const grandFinal = this.stage.settings?.grandFinal;
-        if (grandFinal === undefined) return;
+        if (grandFinal === 'none') return;
 
         // One duel by default.
         const finalDuels: Duels = [[winnerWb, winnerLb]];
