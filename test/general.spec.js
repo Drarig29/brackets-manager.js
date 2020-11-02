@@ -1,5 +1,5 @@
 const chai = require('chai');
-chai.use(require("chai-as-promised"));
+chai.use(require('chai-as-promised'));
 
 const assert = chai.assert;
 const { BracketsManager } = require('../dist');
@@ -49,7 +49,7 @@ describe('Position checks', () => {
             settings: {
                 size: 8,
                 grandFinal: 'simple',
-                seedOrdering: ['natural']
+                seedOrdering: ['natural'],
             },
         });
     });
@@ -141,7 +141,7 @@ describe('Special cases', () => {
                 'Team 3', 'Team 4',
                 'Team 5', 'Team 6',
                 'Team 7',
-            ]
+            ],
         }));
 
         await assert.isRejected(manager.create({

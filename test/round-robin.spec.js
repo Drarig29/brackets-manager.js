@@ -1,5 +1,5 @@
 const chai = require('chai');
-chai.use(require("chai-as-promised"));
+chai.use(require('chai-as-promised'));
 
 const assert = chai.assert;
 const { BracketsManager } = require('../dist');
@@ -79,7 +79,7 @@ describe('Create a round-robin stage', () => {
         await assert.isRejected(manager.create({
             name: 'Example',
             tournamentId: 0,
-            type: 'round_robin'
+            type: 'round_robin',
         }), 'You must specify a group count for round-robin stages.');
     });
 });
@@ -105,38 +105,38 @@ describe('Update scores in a round-robin stage', () => {
     it('should set all the scores', async () => {
         await manager.update.match({
             id: 0,
-            opponent1: { score: 16, result: "win" }, // POCEBLO
+            opponent1: { score: 16, result: 'win' }, // POCEBLO
             opponent2: { score: 9 }, // AQUELLEHEURE?!
         });
 
         await manager.update.match({
             id: 1,
             opponent1: { score: 3 }, // Ballec Squad
-            opponent2: { score: 16, result: "win" }, // twitch.tv/mrs_fly
+            opponent2: { score: 16, result: 'win' }, // twitch.tv/mrs_fly
         });
 
         await manager.update.match({
             id: 2,
-            opponent1: { score: 16, result: "win" }, // twitch.tv/mrs_fly
+            opponent1: { score: 16, result: 'win' }, // twitch.tv/mrs_fly
             opponent2: { score: 0 }, // AQUELLEHEURE?!
         });
 
         await manager.update.match({
             id: 3,
-            opponent1: { score: 16, result: "win" }, // POCEBLO
+            opponent1: { score: 16, result: 'win' }, // POCEBLO
             opponent2: { score: 2 }, // Ballec Squad
         });
 
         await manager.update.match({
             id: 4,
-            opponent1: { score: 16, result: "win" }, // Ballec Squad
+            opponent1: { score: 16, result: 'win' }, // Ballec Squad
             opponent2: { score: 12 }, // AQUELLEHEURE?!
         });
 
         await manager.update.match({
             id: 5,
             opponent1: { score: 4 }, // twitch.tv/mrs_fly
-            opponent2: { score: 16, result: "win" }, // POCEBLO
+            opponent2: { score: 16, result: 'win' }, // POCEBLO
         });
     });
 });
