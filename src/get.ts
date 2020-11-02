@@ -1,6 +1,7 @@
 import { Group, Match, MatchGame, Participant, Round, Stage } from 'brackets-model';
 import { IStorage } from './storage';
 import * as helpers from './helpers';
+import { ParticipantSlot } from './types';
 
 interface StageData {
     stage: Stage,

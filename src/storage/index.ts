@@ -1,3 +1,8 @@
+import { OmitId } from '../types';
+
+/**
+ * The types of table in the storage.
+ */
 export type Table = 'participant' | 'stage' | 'group' | 'round' | 'match' | 'match_game';
 
 /**

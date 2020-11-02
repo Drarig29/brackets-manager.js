@@ -1,9 +1,10 @@
 import { Match, Round, Group, Stage, MatchGame, SeedOrdering, Seeding, SeedingIds, Status, StageType } from 'brackets-model';
+import { ParticipantSlot, Side } from './types';
+import { SetNextOpponent } from './helpers';
 import { ordering } from './ordering';
 import { IStorage } from './storage';
-import * as helpers from './helpers';
 import { Create } from './create';
-import { SetNextOpponent } from './helpers';
+import * as helpers from './helpers';
 
 export type Level = 'stage' | 'group' | 'round' | 'match';
 export type BracketType = 'single-bracket' | 'winner-bracket' | 'loser-bracket' | 'final-group';

@@ -1,5 +1,5 @@
-import { InputStage } from 'brackets-model';
 import { CrudInterface, IStorage, Table } from './storage';
+import { InputStage } from 'brackets-model';
 import { create } from './create';
 import { Update } from './update';
 import { Get } from './get';

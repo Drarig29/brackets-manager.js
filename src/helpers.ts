@@ -1,6 +1,27 @@
 import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Stage, StageType } from 'brackets-model';
 import { ordering } from './ordering';
+import { Duel, OmitId, ParticipantSlot, Scores, Side } from './types';
 import { BracketType } from './update';
+
+/**
+ * The result of an array split by parity.
+ */
+interface ParitySplit<T> {
+    even: T[],
+    odd: T[],
+}
+
+/**
+ * Splits an array in two parts: one with even indices and the other with odd indices.
+ *
+ * @param array The array to split.
+ */
+export function splitByParity<T>(array: T[]): ParitySplit<T> {
+    return {
+        even: array.filter((_, i) => i % 2 === 0),
+        odd: array.filter((_, i) => i % 2 === 1),
+    }
+}
 
 /**
  * Distributes participants in rounds for a round-robin group.
@@ -11,21 +32,21 @@ import { BracketType } from './update';
  *
  * @param participants The participants to distribute.
  */
-export function roundRobinMatches<T>(participants: T[]): T[][][] {
+export function roundRobinMatches<T>(participants: T[]): [T, T][][] {
     const n = participants.length;
     const n1 = n % 2 === 0 ? n : n + 1;
     const roundCount = n1 - 1;
     const matchPerRound = n1 / 2;
 
-    const rounds: T[][][] = [];
+    const rounds: [T, T][][] = [];
 
     for (let roundId = 0; roundId < roundCount; roundId++) {
-        const matches = [];
+        const matches: [T, T][] = [];
 
         for (let matchId = 0; matchId < matchPerRound; matchId++) {
             if (matchId === 0 && n % 2 === 1) continue;
 
-            const opponentsIds: number[] = [
+            const opponentsIds = [
                 (roundId - matchId - 1 + n1) % (n1 - 1),
                 matchId === 0 ? n1 - 1 : (roundId + matchId) % (n1 - 1),
             ]
@@ -48,7 +69,7 @@ export function roundRobinMatches<T>(participants: T[]): T[][][] {
  * @param input The input seeding.
  * @param output The resulting distribution of seeds in grounps.
  */
-export function assertRoundRobin<T>(input: T[], output: T[][][]): void {
+export function assertRoundRobin<T>(input: T[], output: [T, T][][]): void {
     const n = input.length;
     const matchPerRound = Math.floor(n / 2);
     const roundCount = n % 2 === 0 ? n - 1 : n;
@@ -105,9 +126,8 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
  * @example [1, 2, 3, 4] --> [[1, 2], [3, 4]]
  * @param array A list of elements.
  */
-export function makePairs<T>(array: T[]): T[][] {
-    ensureEvenSized(array);
-    return array.map((current, i) => (i % 2 === 0) ? [current, array[i + 1]] : []).filter(v => v.length > 0);
+export function makePairs<T>(array: T[]): [T, T][] {
+    return array.map((_, i) => (i % 2 === 0) ? [array[i], array[i + 1]] : []).filter((v): v is [T, T] => v.length === 2);
 }
 
 /**
@@ -152,7 +172,7 @@ export function ensureValidSize(participantCount: number): void {
  *
  * @param scores Two numbers which are scores.
  */
-export function ensureNotTied(scores: number[]): void {
+export function ensureNotTied(scores: [number, number]): void {
     if (scores[0] === scores[1])
         throw Error(`${scores[0]} and ${scores[1]} are tied. It cannot be.`);
 }
@@ -725,9 +745,9 @@ export function uniqueBy<T>(array: T[], key: (obj: T) => unknown): T[] {
  *
  * @param previousDuels The previous duels to transition from.
  */
-export function transitionToMajor(previousDuels: Duels): Duels {
+export function transitionToMajor(previousDuels: Duel[]): Duel[] {
     const currentDuelCount = previousDuels.length / 2;
-    const currentDuels = [];
+    const currentDuels: Duel[] = [];
 
     for (let duelIndex = 0; duelIndex < currentDuelCount; duelIndex++) {
         const prevDuelId = duelIndex * 2;
@@ -747,10 +767,10 @@ export function transitionToMajor(previousDuels: Duels): Duels {
  * @param losers Losers from the previous major round.
  * @param method The ordering method for the losers.
  */
-export function transitionToMinor(previousDuels: Duels, losers: ParticipantSlot[], method?: SeedOrdering): Duels {
+export function transitionToMinor(previousDuels: Duel[], losers: ParticipantSlot[], method?: SeedOrdering): Duel[] {
     const orderedLosers = method ? ordering[method](losers) : losers;
     const currentDuelCount = previousDuels.length;
-    const currentDuels = [];
+    const currentDuels: Duel[] = [];
 
     for (let duelIndex = 0; duelIndex < currentDuelCount; duelIndex++) {
         const prevDuelId = duelIndex;
@@ -913,6 +933,17 @@ export function getUpperBracketRoundCount(participantCount: number): number {
  */
 export function getRoundPairCount(participantCount: number): number {
     return getUpperBracketRoundCount(participantCount) - 1;
+}
+
+/**
+ * Determines whether a double elimination stage is really necessary.
+ * 
+ * If the size is only two (less is impossible), then a lower bracket and a grand final are not necessary.
+ *
+ * @param participantCount The number of participants in the stage.
+ */
+export function isDoubleEliminationNecessary(participantCount: number): boolean {
+    return participantCount > 2;
 }
 
 /**
