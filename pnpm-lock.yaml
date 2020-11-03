@@ -1,5 +1,5 @@
 dependencies:
-  brackets-model: 1.3.1
+  brackets-model: 1.3.2
   node-json-db: 1.1.0
 devDependencies:
   '@types/chai': 4.2.14
@@ -326,10 +326,10 @@ packages:
       node: '>=8'
     resolution:
       integrity: sha512-b8um+L1RzM3WDSzvhm6gIz1yfTbBt6YTlcEKAvsmqCZZFw46z626lVj9j1yEPW33H5H+lBQpZMP1k8l+78Ha0A==
-  /brackets-model/1.3.1:
+  /brackets-model/1.3.2:
     dev: false
     resolution:
-      integrity: sha512-PDsYBVKNWYW+B38OM2d5RoMs7WIsZUGgv1X6plVRPVY2I+BIq307JquLHnCGP2gmwJvI6Q/32Q3TCjhcI6ygyg==
+      integrity: sha512-wodOHwW/EFjuGJ9TsJneDqL709V/xrCShzTfB1fdWsxXGzkynyYOvjJRRKO9B/kuoc1sTZIZGlLgkeszwghqxg==
   /browser-stdout/1.3.1:
     dev: true
     resolution:
@@ -1783,7 +1783,7 @@ specifiers:
   '@types/node': ^14.0.9
   '@typescript-eslint/eslint-plugin': ^4.4.0
   '@typescript-eslint/parser': ^4.4.0
-  brackets-model: ^1.3.1
+  brackets-model: ^1.3.2
   chai: ^4.2.0
   chai-as-promised: ^7.1.1
   eslint: ^7.10.0
