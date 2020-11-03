@@ -43,6 +43,9 @@ export class Create {
         if (!Number.isInteger(this.stage.tournamentId))
             throw Error('You must provide a tournament id for the stage.');
 
+        if (stage.type === 'round_robin')
+            this.stage.settings.roundRobinMode = this.stage.settings.roundRobinMode || 'simple';
+
         if (stage.type === 'single_elimination')
             this.stage.settings.consolationFinal = this.stage.settings.consolationFinal || false;
 
@@ -187,7 +190,7 @@ export class Create {
         if (groupId === -1)
             throw Error('Could not insert the group.');
 
-        const rounds = helpers.roundRobinMatches(slots);
+        const rounds = helpers.makeRoundRobinMatches(slots, this.stage.settings?.roundRobinMode!);
 
         for (let i = 0; i < rounds.length; i++)
             await this.createRound(stageId, groupId, i + 1, rounds[0].length, rounds[i]);

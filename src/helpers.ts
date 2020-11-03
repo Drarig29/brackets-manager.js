@@ -1,4 +1,4 @@
-import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Stage, StageType } from 'brackets-model';
+import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Stage, StageType, RoundRobinMode } from 'brackets-model';
 import { ordering } from './ordering';
 import { Duel, OmitId, ParticipantSlot, Scores, Side } from './types';
 import { BracketType } from './update';
@@ -24,15 +24,33 @@ export function splitByParity<T>(array: T[]): ParitySplit<T> {
 }
 
 /**
+ * Makes a list of rounds containing the matches of a round-robin group.
+ *
+ * @param participants The participants to distribute.
+ * @param mode The round-robin mode.
+ */
+export function makeRoundRobinMatches<T>(participants: T[], mode: RoundRobinMode = 'simple'): [T, T][][] {
+    const distribution = makeRoundRobinDistribution(participants);
+    
+    if (mode === 'simple')
+        return distribution;
+
+    // Reverse rounds and their content.
+    const symmetry = distribution.map(round => [...round].reverse()).reverse();
+
+    return [...distribution, ...symmetry];
+}
+
+/**
  * Distributes participants in rounds for a round-robin group.
  *
  * Conditions:
- * - Each participant matches each other only once.
+ * - Each participant plays each other once.
  * - Each participant plays once in each round.
  *
  * @param participants The participants to distribute.
  */
-export function roundRobinMatches<T>(participants: T[]): [T, T][][] {
+export function makeRoundRobinDistribution<T>(participants: T[]): [T, T][][] {
     const n = participants.length;
     const n1 = n % 2 === 0 ? n : n + 1;
     const roundCount = n1 - 1;
