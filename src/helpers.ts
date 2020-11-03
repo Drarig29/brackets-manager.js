@@ -1,4 +1,4 @@
-import { ParticipantResult, Match, MatchResults, Result, Seeding, Participant, SeedingIds, Status, SeedOrdering, MatchGame, Stage, StageType, RoundRobinMode } from 'brackets-model';
+import { ParticipantResult, Match, MatchResults, Result, Participant, Seeding, Status, SeedOrdering, MatchGame, Stage, StageType, RoundRobinMode } from 'brackets-model';
 import { ordering } from './ordering';
 import { Duel, OmitId, ParticipantSlot, Scores, Side } from './types';
 import { BracketType } from './update';
@@ -689,7 +689,7 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
  *
  * @param seeding The seeding.
  */
-export function isSeedingWithIds(seeding: Seeding | SeedingIds): boolean {
+export function isSeedingWithIds(seeding: Seeding): boolean {
     return seeding.some((value: string | number | null) => typeof value === 'number');
 }
 
@@ -735,7 +735,7 @@ export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Parti
  * @param seeding The seeding.
  * @param database The participants stored in the database.
  */
-export function mapParticipantsIdsToDatabase(seeding: SeedingIds, database: Participant[]): ParticipantSlot[] {
+export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Participant[]): ParticipantSlot[] {
     const slots = seeding.map((id, i) => {
         if (id === null) return null; // BYE.
 

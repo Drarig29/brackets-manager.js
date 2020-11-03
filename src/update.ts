@@ -1,4 +1,4 @@
-import { Match, Round, Group, Stage, MatchGame, SeedOrdering, Seeding, SeedingIds, Status, StageType } from 'brackets-model';
+import { Match, Round, Group, Stage, MatchGame, SeedOrdering, Seeding, Status, StageType } from 'brackets-model';
 import { ParticipantSlot, Side } from './types';
 import { SetNextOpponent } from './helpers';
 import { ordering } from './ordering';
@@ -189,7 +189,7 @@ export class Update {
      * @param stageId ID of the stage.
      * @param seeding The new seeding.
      */
-    public async seeding(stageId: number, seeding: Seeding | SeedingIds): Promise<void> {
+    public async seeding(stageId: number, seeding: Seeding): Promise<void> {
         return this.updateSeeding(stageId, seeding);
     }
 
@@ -208,7 +208,7 @@ export class Update {
      * @param stageId ID of the stage.
      * @param seeding A new seeding or null to reset the existing seeding.
      */
-    private async updateSeeding(stageId: number, seeding: Seeding | SeedingIds | null): Promise<void> {
+    private async updateSeeding(stageId: number, seeding: Seeding | null): Promise<void> {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 

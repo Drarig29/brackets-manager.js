@@ -1,4 +1,4 @@
-import { Participant, InputStage, Match, SeedOrdering, MatchGame, Stage, Group, Round, SeedingIds, Seeding } from 'brackets-model';
+import { Participant, InputStage, Match, SeedOrdering, MatchGame, Stage, Group, Round, Seeding } from 'brackets-model';
 import { ordering, defaultMinorOrdering } from './ordering';
 import { Duel, OmitId, ParticipantSlot } from './types';
 import { BracketsManager } from '.';
@@ -453,9 +453,9 @@ export class Create {
         }
 
         if (helpers.isSeedingWithIds(this.stage.seeding))
-            return this.getSlotsUsingIds(this.stage.seeding as SeedingIds);
+            return this.getSlotsUsingIds(this.stage.seeding);
 
-        return this.getSlotsUsingNames(this.stage.seeding as Seeding);
+        return this.getSlotsUsingNames(this.stage.seeding);
     }
 
     /**
@@ -464,7 +464,7 @@ export class Create {
      * @param seeding The seeding (names).
      */
     private async getSlotsUsingNames(seeding: Seeding): Promise<ParticipantSlot[]> {
-        const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, this.stage.seeding as Seeding);
+        const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, seeding);
 
         if (!await this.registerParticipants(participants))
             throw Error('Error registering the participants.');
@@ -481,7 +481,7 @@ export class Create {
      *
      * @param seeding The seeding (ids).
      */
-    private async getSlotsUsingIds(seeding: SeedingIds): Promise<ParticipantSlot[]> {
+    private async getSlotsUsingIds(seeding: Seeding): Promise<ParticipantSlot[]> {
         const participants = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
         if (!participants) throw Error('No available participants.');
 
