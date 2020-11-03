@@ -26,6 +26,8 @@ module.exports = {
     'jsdoc/require-returns': 0,
     'jsdoc/require-returns-type': 0,
 
+    '@typescript-eslint/explicit-function-return-type': ['error'],
+
     // I use them rarely but they are understandable and commented. They simplify the code.
     '@typescript-eslint/no-non-null-assertion': 0,
     '@typescript-eslint/no-non-null-asserted-optional-chain': 0,

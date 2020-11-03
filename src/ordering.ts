@@ -39,7 +39,7 @@ export const ordering: OrderingMap = {
          * @param part The part to process.
          * @param method The method to use.
          */
-        function add(part: T[][], method: 'inner' | 'outer') {
+        function add(part: T[][], method: 'inner' | 'outer'): void {
             if (part[0].length > 0 && part[1].length > 0)
                 result.push(...methods[method](part));
         }

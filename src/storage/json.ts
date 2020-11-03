@@ -1,9 +1,11 @@
 import { JsonDB } from 'node-json-db';
 import { CrudInterface, Table } from '.';
 
-type Obj = {
+type StringIndexedObject = {
     [key: string]: unknown;
 };
+
+type Filter<T> = (obj: T) => boolean;
 
 class JsonDatabase implements CrudInterface {
 
@@ -22,7 +24,7 @@ class JsonDatabase implements CrudInterface {
      *
      * @param table The table to check.
      */
-    private ensureArrayExists(table: Table) {
+    private ensureArrayExists(table: Table): void {
         const path = this.makePath(table);
 
         if (!this.internal.exists(path))
@@ -32,7 +34,7 @@ class JsonDatabase implements CrudInterface {
     /**
      * Initiates the storage.
      */
-    private init() {
+    private init(): void {
         this.ensureArrayExists('participant');
         this.ensureArrayExists('stage');
         this.ensureArrayExists('group');
@@ -74,7 +76,7 @@ class JsonDatabase implements CrudInterface {
      *
      * @param partial A partial object with given values as query.
      */
-    private makeFilter<T extends Obj>(partial: Partial<T>) {
+    private makeFilter<T extends StringIndexedObject>(partial: Partial<T>): Filter<T> {
         return (obj: T): boolean => {
             let result = true;
 
@@ -205,7 +207,7 @@ class JsonDatabase implements CrudInterface {
      * @param arg An index or a filter.
      * @param value The whole object if arg is an index or the values to change if arg is a filter.
      */
-    public async update<T>(table: Table, arg: number | Partial<T>, value: T | Partial<T>) {
+    public async update<T>(table: Table, arg: number | Partial<T>, value: T | Partial<T>): Promise<boolean> {
         if (typeof arg === 'number') {
             try {
                 this.internal.push(this.makeArrayIndexPath(table, arg), value);
@@ -234,9 +236,8 @@ class JsonDatabase implements CrudInterface {
         if (!values) return false;
 
         const predicate = this.makeFilter(filter);
-        const oppositeFilter = (value: T) => !predicate(value);
 
-        this.internal.push(path, values.filter(oppositeFilter));
+        this.internal.push(path, values.filter(value => !predicate(value)));
         return true;
     }
 }

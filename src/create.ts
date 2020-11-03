@@ -6,6 +6,21 @@ import { IStorage } from './storage';
 import * as helpers from './helpers';
 
 /**
+ * Contains the losers and the winner of the bracket.
+ */
+interface StandardBracketResults {
+    /**
+     * The list of losers for each round of the bracket.
+     */
+    losers: ParticipantSlot[][],
+
+    /**
+     * The winner of the bracket.
+     */
+    winner: ParticipantSlot,
+}
+
+/**
  * Creates a stage.
  *
  * @param this Instance of BracketsManager.
@@ -86,7 +101,7 @@ export class Create {
      * 
      * Group count must be given. It will distribute participants in groups and rounds.
      */
-    private async roundRobin() {
+    private async roundRobin(): Promise<number> {
         const groups = await this.getRoundRobinGroups();
         const stageId = await this.createStage();
 
@@ -101,7 +116,7 @@ export class Create {
      * 
      * One bracket and optionally a consolation final between semi-final losers.
      */
-    private async singleElimination() {
+    private async singleElimination(): Promise<number> {
         if (Array.isArray(this.stage.settings?.seedOrdering) &&
             this.stage.settings?.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
@@ -122,7 +137,7 @@ export class Create {
      * One upper bracket (winner bracket, WB), one lower bracket (loser bracket, LB) and optionally a grand final
      * between the winner of both bracket, which can be simple or double.
      */
-    private async doubleElimination() {
+    private async doubleElimination(): Promise<number> {
         if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
             this.stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
 
@@ -143,7 +158,7 @@ export class Create {
      * @param stageId ID of the stage.
      * @param slots A list of slots.
      */
-    private async createDoubleEliminationSkipFirstRound(stageId: number, slots: ParticipantSlot[]) {
+    private async createDoubleEliminationSkipFirstRound(stageId: number, slots: ParticipantSlot[]): Promise<number> {
         const { even: directInWb, odd: directInLb } = helpers.splitByParity(slots);
         const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, directInWb);
 
@@ -161,7 +176,7 @@ export class Create {
      * @param stageId ID of the stage.
      * @param slots A list of slots.
      */
-    private async createDoubleElimination(stageId: number, slots: ParticipantSlot[]) {
+    private async createDoubleElimination(stageId: number, slots: ParticipantSlot[]): Promise<number> {
         const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, slots);
 
         if (helpers.isDoubleEliminationNecessary(this.stage.settings?.size!)) {
@@ -181,7 +196,7 @@ export class Create {
      * @param number Number in the stage.
      * @param slots A list of slots.
      */
-    private async createRoundRobinGroup(stageId: number, number: number, slots: ParticipantSlot[]) {
+    private async createRoundRobinGroup(stageId: number, number: number, slots: ParticipantSlot[]): Promise<void> {
         const groupId = await this.insertGroup({
             stage_id: stageId,
             number,
@@ -205,10 +220,7 @@ export class Create {
      * @param number Number in the stage.
      * @param slots A list of slots.
      */
-    private async createStandardBracket(stageId: number, number: number, slots: ParticipantSlot[]): Promise<{
-        losers: ParticipantSlot[][],
-        winner: ParticipantSlot,
-    }> {
+    private async createStandardBracket(stageId: number, number: number, slots: ParticipantSlot[]): Promise<StandardBracketResults> {
         const roundCount = helpers.getUpperBracketRoundCount(slots.length);
         const groupId = await this.insertGroup({
             stage_id: stageId,
@@ -286,7 +298,7 @@ export class Create {
      * @param number Number in the stage.
      * @param duels A list of duels.
      */
-    private async createUniqueMatchBracket(stageId: number, number: number, duels: Duel[]) {
+    private async createUniqueMatchBracket(stageId: number, number: number, duels: Duel[]): Promise<void> {
         const groupId = await this.insertGroup({
             stage_id: stageId,
             number,
@@ -308,7 +320,7 @@ export class Create {
      * @param matchCount Duel/match count.
      * @param duels A list of duels.
      */
-    private async createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, duels: Duel[]) {
+    private async createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, duels: Duel[]): Promise<void> {
         const matchesChildCount = this.getMatchesChildCount();
 
         const roundId = await this.insertRound({
@@ -337,7 +349,7 @@ export class Create {
      * @param opponents The two opponents matching against each other.
      * @param childCount Child count for this match (number of games).
      */
-    private async createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number) {
+    private async createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number): Promise<void> {
         const status = helpers.getMatchByeStatus(opponents);
 
         const parentId = await this.insertMatch({
@@ -451,7 +463,7 @@ export class Create {
      *
      * @param seeding The seeding (names).
      */
-    private async getSlotsUsingNames(seeding: Seeding) {
+    private async getSlotsUsingNames(seeding: Seeding): Promise<ParticipantSlot[]> {
         const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, this.stage.seeding as Seeding);
 
         if (!await this.registerParticipants(participants))
@@ -469,7 +481,7 @@ export class Create {
      *
      * @param seeding The seeding (ids).
      */
-    private async getSlotsUsingIds(seeding: SeedingIds) {
+    private async getSlotsUsingIds(seeding: SeedingIds): Promise<ParticipantSlot[]> {
         const participants = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
         if (!participants) throw Error('No available participants.');
 
@@ -713,7 +725,7 @@ export class Create {
     /**
      * Creates a new stage.
      */
-    private async createStage() {
+    private async createStage(): Promise<number> {
         const stageNumber = await this.getStageNumber();
 
         const stageId = await this.insertStage({
@@ -736,7 +748,7 @@ export class Create {
      * @param stageId ID of the stage.
      * @param losers The semi final losers who will play the consolation final.
      */
-    private async createConsolationFinal(stageId: number, losers: ParticipantSlot[][]) {
+    private async createConsolationFinal(stageId: number, losers: ParticipantSlot[][]): Promise<void> {
         if (!this.stage.settings?.consolationFinal) return;
 
         const semiFinalLosers = losers[losers.length - 2] as Duel;
@@ -750,7 +762,7 @@ export class Create {
      * @param winnerWb The winner of the winner bracket.
      * @param winnerLb The winner of the loser bracket.
      */
-    private async createGrandFinal(stageId: number, winnerWb: ParticipantSlot, winnerLb: ParticipantSlot) {
+    private async createGrandFinal(stageId: number, winnerWb: ParticipantSlot, winnerLb: ParticipantSlot): Promise<void> {
         // No Grand Final by default.
         const grandFinal = this.stage.settings?.grandFinal;
         if (grandFinal === 'none') return;
@@ -770,7 +782,7 @@ export class Create {
      *
      * @param stageId ID of the stage.
      */
-    private async ensureSeedOrdering(stageId: number) {
+    private async ensureSeedOrdering(stageId: number): Promise<void> {
         if (this.stage.settings?.seedOrdering?.length === this.seedOrdering.length) return;
 
         const stage = await this.storage.select<Stage>('stage', stageId);
