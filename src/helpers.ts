@@ -31,7 +31,7 @@ export function splitByParity<T>(array: T[]): ParitySplit<T> {
  */
 export function makeRoundRobinMatches<T>(participants: T[], mode: RoundRobinMode = 'simple'): [T, T][][] {
     const distribution = makeRoundRobinDistribution(participants);
-    
+
     if (mode === 'simple')
         return distribution;
 
@@ -136,6 +136,42 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
     }
 
     return result;
+}
+
+/**
+ * Balances BYEs to prevents having BYE against BYE in matches.
+ *
+ * @param seeding The seeding of the stage.
+ * @param targetSize The target size of the seeding.
+ */
+export function balanceByes(seeding: Seeding, targetSize?: number): Seeding {
+    seeding = seeding.filter(v => v !== null);
+
+    targetSize = targetSize || getNearestPowerOfTwo(seeding.length);
+
+    if (seeding.length < targetSize / 2) {
+        const flat = seeding.map(v => [v, null]).flat();
+        return setArraySize(flat, targetSize, null);
+    }
+
+    const nonNullCount = seeding.length;
+    const nullCount = targetSize - nonNullCount;
+    const againstEachOther = seeding.slice(0, nonNullCount - nullCount).filter((_, i) => i % 2 == 0).map((_, i) => [seeding[2 * i], seeding[2 * i + 1]]);
+    const againstNull = seeding.slice(nonNullCount - nullCount, nonNullCount).map(v => [v, null]);
+    const flat = [...againstEachOther.flat(), ...againstNull.flat()];
+
+    return setArraySize(flat, targetSize, null);
+}
+
+/**
+ * Sets the size of an array with a placeholder if the size is bigger.
+ *
+ * @param array The original array.
+ * @param length The new length.
+ * @param placeholder A placeholder to use to fill the empty space.
+ */
+export function setArraySize<T>(array: T[], length: number, placeholder: T): T[] {
+    return Array.from(Array(length), (_, i) => array[i] || placeholder);
 }
 
 /**
@@ -1021,6 +1057,15 @@ export function lowerBracketRoundCount(participantCount: number): number {
  */
 export function getDiagonalMatchNumber(matchNumber: number): number {
     return Math.ceil(matchNumber / 2);
+}
+
+/**
+ * Returns the nearest power of two **greater than** or equal to the given number.
+ *
+ * @param input The input number.
+ */
+export function getNearestPowerOfTwo(input: number): number {
+    return Math.pow(2, Math.ceil(Math.log2(input)));
 }
 
 /**
