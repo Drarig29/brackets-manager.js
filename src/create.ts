@@ -452,6 +452,11 @@ export class Create {
             size, // Always set the size.
         }
 
+        this.stage.seeding = helpers.fixSeeding(this.stage.seeding, size);
+
+        if (this.stage.type !== 'round_robin' && this.stage.settings.balanceByes)
+            this.stage.seeding = helpers.balanceByes(this.stage.seeding, this.stage.settings.size);
+
         if (helpers.isSeedingWithIds(this.stage.seeding))
             return this.getSlotsUsingIds(this.stage.seeding);
 

@@ -142,25 +142,25 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
  * Balances BYEs to prevents having BYE against BYE in matches.
  *
  * @param seeding The seeding of the stage.
- * @param targetSize The target size of the seeding.
+ * @param participantCount The number of participants in the stage.
  */
-export function balanceByes(seeding: Seeding, targetSize?: number): Seeding {
+export function balanceByes(seeding: Seeding, participantCount?: number): Seeding {
     seeding = seeding.filter(v => v !== null);
 
-    targetSize = targetSize || getNearestPowerOfTwo(seeding.length);
+    participantCount = participantCount || getNearestPowerOfTwo(seeding.length);
 
-    if (seeding.length < targetSize / 2) {
+    if (seeding.length < participantCount / 2) {
         const flat = seeding.map(v => [v, null]).flat();
-        return setArraySize(flat, targetSize, null);
+        return setArraySize(flat, participantCount, null);
     }
 
     const nonNullCount = seeding.length;
-    const nullCount = targetSize - nonNullCount;
+    const nullCount = participantCount - nonNullCount;
     const againstEachOther = seeding.slice(0, nonNullCount - nullCount).filter((_, i) => i % 2 == 0).map((_, i) => [seeding[2 * i], seeding[2 * i + 1]]);
     const againstNull = seeding.slice(nonNullCount - nullCount, nonNullCount).map(v => [v, null]);
     const flat = [...againstEachOther.flat(), ...againstNull.flat()];
 
-    return setArraySize(flat, targetSize, null);
+    return setArraySize(flat, participantCount, null);
 }
 
 /**
@@ -203,6 +203,22 @@ export function ensureEvenSized<T>(array: T[]): void {
 export function ensureEquallySized<T>(left: T[], right: T[]): void {
     if (left.length !== right.length)
         throw Error('Arrays\' size must be equal.');
+}
+
+/**
+ * Fixes the seeding by enlarging it if it's not complete.
+ * 
+ * @param seeding The seeding of the stage.
+ * @param participantCount The number of participants in the stage.
+ */
+export function fixSeeding(seeding: Seeding, participantCount: number): Seeding {
+    if (seeding.length > participantCount)
+        throw Error('The seeding has more participants than the size of the stage.');
+
+    if (seeding.length < participantCount)
+        return setArraySize(seeding, participantCount, null);
+
+    return seeding;
 }
 
 /**
