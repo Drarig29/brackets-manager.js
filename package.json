@@ -31,7 +31,7 @@
         "build": "tsc",
         "prepare": "npm run build",
         "prepublishOnly": "npm run build",
-        "lint": "eslint **/*.{js,ts} --fix"
+        "lint": "eslint **/*.{js,ts} --ignore-pattern 'dist/*' --fix"
     },
     "keywords": [
         "javascript",

@@ -7,7 +7,7 @@ import { Create } from './create';
 import * as helpers from './helpers';
 
 export type Level = 'stage' | 'group' | 'round' | 'match';
-export type BracketType = 'single-bracket' | 'winner-bracket' | 'loser-bracket' | 'final-group';
+export type BracketType = 'single_bracket' | 'winner_bracket' | 'loser_bracket' | 'final_group';
 
 export type RoundInformation = {
     roundNumber: number,
@@ -506,7 +506,7 @@ export class Update {
         const winnerSide = helpers.getMatchResult(match);
         if (match.status === Status.Completed && !winnerSide) throw Error('Cannot find a winner.');
 
-        const actualRoundNumber = (stage.settings.skipFirstRound && matchLocation === 'winner-bracket') ? roundNumber + 1 : roundNumber;
+        const actualRoundNumber = (stage.settings.skipFirstRound && matchLocation === 'winner_bracket') ? roundNumber + 1 : roundNumber;
 
         if (winnerSide)
             this.applyToNextMatches(helpers.setNextOpponent, match, matchLocation, actualRoundNumber, roundCount, nextMatches, winnerSide);
@@ -526,7 +526,7 @@ export class Update {
      * @param winnerSide Side of the winner in the current match.
      */
     private applyToNextMatches(setNextOpponent: SetNextOpponent, match: Match, matchLocation: BracketType, roundNumber: number, roundCount: number, nextMatches: Match[], winnerSide?: Side): void {
-        if (matchLocation === 'final-group') {
+        if (matchLocation === 'final_group') {
             setNextOpponent(nextMatches, 0, 'opponent1', match, 'opponent1');
             setNextOpponent(nextMatches, 0, 'opponent2', match, 'opponent2');
             this.storage.update('match', nextMatches[0].id, nextMatches[0]);
@@ -541,7 +541,7 @@ export class Update {
 
         // The second match is either the consolation final (single elimination) or a loser bracket match (double elimination).
 
-        if (matchLocation === 'single-bracket') {
+        if (matchLocation === 'single_bracket') {
             setNextOpponent(nextMatches, 1, nextSide, match, winnerSide && helpers.getOtherSide(winnerSide));
             this.storage.update('match', nextMatches[1].id, nextMatches[1]);
         } else {
@@ -579,10 +579,10 @@ export class Update {
      * @param roundNumber Number of the round.
      */
     private async getPreviousMatches(match: Match, matchLocation: BracketType, stage: Stage, roundNumber: number): Promise<Match[]> {
-        if (matchLocation === 'loser-bracket')
+        if (matchLocation === 'loser_bracket')
             return this.getPreviousMatchesLB(match, stage, roundNumber);
 
-        if (matchLocation === 'final-group')
+        if (matchLocation === 'final_group')
             return this.getPreviousMatchesFinal(match, roundNumber);
 
         if (roundNumber === 1)
@@ -695,10 +695,10 @@ export class Update {
      */
     private async getNextMatches(match: Match, matchLocation: BracketType, stage: Stage, roundNumber: number, roundCount: number): Promise<Match[]> {
         switch (matchLocation) {
-            case 'single-bracket': return this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount);
-            case 'winner-bracket': return this.getNextMatchesWB(match, stage, roundNumber, roundCount);
-            case 'loser-bracket': return this.getNextMatchesLB(match, stage.type, roundNumber, roundCount);
-            case 'final-group': return this.getNextMatchesFinal(match, roundNumber, roundCount);
+            case 'single_bracket': return this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount);
+            case 'winner_bracket': return this.getNextMatchesWB(match, stage, roundNumber, roundCount);
+            case 'loser_bracket': return this.getNextMatchesLB(match, stage.type, roundNumber, roundCount);
+            case 'final_group': return this.getNextMatchesFinal(match, roundNumber, roundCount);
         }
     }
 

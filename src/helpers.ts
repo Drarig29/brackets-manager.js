@@ -442,11 +442,11 @@ export function getOriginPosition(match: Match, side: Side): number {
  */
 export function getNextSide(matchNumber: number, roundNumber: number, roundCount: number, matchLocation: BracketType): Side {
     // The nextSide comes from the same bracket.
-    if (matchLocation === 'loser-bracket' && roundNumber % 2 === 1)
+    if (matchLocation === 'loser_bracket' && roundNumber % 2 === 1)
         return 'opponent2';
 
     // The nextSide comes from the loser bracket to the final group.
-    if (matchLocation === 'loser-bracket' && roundNumber === roundCount)
+    if (matchLocation === 'loser_bracket' && roundNumber === roundCount)
         return 'opponent2';
 
     return getSide(matchNumber);
@@ -1065,13 +1065,13 @@ export function isFinalGroup(stageType: StageType, groupNumber: number): boolean
  */
 export function getMatchLocation(stageType: StageType, groupNumber: number): BracketType {
     if (isWinnerBracket(stageType, groupNumber))
-        return 'winner-bracket';
+        return 'winner_bracket';
 
     if (isLoserBracket(stageType, groupNumber))
-        return 'loser-bracket';
+        return 'loser_bracket';
 
     if (isFinalGroup(stageType, groupNumber))
-        return 'final-group';
+        return 'final_group';
 
-    return 'single-bracket';
+    return 'single_bracket';
 }
