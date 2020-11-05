@@ -25,13 +25,13 @@ export class BracketsManager {
             const results = await this.storage.select<T>(table, filter);
             if (!results || results.length === 0) return null;
             return results[0];
-        }
+        };
 
         storage.selectLast = async <T>(table: Table, filter: Partial<T>): Promise<T | null> => {
             const results = await this.storage.select<T>(table, filter);
             if (!results || results.length === 0) return null;
             return results[results.length - 1];
-        }
+        };
 
         this.storage = storage;
         this.create = create;

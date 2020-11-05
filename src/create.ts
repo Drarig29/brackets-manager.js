@@ -418,12 +418,12 @@ export class Create {
      * @param method Only for minor rounds. Ordering method for the losers.
      */
     private getCurrentDuels(previousDuels: Duel[], currentDuelCount: number, major?: boolean, losers?: ParticipantSlot[], method?: SeedOrdering): Duel[] {
-        if ((major === undefined || major === true) && previousDuels.length === currentDuelCount) {
+        if ((major === undefined || major) && previousDuels.length === currentDuelCount) {
             // First round.
             return previousDuels;
         }
 
-        if (major === undefined || major === true) {
+        if (major === undefined || major) {
             // From major to major (WB) or minor to major (LB).
             return helpers.transitionToMajor(previousDuels);
         }
@@ -450,7 +450,7 @@ export class Create {
         this.stage.settings = {
             ...this.stage.settings,
             size, // Always set the size.
-        }
+        };
 
         this.stage.seeding = helpers.fixSeeding(this.stage.seeding, size);
 

@@ -16,7 +16,7 @@ class JsonDatabase implements CrudInterface {
      */
     constructor() {
         this.internal = new JsonDB('db.json', true, true);
-        this.init()
+        this.init();
     }
 
     /**
@@ -25,7 +25,7 @@ class JsonDatabase implements CrudInterface {
      * @param table The table to check.
      */
     private ensureArrayExists(table: Table): void {
-        const path = this.makePath(table);
+        const path = JsonDatabase.makePath(table);
 
         if (!this.internal.exists(path))
             this.internal.push(path, []);
@@ -48,7 +48,7 @@ class JsonDatabase implements CrudInterface {
      *
      * @param table Name of the table.
      */
-    private makePath(table: Table): string {
+    private static makePath(table: Table): string {
         return `/${table}`;
     }
 
@@ -57,7 +57,7 @@ class JsonDatabase implements CrudInterface {
      *
      * @param table Name of the table.
      */
-    private makeArrayPath(table: Table): string {
+    private static makeArrayPath(table: Table): string {
         return `/${table}[]`;
     }
 
@@ -67,7 +67,7 @@ class JsonDatabase implements CrudInterface {
      * @param table Name of the table.
      * @param index Index of the element.
      */
-    private makeArrayIndexPath(table: Table, index: number): string {
+    private static makeArrayIndexPath(table: Table, index: number): string {
         return `/${table}[${index}]`;
     }
 
@@ -118,11 +118,11 @@ class JsonDatabase implements CrudInterface {
      * @param arg A single value or an array of values.
      */
     public async insert<T>(table: Table, arg: T | T[]): Promise<number | boolean> {
-        let id = this.internal.getData(this.makePath(table)).length;
+        let id = this.internal.getData(JsonDatabase.makePath(table)).length;
 
         if (!Array.isArray(arg)) {
             try {
-                this.internal.push(this.makeArrayPath(table), { id, ...arg });
+                this.internal.push(JsonDatabase.makeArrayPath(table), { id, ...arg });
             } catch (error) {
                 return -1;
             }
@@ -131,7 +131,7 @@ class JsonDatabase implements CrudInterface {
         }
 
         try {
-            this.internal.push(this.makePath(table), arg.map(object => ({ id: id++, ...object })));
+            this.internal.push(JsonDatabase.makePath(table), arg.map(object => ({ id: id++, ...object })));
         } catch (error) {
             return false;
         }
@@ -150,7 +150,7 @@ class JsonDatabase implements CrudInterface {
      * Gets specific data from a table.
      *
      * @param table Where to get from.
-     * @param id What to get.
+     * @param key What to get.
      */
     public select<T>(table: Table, key: number): Promise<T | null>;
 
@@ -171,12 +171,12 @@ class JsonDatabase implements CrudInterface {
     public async select<T>(table: Table, arg?: number | Partial<T>): Promise<T | T[] | null> {
         try {
             if (arg === undefined)
-                return this.internal.getData(this.makePath(table));
+                return this.internal.getData(JsonDatabase.makePath(table));
 
             if (typeof arg === 'number')
-                return this.internal.getData(this.makeArrayIndexPath(table, arg));
+                return this.internal.getData(JsonDatabase.makeArrayIndexPath(table, arg));
 
-            return this.internal.filter(this.makePath(table), this.makeFilter(arg)) || null;
+            return this.internal.filter(JsonDatabase.makePath(table), this.makeFilter(arg)) || null;
         } catch (error) {
             return null;
         }
@@ -186,7 +186,7 @@ class JsonDatabase implements CrudInterface {
      * Updates data in a table.
      *
      * @param table Where to update.
-     * @param id What to update.
+     * @param key What to update.
      * @param value How to update.
      */
     public update<T>(table: Table, key: number, value: T): Promise<boolean>;
@@ -210,17 +210,17 @@ class JsonDatabase implements CrudInterface {
     public async update<T>(table: Table, arg: number | Partial<T>, value: T | Partial<T>): Promise<boolean> {
         if (typeof arg === 'number') {
             try {
-                this.internal.push(this.makeArrayIndexPath(table, arg), value);
+                this.internal.push(JsonDatabase.makeArrayIndexPath(table, arg), value);
                 return true;
             } catch (error) {
                 return false;
             }
         }
 
-        const values = this.internal.filter<{ id: number }>(this.makePath(table), this.makeFilter(arg));
+        const values = this.internal.filter<{ id: number }>(JsonDatabase.makePath(table), this.makeFilter(arg));
         if (!values) return false;
 
-        values.forEach(v => this.internal.push(this.makeArrayIndexPath(table, v.id), value, false));
+        values.forEach(v => this.internal.push(JsonDatabase.makeArrayIndexPath(table, v.id), value, false));
         return true;
     }
 
@@ -231,7 +231,7 @@ class JsonDatabase implements CrudInterface {
      * @param filter An object to filter data.
      */
     public async delete<T extends { [key: string]: unknown }>(table: Table, filter: Partial<T>): Promise<boolean> {
-        const path = this.makePath(table);
+        const path = JsonDatabase.makePath(table);
         const values: T[] = this.internal.getData(path);
         if (!values) return false;
 

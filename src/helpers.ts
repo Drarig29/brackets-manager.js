@@ -20,7 +20,7 @@ export function splitByParity<T>(array: T[]): ParitySplit<T> {
     return {
         even: array.filter((_, i) => i % 2 === 0),
         odd: array.filter((_, i) => i % 2 === 1),
-    }
+    };
 }
 
 /**
@@ -67,7 +67,7 @@ export function makeRoundRobinDistribution<T>(participants: T[]): [T, T][][] {
             const opponentsIds = [
                 (roundId - matchId - 1 + n1) % (n1 - 1),
                 matchId === 0 ? n1 - 1 : (roundId + matchId) % (n1 - 1),
-            ]
+            ];
 
             matches.push([
                 participants[opponentsIds[0]],
@@ -85,7 +85,7 @@ export function makeRoundRobinDistribution<T>(participants: T[]): [T, T][][] {
  * A helper to assert our generated round-robin is correct.
  *
  * @param input The input seeding.
- * @param output The resulting distribution of seeds in grounps.
+ * @param output The resulting distribution of seeds in groups.
  */
 export function assertRoundRobin<T>(input: T[], output: [T, T][][]): void {
     const n = input.length;
@@ -315,7 +315,7 @@ export function getMatchResult(match: MatchResults): Side | null {
         winner = 'opponent1';
 
     if (match.opponent2?.result === 'win') {
-        if (winner !== null) throw Error('There are two winners.')
+        if (winner !== null) throw Error('There are two winners.');
         winner = 'opponent2';
     }
 
@@ -822,7 +822,7 @@ export function transitionToMajor(previousDuels: Duel[]): Duel[] {
     for (let duelIndex = 0; duelIndex < currentDuelCount; duelIndex++) {
         const prevDuelId = duelIndex * 2;
         currentDuels.push([
-            byeWinner(previousDuels[prevDuelId + 0]),
+            byeWinner(previousDuels[prevDuelId]),
             byeWinner(previousDuels[prevDuelId + 1]),
         ]);
     }
@@ -896,12 +896,12 @@ export function getParentMatchResults(storedParent: Match, scores: Scores): Part
  *
  * @param match The up to date match.
  */
-export function getUpdatedMatchResults(match: OmitId<MatchResults>): MatchResults {
+export function getUpdatedMatchResults(match: OmitId<MatchResults>): OmitId<MatchResults> {
     return {
         status: match.status,
         opponent1: match.opponent1,
         opponent2: match.opponent2,
-    }
+    };
 }
 
 /**
@@ -913,7 +913,7 @@ export function getChildGamesResults(games: MatchGame[]): Scores {
     const scores = {
         opponent1: 0,
         opponent2: 0,
-    }
+    };
 
     for (const game of games) {
         const result = getMatchResult(game);

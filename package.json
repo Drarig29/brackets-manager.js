@@ -8,7 +8,7 @@
         "dist"
     ],
     "dependencies": {
-        "brackets-model": "^1.3.3",
+        "brackets-model": "^1.3.4",
         "node-json-db": "^1.0.3"
     },
     "devDependencies": {
@@ -31,7 +31,7 @@
         "build": "tsc",
         "prepare": "npm run build",
         "prepublishOnly": "npm run build",
-        "lint": "eslint **/*.{js,ts} --ignore-pattern 'dist/*' --fix"
+        "lint": "eslint **/*.{js,ts} --fix"
     },
     "keywords": [
         "javascript",

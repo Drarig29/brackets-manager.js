@@ -223,7 +223,7 @@ export class Update {
             seeding: seeding || undefined,
         }, true);
 
-        const method = this.getSeedingOrdering(stage.type, create);
+        const method = Update.getSeedingOrdering(stage.type, create);
         const slots = await create.getSlots();
 
         const matches = await this.getSeedingMatches(stage.id, stage.type);
@@ -231,7 +231,7 @@ export class Update {
             throw Error('Error getting matches associated to the seeding.');
 
         const ordered = ordering[method](slots);
-        await this.assertCanUpdateSeeding(matches, ordered);
+        await Update.assertCanUpdateSeeding(matches, ordered);
 
         return create.run();
     }
@@ -242,7 +242,7 @@ export class Update {
      * @param stageType The type of the stage.
      * @param create A reference to a Create instance.
      */
-    private getSeedingOrdering(stageType: StageType, create: Create): SeedOrdering {
+    private static getSeedingOrdering(stageType: StageType, create: Create): SeedOrdering {
         return stageType === 'round_robin' ? create.getRoundRobinOrdering() : create.getStandardBracketFirstRoundOrdering();
     }
 
@@ -310,7 +310,7 @@ export class Update {
      * @param matches The matches stored in the database.
      * @param slots The slots to check from the new seeding.
      */
-    private async assertCanUpdateSeeding(matches: Match[], slots: ParticipantSlot[]): Promise<void> {
+    private static async assertCanUpdateSeeding(matches: Match[], slots: ParticipantSlot[]): Promise<void> {
         let index = 0;
 
         for (const match of matches) {
@@ -567,7 +567,7 @@ export class Update {
         return {
             roundNumber: round.number,
             roundCount: rounds.length,
-        }
+        };
     }
 
     /**
@@ -760,7 +760,7 @@ export class Update {
             return [
                 await this.getDiagonalMatch(match.group_id, roundNumber, match.number),
                 ...await this.getFirstMatchFinal(match, stageType),
-            ]
+            ];
         }
 
         if (roundNumber === roundCount)
@@ -885,7 +885,7 @@ export class Update {
      */
     private async getFinalGroupId(stageId: number, stageType: StageType): Promise<number | null> {
         const groupNumber = stageType === 'single_elimination' ? 2 /* Consolation final */ : 3 /* Grand final */;
-        const finalGroup = await this.storage.selectFirst<Group>('group', { stage_id: stageId, number: groupNumber })
+        const finalGroup = await this.storage.selectFirst<Group>('group', { stage_id: stageId, number: groupNumber });
         if (!finalGroup) return null;
         return finalGroup.id;
     }

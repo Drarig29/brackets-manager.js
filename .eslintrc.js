@@ -4,6 +4,7 @@ module.exports = {
     ecmaVersion: 2020, // Allows for the parsing of modern ECMAScript features
     sourceType: 'module', // Allows for the use of imports
   },
+  ignorePatterns: ['dist/', 'webpack.config.js'],
   extends: [
     'plugin:@typescript-eslint/recommended',
     'plugin:jsdoc/recommended',
@@ -12,7 +13,8 @@ module.exports = {
     'curly': ['error', 'multi-or-nest'],
     'brace-style': ['error', '1tbs'],
     'quotes': ['error', 'single'],
-    
+    'semi': 'error',
+
     'comma-dangle': ['error', {
       'arrays': 'always-multiline',
       'objects': 'always-multiline',

@@ -7,9 +7,9 @@ describe('Helpers', () => {
     describe('Round-robin groups', () => {
 
         it('should place participants in groups', () => {
-            assert.deepEqual(makeGroups([1, 2, 3, 4, 5], 2), [[1, 2, 3], [4, 5]])
-            assert.deepEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 2), [[1, 2, 3, 4], [5, 6, 7, 8]])
-            assert.deepEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 3), [[1, 2, 3], [4, 5, 6], [7, 8]])
+            assert.deepEqual(makeGroups([1, 2, 3, 4, 5], 2), [[1, 2, 3], [4, 5]]);
+            assert.deepEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 2), [[1, 2, 3, 4], [5, 6, 7, 8]]);
+            assert.deepEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 3), [[1, 2, 3], [4, 5, 6], [7, 8]]);
         });
 
         it('should make the rounds for a round-robin group', () => {
@@ -18,7 +18,7 @@ describe('Helpers', () => {
             assertRoundRobin([1, 2, 3, 4, 5], makeRoundRobinMatches([1, 2, 3, 4, 5]));
             assertRoundRobin([1, 2, 3, 4, 5, 6], makeRoundRobinMatches([1, 2, 3, 4, 5, 6]));
         });
-    })
+    });
 
     describe('Seed ordering methods', () => {
 

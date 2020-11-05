@@ -29,7 +29,7 @@ export const ordering: OrderingMap = {
             outer(part: T[][]): T[] {
                 return [part[0].shift()!, part[1].pop()!];
             },
-        }
+        };
 
         const result: T[] = [];
 
@@ -85,7 +85,7 @@ export const ordering: OrderingMap = {
     'groups.bracket_optimized': () => {
         throw Error('Not implemented.');
     },
-}
+};
 
 export const defaultMinorOrdering: { [key: number]: SeedOrdering[] } = {
     // 1 or 2: Not possible.
@@ -95,4 +95,4 @@ export const defaultMinorOrdering: { [key: number]: SeedOrdering[] } = {
     32: ['natural', 'reverse', 'half_shift', 'natural', 'natural'],
     64: ['natural', 'reverse', 'half_shift', 'reverse', 'natural', 'natural'],
     128: ['natural', 'reverse', 'half_shift', 'pair_flip', 'pair_flip', 'pair_flip', 'natural'],
-}
+};

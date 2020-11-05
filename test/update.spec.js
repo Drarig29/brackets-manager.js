@@ -68,7 +68,7 @@ describe('Update matches', () => {
             id: 4,
             status: Status.Completed,
         }), 'The match is not really completed.');
-    })
+    });
 
     it('should end the match by only setting the winner', async () => {
         const before = await storage.select('match', 0);
