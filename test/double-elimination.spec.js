@@ -33,12 +33,12 @@ describe('Create double elimination stage', () => {
         });
 
         const stage = await storage.select('stage', 0);
-        assert.equal(stage.name, 'Amateur');
-        assert.equal(stage.type, 'double_elimination');
+        assert.strictEqual(stage.name, 'Amateur');
+        assert.strictEqual(stage.type, 'double_elimination');
 
-        assert.equal((await storage.select('group')).length, 3);
-        assert.equal((await storage.select('round')).length, 4 + 6 + 1);
-        assert.equal((await storage.select('match')).length, 30);
+        assert.strictEqual((await storage.select('group')).length, 3);
+        assert.strictEqual((await storage.select('round')).length, 4 + 6 + 1);
+        assert.strictEqual((await storage.select('match')).length, 30);
     });
 
     it('should create a double elimination stage with only two participants', async () => {
@@ -50,9 +50,9 @@ describe('Create double elimination stage', () => {
             settings: { size: 2 },
         });
 
-        assert.equal((await storage.select('group')).length, 1);
-        assert.equal((await storage.select('round')).length, 1);
-        assert.equal((await storage.select('match')).length, 1);
+        assert.strictEqual((await storage.select('group')).length, 1);
+        assert.strictEqual((await storage.select('round')).length, 1);
+        assert.strictEqual((await storage.select('match')).length, 1);
 
         // Ensure update works.
         await manager.update.seeding(0, ['Team 1', 'Team 2']);
@@ -76,9 +76,9 @@ describe('Create double elimination stage', () => {
             settings: { grandFinal: 'double', seedOrdering: ['natural'] },
         });
 
-        assert.equal((await storage.select('group')).length, 3);
-        assert.equal((await storage.select('round')).length, 3 + 4 + 2);
-        assert.equal((await storage.select('match')).length, 15);
+        assert.strictEqual((await storage.select('group')).length, 3);
+        assert.strictEqual((await storage.select('round')).length, 3 + 4 + 2);
+        assert.strictEqual((await storage.select('match')).length, 15);
     });
 });
 
@@ -106,7 +106,7 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         const before = await storage.select('match', 8); // First match of WB round 2
-        assert.equal(before.opponent2.id, null);
+        assert.strictEqual(before.opponent2.id, null);
 
         await manager.update.match({
             id: 0, // First match of WB round 1
@@ -126,22 +126,22 @@ describe('Previous and next match update in double elimination stage', () => {
             opponent2: { score: 10 },
         });
 
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 8)).opponent1.id, // Determined opponent for WB round 2
             (await storage.select('match', 0)).opponent1.id, // Winner of first match round 1
         );
 
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 8)).opponent2.id, // Determined opponent for WB round 2
             (await storage.select('match', 1)).opponent2.id, // Winner of second match round 1
         );
 
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 15)).opponent2.id, // Determined opponent for LB round 1
             (await storage.select('match', 1)).opponent1.id, // Loser of second match round 1
         );
 
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 19)).opponent2.id, // Determined opponent for LB round 2
             (await storage.select('match', 0)).opponent2.id, // Loser of first match round 1
         );
@@ -174,7 +174,7 @@ describe('Previous and next match update in double elimination stage', () => {
             opponent2: { score: 9 },
         });
 
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 5)).opponent1.id, // Determined opponent for the grand final (round 1)
             (await storage.select('match', 0)).opponent1.id, // Winner of WB Final
         );
@@ -191,7 +191,7 @@ describe('Previous and next match update in double elimination stage', () => {
             opponent2: { score: 7 },
         });
 
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 5)).opponent2.id, // Determined opponent for the grand final (round 1)
             (await storage.select('match', 1)).opponent2.id, // Winner of LB Final
         );
@@ -202,7 +202,7 @@ describe('Previous and next match update in double elimination stage', () => {
             opponent2: { score: 16, result: 'win' }, // Team 3
         });
 
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 6)).opponent2.id, // Determined opponent for the grand final (round 2)
             (await storage.select('match', 1)).opponent2.id, // Winner of LB Final
         );
@@ -224,8 +224,8 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         const beforeReset = await storage.select('match', 3); // Determined opponent for LB round 1
-        assert.equal(beforeReset.opponent1.id, (await storage.select('match', 0)).opponent2.id);
-        assert.equal(beforeReset.opponent1.position, 1); // Must be set.
+        assert.strictEqual(beforeReset.opponent1.id, (await storage.select('match', 0)).opponent2.id);
+        assert.strictEqual(beforeReset.opponent1.position, 1); // Must be set.
 
         await manager.update.match({
             id: 0, // First match of WB round 1
@@ -233,8 +233,8 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         const afterReset = await storage.select('match', 3); // Determined opponent for LB round 1
-        assert.equal(afterReset.opponent1.id, null);
-        assert.equal(afterReset.opponent1.position, 1); // It must stay.
+        assert.strictEqual(afterReset.opponent1.id, null);
+        assert.strictEqual(afterReset.opponent1.position, 1); // It must stay.
     });
 
     it('should archive previous matches', async () => {
@@ -265,8 +265,8 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         // WB Final archived both WB round 1 matches
-        assert.equal((await storage.select('match', 0)).status, Status.Archived);
-        assert.equal((await storage.select('match', 1)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Archived);
 
         // Reset the result
         await manager.update.match({
@@ -275,8 +275,8 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         // Should remove the archived status
-        assert.equal((await storage.select('match', 0)).status, Status.Completed);
-        assert.equal((await storage.select('match', 1)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Completed);
 
         await manager.update.match({
             id: 3, // Only match of LB round 1
@@ -285,8 +285,8 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         // First round of LB archived both WB round 1 matches
-        assert.equal((await storage.select('match', 0)).status, Status.Archived);
-        assert.equal((await storage.select('match', 1)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Archived);
 
         await manager.update.match({
             id: 2, // WB Final
@@ -300,8 +300,8 @@ describe('Previous and next match update in double elimination stage', () => {
             opponent2: { score: 7 },
         });
 
-        assert.equal((await storage.select('match', 2)).status, Status.Archived);
-        assert.equal((await storage.select('match', 3)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Archived);
 
         // Force status of WB Final to completed to make sure the Grand Final sets it to Archived.
         await storage.update('match', 2, {
@@ -315,7 +315,7 @@ describe('Previous and next match update in double elimination stage', () => {
             opponent2: { score: 16, result: 'win' }, // Team 3
         });
 
-        assert.equal((await storage.select('match', 2)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Archived);
 
         await manager.update.match({
             id: 6, // Grand Final round 2
@@ -323,7 +323,7 @@ describe('Previous and next match update in double elimination stage', () => {
             opponent2: { score: 16, result: 'win' }, // Team 3
         });
 
-        assert.equal((await storage.select('match', 5)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 5)).status, Status.Archived);
     });
 
     it('should choose the correct previous and next matches based on losers ordering', async () => {
@@ -348,19 +348,19 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         await manager.update.match({ id: 0, opponent1: { result: 'win' } }); // WB 1.1
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 18)).opponent2.id, // Determined opponent for last match of LB round 1 (reverse ordering for losers)
             (await storage.select('match', 0)).opponent2.id, // Loser of first match round 1
         );
 
         await manager.update.match({ id: 1, opponent1: { result: 'win' } }); // WB 1.2
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 18)).opponent1.id, // Determined opponent for last match of LB round 1 (reverse ordering for losers)
             (await storage.select('match', 1)).opponent2.id, // Loser of second match round 1
         );
 
         await manager.update.match({ id: 8, opponent1: { result: 'win' } }); // WB 2.1
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 22)).opponent1.id, // Determined opponent for last match of LB round 2 (reverse ordering for losers)
             (await storage.select('match', 8)).opponent2.id, // Loser of first match round 2
         );
@@ -371,8 +371,8 @@ describe('Previous and next match update in double elimination stage', () => {
         await manager.update.match({ id: 15, opponent1: { result: 'win' } }); // LB 1.1
         await manager.update.match({ id: 19, opponent1: { result: 'win' } }); // LB 2.1
 
-        assert.equal((await storage.select('match', 8)).status, Status.Completed); // WB 2.1
-        assert.equal((await storage.select('match', 11)).status, Status.Archived); // WB 2.4
+        assert.strictEqual((await storage.select('match', 8)).status, Status.Completed); // WB 2.1
+        assert.strictEqual((await storage.select('match', 11)).status, Status.Archived); // WB 2.4
     });
 });
 
@@ -403,43 +403,43 @@ describe('Skip first round', () => {
     });
 
     it('should create a double elimination stage with skip first round option', async () => {
-        assert.equal((await storage.select('group')).length, 3);
-        assert.equal((await storage.select('round')).length, 3 + 6 + 2); // One round less in WB.
-        assert.equal((await storage.select('match')).length, (4 + 2 + 1) + (4 + 4 + 2 + 2 + 1 + 1) + (1 + 1));
+        assert.strictEqual((await storage.select('group')).length, 3);
+        assert.strictEqual((await storage.select('round')).length, 3 + 6 + 2); // One round less in WB.
+        assert.strictEqual((await storage.select('match')).length, (4 + 2 + 1) + (4 + 4 + 2 + 2 + 1 + 1) + (1 + 1));
 
-        assert.equal((await storage.select('round', 0)).number, 1); // Even though the "real" first round is skipped, the stored first round's number should be 1.
+        assert.strictEqual((await storage.select('round', 0)).number, 1); // Even though the "real" first round is skipped, the stored first round's number should be 1.
 
-        assert.equal((await storage.select('match', 0)).opponent1.id, 0); // First match of WB.
-        assert.equal((await storage.select('match', 7)).opponent1.id, 1); // First match of LB.
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0); // First match of WB.
+        assert.strictEqual((await storage.select('match', 7)).opponent1.id, 1); // First match of LB.
     });
 
     it('should choose the correct previous and next matches', async () => {
         await manager.update.match({ id: 0, opponent1: { result: 'win' } });
-        assert.equal((await storage.select('match', 7)).opponent1.id, 1); // First match of LB Round 1 (must stay).
-        assert.equal((await storage.select('match', 12)).opponent1.id, 2); // First match of LB Round 2 (must be updated).
+        assert.strictEqual((await storage.select('match', 7)).opponent1.id, 1); // First match of LB Round 1 (must stay).
+        assert.strictEqual((await storage.select('match', 12)).opponent1.id, 2); // First match of LB Round 2 (must be updated).
 
         await manager.update.match({ id: 1, opponent1: { result: 'win' } });
-        assert.equal((await storage.select('match', 7)).opponent2.id, 3); // First match of LB Round 1 (must stay).
-        assert.equal((await storage.select('match', 11)).opponent1.id, 6); // Second match of LB Round 2 (must be updated).
+        assert.strictEqual((await storage.select('match', 7)).opponent2.id, 3); // First match of LB Round 1 (must stay).
+        assert.strictEqual((await storage.select('match', 11)).opponent1.id, 6); // Second match of LB Round 2 (must be updated).
 
         await manager.update.match({ id: 4, opponent1: { result: 'win' } }); // First match of WB Round 2.
-        assert.equal((await storage.select('match', 18)).opponent1.id, 4); // First match of LB Round 4.
+        assert.strictEqual((await storage.select('match', 18)).opponent1.id, 4); // First match of LB Round 4.
 
         await manager.update.match({ id: 7, opponent1: { result: 'win' } }); // First match of LB Round 1.
-        assert.equal((await storage.select('match', 11)).opponent2.id, 1); // First match of LB Round 2.
+        assert.strictEqual((await storage.select('match', 11)).opponent2.id, 1); // First match of LB Round 2.
 
         for (let i = 2; i < 21; i++)
             await manager.update.match({ id: i, opponent1: { result: 'win' } });
 
-        assert.equal((await storage.select('match', 15)).opponent1.id, 6); // First match of LB Round 3.
+        assert.strictEqual((await storage.select('match', 15)).opponent1.id, 6); // First match of LB Round 3.
 
-        assert.equal((await storage.select('match', 21)).opponent1.id, 0); // GF Round 1.
-        assert.equal((await storage.select('match', 21)).opponent2.id, 8); // GF Round 1.
+        assert.strictEqual((await storage.select('match', 21)).opponent1.id, 0); // GF Round 1.
+        assert.strictEqual((await storage.select('match', 21)).opponent2.id, 8); // GF Round 1.
 
         await manager.update.match({ id: 21, opponent2: { result: 'win' } });
 
-        assert.equal((await storage.select('match', 21)).opponent1.id, 0); // GF Round 2.
-        assert.equal((await storage.select('match', 22)).opponent2.id, 8); // GF Round 2.
+        assert.strictEqual((await storage.select('match', 21)).opponent1.id, 0); // GF Round 2.
+        assert.strictEqual((await storage.select('match', 22)).opponent2.id, 8); // GF Round 2.
 
         await manager.update.match({ id: 22, opponent2: { result: 'win' } });
     });

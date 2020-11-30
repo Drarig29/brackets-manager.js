@@ -21,7 +21,7 @@ export type MatchData = {
 
 export class Update {
 
-    private storage: IStorage;
+    private readonly storage: IStorage;
 
     /**
      * Creates an instance of Update, which will handle the updates for a stage.
@@ -34,7 +34,7 @@ export class Update {
 
     /**
      * Updates partial information of a match. Its id must be given.
-     * 
+     *
      * This will update related matches accordingly.
      *
      * @param match Values to change in a match.
@@ -55,7 +55,7 @@ export class Update {
 
     /**
      * Resets the results of a match.
-     * 
+     *
      * This will update related matches accordingly.
      *
      * @param matchId ID of the match.
@@ -72,7 +72,7 @@ export class Update {
 
     /**
      * Updates partial information of a match game. It's id must be given.
-     * 
+     *
      * This will update the parent match accordingly.
      *
      * @param game Values to change in a match game.
@@ -176,10 +176,14 @@ export class Update {
      */
     public async matchChildCount(level: Level, id: number, childCount: number): Promise<void> {
         switch (level) {
-            case 'stage': return this.updateStageMatchChildCount(id, childCount);
-            case 'group': return this.updateGroupMatchChildCount(id, childCount);
-            case 'round': return this.updateRoundMatchChildCount(id, childCount);
-            case 'match': return this.updateMatchChildCount(id, childCount);
+            case 'stage':
+                return this.updateStageMatchChildCount(id, childCount);
+            case 'group':
+                return this.updateGroupMatchChildCount(id, childCount);
+            case 'round':
+                return this.updateRoundMatchChildCount(id, childCount);
+            case 'match':
+                return this.updateMatchChildCount(id, childCount);
         }
     }
 
@@ -461,9 +465,9 @@ export class Update {
         if (match.status === Status.Completed && !winnerSide) throw Error('Cannot find a winner.');
 
         if (winnerSide)
-            this.setPrevious(previousMatches);
+            await this.setPrevious(previousMatches);
         else
-            this.resetPrevious(previousMatches);
+            await this.resetPrevious(previousMatches);
     }
 
     /**
@@ -509,9 +513,9 @@ export class Update {
         const actualRoundNumber = (stage.settings.skipFirstRound && matchLocation === 'winner_bracket') ? roundNumber + 1 : roundNumber;
 
         if (winnerSide)
-            this.applyToNextMatches(helpers.setNextOpponent, match, matchLocation, actualRoundNumber, roundCount, nextMatches, winnerSide);
+            await this.applyToNextMatches(helpers.setNextOpponent, match, matchLocation, actualRoundNumber, roundCount, nextMatches, winnerSide);
         else
-            this.applyToNextMatches(helpers.resetNextOpponent, match, matchLocation, actualRoundNumber, roundCount, nextMatches);
+            await this.applyToNextMatches(helpers.resetNextOpponent, match, matchLocation, actualRoundNumber, roundCount, nextMatches);
     }
 
     /**
@@ -525,17 +529,17 @@ export class Update {
      * @param nextMatches The matches following the current match.
      * @param winnerSide Side of the winner in the current match.
      */
-    private applyToNextMatches(setNextOpponent: SetNextOpponent, match: Match, matchLocation: BracketType, roundNumber: number, roundCount: number, nextMatches: Match[], winnerSide?: Side): void {
+    private async applyToNextMatches(setNextOpponent: SetNextOpponent, match: Match, matchLocation: BracketType, roundNumber: number, roundCount: number, nextMatches: Match[], winnerSide?: Side): Promise<void> {
         if (matchLocation === 'final_group') {
             setNextOpponent(nextMatches, 0, 'opponent1', match, 'opponent1');
             setNextOpponent(nextMatches, 0, 'opponent2', match, 'opponent2');
-            this.storage.update('match', nextMatches[0].id, nextMatches[0]);
+            await this.storage.update('match', nextMatches[0].id, nextMatches[0]);
             return;
         }
 
         const nextSide = helpers.getNextSide(match.number, roundNumber, roundCount, matchLocation);
         setNextOpponent(nextMatches, 0, nextSide, match, winnerSide);
-        this.storage.update('match', nextMatches[0].id, nextMatches[0]);
+        await this.storage.update('match', nextMatches[0].id, nextMatches[0]);
 
         if (nextMatches.length !== 2) return;
 
@@ -543,11 +547,11 @@ export class Update {
 
         if (matchLocation === 'single_bracket') {
             setNextOpponent(nextMatches, 1, nextSide, match, winnerSide && helpers.getOtherSide(winnerSide));
-            this.storage.update('match', nextMatches[1].id, nextMatches[1]);
+            await this.storage.update('match', nextMatches[1].id, nextMatches[1]);
         } else {
             const nextSideLB = helpers.getNextSideLoserBracket(match.number, nextMatches[1], roundNumber);
             setNextOpponent(nextMatches, 1, nextSideLB, match, winnerSide && helpers.getOtherSide(winnerSide));
-            this.storage.update('match', nextMatches[1].id, nextMatches[1]);
+            await this.storage.update('match', nextMatches[1].id, nextMatches[1]);
         }
     }
 
@@ -593,7 +597,7 @@ export class Update {
 
     /**
      * Gets the matches leading to the given match, which is in a final group (consolation final or grand final).
-     * 
+     *
      * @param match The current match.
      * @param roundNumber Number of the current round.
      */
@@ -695,10 +699,14 @@ export class Update {
      */
     private async getNextMatches(match: Match, matchLocation: BracketType, stage: Stage, roundNumber: number, roundCount: number): Promise<Match[]> {
         switch (matchLocation) {
-            case 'single_bracket': return this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount);
-            case 'winner_bracket': return this.getNextMatchesWB(match, stage, roundNumber, roundCount);
-            case 'loser_bracket': return this.getNextMatchesLB(match, stage.type, roundNumber, roundCount);
-            case 'final_group': return this.getNextMatchesFinal(match, roundNumber, roundCount);
+            case 'single_bracket':
+                return this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount);
+            case 'winner_bracket':
+                return this.getNextMatchesWB(match, stage, roundNumber, roundCount);
+            case 'loser_bracket':
+                return this.getNextMatchesLB(match, stage.type, roundNumber, roundCount);
+            case 'final_group':
+                return this.getNextMatchesFinal(match, roundNumber, roundCount);
         }
     }
 
@@ -789,7 +797,7 @@ export class Update {
 
     /**
      * Gets the first match of the final group (consolation final or grand final).
-     * 
+     *
      * @param match The current match.
      * @param stageType Type of the stage.
      */
@@ -803,7 +811,7 @@ export class Update {
 
     /**
      * Gets the matches following the current match, which is in the final group (consolation final or grand final).
-     * 
+     *
      * @param match The current match.
      * @param roundNumber The number of the current round.
      * @param roundCount The count of rounds.
@@ -912,7 +920,7 @@ export class Update {
 
     /**
      * Gets the corresponding match in the next round ("diagonal match") the usual way.
-     * 
+     *
      * Just like from Round 1 to Round 2 in a single elimination stage.
      *
      * @param groupId ID of the group.
@@ -925,7 +933,7 @@ export class Update {
 
     /**
      * Gets the corresponding match in the next round ("parallel match") the "major round to minor round" way.
-     * 
+     *
      * Just like from Round 1 to Round 2 in the loser bracket of a double elimination stage.
      *
      * @param groupId ID of the group.
@@ -938,7 +946,7 @@ export class Update {
 
     /**
      * Finds a match in a given group. The match must have the given number in a round of which the number in group is given.
-     * 
+     *
      * **Example:** In group of id 1, give me the 4th match in the 3rd round.
      *
      * @param groupId ID of the group.

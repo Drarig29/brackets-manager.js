@@ -30,12 +30,12 @@ describe('Create a round-robin stage', () => {
         await manager.create(example);
 
         const stage = await storage.select('stage', 0);
-        assert.equal(stage.name, example.name);
-        assert.equal(stage.type, example.type);
+        assert.strictEqual(stage.name, example.name);
+        assert.strictEqual(stage.type, example.type);
 
-        assert.equal((await storage.select('group')).length, 2);
-        assert.equal((await storage.select('round')).length, 6);
-        assert.equal((await storage.select('match')).length, 12);
+        assert.strictEqual((await storage.select('group')).length, 2);
+        assert.strictEqual((await storage.select('round')).length, 6);
+        assert.strictEqual((await storage.select('match')).length, 12);
     });
 
     it('should create a round-robin stage with to be determined participants', async () => {
@@ -49,9 +49,9 @@ describe('Create a round-robin stage', () => {
             },
         });
 
-        assert.equal((await storage.select('group')).length, 4);
-        assert.equal((await storage.select('round')).length, 4 * 3);
-        assert.equal((await storage.select('match')).length, 4 * 3 * 2);
+        assert.strictEqual((await storage.select('group')).length, 4);
+        assert.strictEqual((await storage.select('round')).length, 4 * 3);
+        assert.strictEqual((await storage.select('match')).length, 4 * 3 * 2);
     });
 
     it('should create a round-robin stage with effort balanced', async () => {
@@ -71,8 +71,8 @@ describe('Create a round-robin stage', () => {
             },
         });
 
-        assert.equal((await storage.select('match', 0)).opponent1.id, 0);
-        assert.equal((await storage.select('match', 0)).opponent2.id, 7);
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('match', 0)).opponent2.id, 7);
     });
 
     it('should throw if no group count given', async () => {

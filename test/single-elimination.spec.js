@@ -32,12 +32,12 @@ describe('Create single elimination stage', () => {
         await manager.create(example);
 
         const stage = await storage.select('stage', 0);
-        assert.equal(stage.name, example.name);
-        assert.equal(stage.type, example.type);
+        assert.strictEqual(stage.name, example.name);
+        assert.strictEqual(stage.type, example.type);
 
-        assert.equal((await storage.select('group')).length, 1);
-        assert.equal((await storage.select('round')).length, 4);
-        assert.equal((await storage.select('match')).length, 15);
+        assert.strictEqual((await storage.select('group')).length, 1);
+        assert.strictEqual((await storage.select('round')).length, 4);
+        assert.strictEqual((await storage.select('match')).length, 15);
     });
 
     it('should create a single elimination stage with BYEs', async () => {
@@ -54,10 +54,10 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'] },
         });
 
-        assert.equal((await storage.select('match', 4)).opponent1.id, 0); // Determined because of opponent's BYE.
-        assert.equal((await storage.select('match', 4)).opponent2.id, null); // To be determined.
-        assert.equal((await storage.select('match', 5)).opponent1, null); // BYE propagated.
-        assert.equal((await storage.select('match', 5)).opponent2.id, null); // To be determined.
+        assert.strictEqual((await storage.select('match', 4)).opponent1.id, 0); // Determined because of opponent's BYE.
+        assert.strictEqual((await storage.select('match', 4)).opponent2.id, null); // To be determined.
+        assert.strictEqual((await storage.select('match', 5)).opponent1, null); // BYE propagated.
+        assert.strictEqual((await storage.select('match', 5)).opponent2.id, null); // To be determined.
     });
 
     it('should create a single elimination stage with consolation final', async () => {
@@ -74,9 +74,9 @@ describe('Create single elimination stage', () => {
             settings: { consolationFinal: true, seedOrdering: ['natural'] },
         });
 
-        assert.equal((await storage.select('group')).length, 2);
-        assert.equal((await storage.select('round')).length, 4);
-        assert.equal((await storage.select('match')).length, 8);
+        assert.strictEqual((await storage.select('group')).length, 2);
+        assert.strictEqual((await storage.select('round')).length, 4);
+        assert.strictEqual((await storage.select('match')).length, 8);
     });
 
     it('should create a single elimination stage with consolation final and BYEs', async () => {
@@ -93,15 +93,15 @@ describe('Create single elimination stage', () => {
             settings: { consolationFinal: true, seedOrdering: ['natural'] },
         });
 
-        assert.equal((await storage.select('match', 4)).opponent1, null);
-        assert.equal((await storage.select('match', 4)).opponent2.id, 0);
+        assert.strictEqual((await storage.select('match', 4)).opponent1, null);
+        assert.strictEqual((await storage.select('match', 4)).opponent2.id, 0);
 
         // Consolation final
-        assert.equal((await storage.select('match', 7)).opponent1, null);
-        assert.equal((await storage.select('match', 7)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 7)).opponent1, null);
+        assert.strictEqual((await storage.select('match', 7)).opponent2.id, null);
     });
 
-    it('shoud create a single elimination stage with Bo3 matches', async () => {
+    it('should create a single elimination stage with Bo3 matches', async () => {
         await manager.create({
             name: 'Example with Bo3 matches',
             tournamentId: 0,
@@ -115,10 +115,10 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'], matchesChildCount: 3 },
         });
 
-        assert.equal((await storage.select('group')).length, 1);
-        assert.equal((await storage.select('round')).length, 3);
-        assert.equal((await storage.select('match')).length, 7);
-        assert.equal((await storage.select('match_game')).length, 7 * 3);
+        assert.strictEqual((await storage.select('group')).length, 1);
+        assert.strictEqual((await storage.select('round')).length, 3);
+        assert.strictEqual((await storage.select('match')).length, 7);
+        assert.strictEqual((await storage.select('match_game')).length, 7 * 3);
     });
 });
 
@@ -154,12 +154,12 @@ describe('Previous and next match update in single elimination stage', () => {
             opponent2: { score: 9 },
         });
 
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 3)).opponent1.id, // Determined opponent for the consolation final
             (await storage.select('match', 0)).opponent2.id, // Loser of Semi 1
         );
 
-        assert.equal(
+        assert.strictEqual(
             (await storage.select('match', 3)).opponent2.id, // Determined opponent for the consolation final
             (await storage.select('match', 1)).opponent1.id, // Loser of Semi 2
         );
@@ -192,8 +192,8 @@ describe('Previous and next match update in single elimination stage', () => {
             opponent2: { score: 9 },
         });
 
-        assert.equal((await storage.select('match', 0)).status, Status.Archived);
-        assert.equal((await storage.select('match', 1)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Archived);
 
         await manager.update.match({
             id: 3, // Consolation final
@@ -201,6 +201,6 @@ describe('Previous and next match update in single elimination stage', () => {
             opponent2: { score: 9 },
         });
 
-        assert.equal((await storage.select('match', 2)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Archived);
     });
 });

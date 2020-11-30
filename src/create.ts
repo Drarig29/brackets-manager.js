@@ -35,8 +35,8 @@ export class Create {
 
     private storage: IStorage;
     private stage: InputStage;
-    private seedOrdering: SeedOrdering[];
-    private updateSeeding: boolean;
+    private readonly seedOrdering: SeedOrdering[];
+    private readonly updateSeeding: boolean;
 
     /**
      * Creates an instance of Create, which will handle the creation of the stage.

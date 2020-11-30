@@ -26,7 +26,7 @@ It contains all the logic needed to manage tournaments.
 ## Double elimination
 
 - Twice the number of matches.
-- Contains a Winner Bracket (WB) and a Loser Bracket (LB).
+- Contains a Winner Bracket (WB), and a Loser Bracket (LB).
 - Number of participants : 8, 16, 32, etc. (powers of two)
 - Optional Grand Final : matches the WB winner against the LB winner.
   - Can be simple or double.

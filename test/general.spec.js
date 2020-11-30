@@ -24,17 +24,17 @@ describe('BYE handling', () => {
             settings: { seedOrdering: ['natural'], grandFinal: 'simple' },
         });
 
-        assert.equal((await storage.select('match', 2)).opponent1.id, 0);
-        assert.equal((await storage.select('match', 2)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 2)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('match', 2)).opponent2, null);
 
-        assert.equal((await storage.select('match', 3)).opponent1, null);
-        assert.equal((await storage.select('match', 3)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent1, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent2, null);
 
-        assert.equal((await storage.select('match', 4)).opponent1, null);
-        assert.equal((await storage.select('match', 4)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 4)).opponent1, null);
+        assert.strictEqual((await storage.select('match', 4)).opponent2, null);
 
-        assert.equal((await storage.select('match', 5)).opponent1.id, 0);
-        assert.equal((await storage.select('match', 5)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 5)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('match', 5)).opponent2, null);
     });
 
     it('should balance BYEs in the seeding', async () => {
@@ -52,11 +52,11 @@ describe('BYE handling', () => {
             },
         });
 
-        assert.equal((await storage.select('match', 0)).opponent1.id, 0);
-        assert.equal((await storage.select('match', 0)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('match', 0)).opponent2, null);
 
-        assert.equal((await storage.select('match', 1)).opponent1.id, 1);
-        assert.equal((await storage.select('match', 1)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 1)).opponent1.id, 1);
+        assert.strictEqual((await storage.select('match', 1)).opponent2, null);
     });
 });
 
@@ -78,30 +78,30 @@ describe('Position checks', () => {
 
     it('should not have a position when we don\'t need the origin of a participant', async () => {
         const matchFromWbRound2 = await storage.select('match', 4);
-        assert.equal(matchFromWbRound2.opponent1.position, undefined);
-        assert.equal(matchFromWbRound2.opponent2.position, undefined);
+        assert.strictEqual(matchFromWbRound2.opponent1.position, undefined);
+        assert.strictEqual(matchFromWbRound2.opponent2.position, undefined);
 
         const matchFromLbRound2 = await storage.select('match', 9);
-        assert.equal(matchFromLbRound2.opponent2.position, undefined);
+        assert.strictEqual(matchFromLbRound2.opponent2.position, undefined);
 
         const matchFromGrandFinal = await storage.select('match', 13);
-        assert.equal(matchFromGrandFinal.opponent1.position, undefined);
+        assert.strictEqual(matchFromGrandFinal.opponent1.position, undefined);
     });
 
     it('should have a position where we need the origin of a participant', async () => {
         const matchFromWbRound1 = await storage.select('match', 0);
-        assert.equal(matchFromWbRound1.opponent1.position, 1);
-        assert.equal(matchFromWbRound1.opponent2.position, 2);
+        assert.strictEqual(matchFromWbRound1.opponent1.position, 1);
+        assert.strictEqual(matchFromWbRound1.opponent2.position, 2);
 
         const matchFromLbRound1 = await storage.select('match', 7);
-        assert.equal(matchFromLbRound1.opponent1.position, 1);
-        assert.equal(matchFromLbRound1.opponent2.position, 2);
+        assert.strictEqual(matchFromLbRound1.opponent1.position, 1);
+        assert.strictEqual(matchFromLbRound1.opponent2.position, 2);
 
         const matchFromLbRound2 = await storage.select('match', 9);
-        assert.equal(matchFromLbRound2.opponent1.position, 2);
+        assert.strictEqual(matchFromLbRound2.opponent1.position, 2);
 
         const matchFromGrandFinal = await storage.select('match', 13);
-        assert.equal(matchFromGrandFinal.opponent2.position, 1);
+        assert.strictEqual(matchFromGrandFinal.opponent2.position, 1);
     });
 });
 
@@ -124,7 +124,7 @@ describe('Special cases', () => {
         }));
 
         // Simulation of external database filling for participants.
-        storage.insert('participant', participants);
+        await storage.insert('participant', participants);
 
         await manager.create({
             name: 'Example',
@@ -136,7 +136,7 @@ describe('Special cases', () => {
         // Update seeding with already existing ids.
         await manager.update.seeding(0, [0, 1, 2, 3, 4, 5, 6, 7]);
 
-        assert.equal((await storage.select('match', 0)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
     });
 
     it('should throw if the name of the stage is not provided', async () => {
@@ -211,34 +211,34 @@ describe('Update match child count', () => {
 
     it('should change match child count at match level', async () => {
         await manager.update.matchChildCount('match', 0, 3);
-        assert.equal((await storage.select('match_game')).length, 6 + 3);
+        assert.strictEqual((await storage.select('match_game')).length, 6 + 3);
     });
 
     it('should change match child count at round level', async () => {
         await manager.update.matchChildCount('round', 2, 3); // Round of id 2 in Bo3
-        assert.equal((await storage.select('match_game')).length, 6 + 3);
+        assert.strictEqual((await storage.select('match_game')).length, 6 + 3);
 
         await manager.update.matchChildCount('round', 1, 2); // Round of id 1 in Bo2
-        assert.equal((await storage.select('match_game')).length, 4 + 4 + 3);
+        assert.strictEqual((await storage.select('match_game')).length, 4 + 4 + 3);
 
         await manager.update.matchChildCount('round', 0, 0); // Round of id 0 in Bo0 (normal matches without games)
-        assert.equal((await storage.select('match_game')).length, 0 + 4 + 3);
+        assert.strictEqual((await storage.select('match_game')).length, 0 + 4 + 3);
     });
 
     it('should change match child count at group level', async () => {
         await manager.update.matchChildCount('group', 0, 4);
-        assert.equal((await storage.select('match_game')).length, 7 * 4);
+        assert.strictEqual((await storage.select('match_game')).length, 7 * 4);
 
         await manager.update.matchChildCount('group', 0, 2);
-        assert.equal((await storage.select('match_game')).length, 7 * 2);
+        assert.strictEqual((await storage.select('match_game')).length, 7 * 2);
     });
 
     it('should change match child count at stage level', async () => {
         await manager.update.matchChildCount('stage', 0, 4);
-        assert.equal((await storage.select('match_game')).length, 7 * 4);
+        assert.strictEqual((await storage.select('match_game')).length, 7 * 4);
 
         await manager.update.matchChildCount('stage', 0, 2);
-        assert.equal((await storage.select('match_game')).length, 7 * 2);
+        assert.strictEqual((await storage.select('match_game')).length, 7 * 2);
     });
 });
 
@@ -264,40 +264,40 @@ describe('Seeding and ordering in elimination', () => {
 
     it('should have the good orderings everywhere', async () => {
         const firstRoundMatchWB = await storage.select('match', 0);
-        assert.equal(firstRoundMatchWB.opponent1.position, 1);
-        assert.equal(firstRoundMatchWB.opponent2.position, 16);
+        assert.strictEqual(firstRoundMatchWB.opponent1.position, 1);
+        assert.strictEqual(firstRoundMatchWB.opponent2.position, 16);
 
         const firstRoundMatchLB = await storage.select('match', 15);
-        assert.equal(firstRoundMatchLB.opponent1.position, 8);
-        assert.equal(firstRoundMatchLB.opponent2.position, 7);
+        assert.strictEqual(firstRoundMatchLB.opponent1.position, 8);
+        assert.strictEqual(firstRoundMatchLB.opponent2.position, 7);
 
         const secondRoundMatchLB = await storage.select('match', 19);
-        assert.equal(secondRoundMatchLB.opponent1.position, 2);
+        assert.strictEqual(secondRoundMatchLB.opponent1.position, 2);
 
         const secondRoundSecondMatchLB = await storage.select('match', 20);
-        assert.equal(secondRoundSecondMatchLB.opponent1.position, 1);
+        assert.strictEqual(secondRoundSecondMatchLB.opponent1.position, 1);
 
         const fourthRoundMatchLB = await storage.select('match', 25);
-        assert.equal(fourthRoundMatchLB.opponent1.position, 2);
+        assert.strictEqual(fourthRoundMatchLB.opponent1.position, 2);
 
         const finalRoundMatchLB = await storage.select('match', 28);
-        assert.equal(finalRoundMatchLB.opponent1.position, 1);
+        assert.strictEqual(finalRoundMatchLB.opponent1.position, 1);
     });
 
     it('should update the orderings in rounds', async () => {
         await manager.update.roundOrdering(0, 'pair_flip');
 
         const firstRoundMatchWB = await storage.select('match', 0);
-        assert.equal(firstRoundMatchWB.opponent1.position, 2);
-        assert.equal(firstRoundMatchWB.opponent2.position, 1);
+        assert.strictEqual(firstRoundMatchWB.opponent1.position, 2);
+        assert.strictEqual(firstRoundMatchWB.opponent2.position, 1);
 
         await manager.update.roundOrdering(5, 'reverse');
 
         const secondRoundMatchLB = await storage.select('match', 19);
-        assert.equal(secondRoundMatchLB.opponent1.position, 4);
+        assert.strictEqual(secondRoundMatchLB.opponent1.position, 4);
 
         const secondRoundSecondMatchLB = await storage.select('match', 20);
-        assert.equal(secondRoundSecondMatchLB.opponent1.position, 3);
+        assert.strictEqual(secondRoundSecondMatchLB.opponent1.position, 3);
     });
 
     it('should throw if round does not support ordering', async () => {
@@ -332,24 +332,24 @@ describe('Seeding and ordering in elimination', () => {
         await manager.update.ordering(0, ['pair_flip', 'half_shift', 'reverse', 'natural']);
 
         const firstRoundMatchWB = await storage.select('match', 0);
-        assert.equal(firstRoundMatchWB.opponent1.position, 2);
-        assert.equal(firstRoundMatchWB.opponent2.position, 1);
+        assert.strictEqual(firstRoundMatchWB.opponent1.position, 2);
+        assert.strictEqual(firstRoundMatchWB.opponent2.position, 1);
 
         const firstRoundMatchLB = await storage.select('match', 15);
-        assert.equal(firstRoundMatchLB.opponent1.position, 5);
-        assert.equal(firstRoundMatchLB.opponent2.position, 6);
+        assert.strictEqual(firstRoundMatchLB.opponent1.position, 5);
+        assert.strictEqual(firstRoundMatchLB.opponent2.position, 6);
 
         const secondRoundMatchLB = await storage.select('match', 19);
-        assert.equal(secondRoundMatchLB.opponent1.position, 4);
+        assert.strictEqual(secondRoundMatchLB.opponent1.position, 4);
 
         const secondRoundSecondMatchLB = await storage.select('match', 20);
-        assert.equal(secondRoundSecondMatchLB.opponent1.position, 3);
+        assert.strictEqual(secondRoundSecondMatchLB.opponent1.position, 3);
 
         const fourthRoundMatchLB = await storage.select('match', 25);
-        assert.equal(fourthRoundMatchLB.opponent1.position, 1);
+        assert.strictEqual(fourthRoundMatchLB.opponent1.position, 1);
 
         const finalRoundMatchLB = await storage.select('match', 28);
-        assert.equal(finalRoundMatchLB.opponent1.position, 1);
+        assert.strictEqual(finalRoundMatchLB.opponent1.position, 1);
     });
 });
 
@@ -369,9 +369,9 @@ describe('Get module', () => {
         });
 
         const seeding = await manager.get.seeding(0);
-        assert.equal(seeding.length, 32);
-        assert.equal(seeding[0].position, 1);
-        assert.equal(seeding[1].position, 2);
+        assert.strictEqual(seeding.length, 32);
+        assert.strictEqual(seeding[0].position, 1);
+        assert.strictEqual(seeding[1].position, 2);
     });
 
     it('should get the seeding of a single elimination stage', async () => {
@@ -385,9 +385,9 @@ describe('Get module', () => {
         });
 
         const seeding = await manager.get.seeding(0);
-        assert.equal(seeding.length, 16);
-        assert.equal(seeding[0].position, 1);
-        assert.equal(seeding[1].position, 2);
+        assert.strictEqual(seeding.length, 16);
+        assert.strictEqual(seeding[0].position, 1);
+        assert.strictEqual(seeding[1].position, 2);
     });
 
     it('should get the seeding with BYEs', async () => {
@@ -404,10 +404,10 @@ describe('Get module', () => {
         });
 
         const seeding = await manager.get.seeding(0);
-        assert.equal(seeding.length, 8);
-        assert.equal(seeding[0].position, 1);
-        assert.equal(seeding[1], null);
-        assert.equal(seeding[2].position, 3);
-        assert.equal(seeding[5], null);
+        assert.strictEqual(seeding.length, 8);
+        assert.strictEqual(seeding[0].position, 1);
+        assert.strictEqual(seeding[1], null);
+        assert.strictEqual(seeding[2].position, 3);
+        assert.strictEqual(seeding[5], null);
     });
 });

@@ -45,10 +45,10 @@ export const ordering: OrderingMap = {
         }
 
         for (let i = 0; i < size / 2; i++) {
-            add(outerPart, 'outer'); // Outer's outer
-            add(innerPart, 'inner'); // Inner's inner
-            add(outerPart, 'inner'); // Outer's inner
-            add(innerPart, 'outer'); // Inner's outer
+            add(outerPart, 'outer'); // Outer part's outer
+            add(innerPart, 'inner'); // Inner part's inner
+            add(outerPart, 'inner'); // Outer part's inner
+            add(innerPart, 'outer'); // Inner part's outer
         }
 
         return result;
