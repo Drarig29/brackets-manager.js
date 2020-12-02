@@ -1,5 +1,7 @@
 node_modules
 dist
+.vscode
+.idea
 db.json
 viewer
 coverage
