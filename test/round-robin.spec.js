@@ -38,6 +38,26 @@ describe('Create a round-robin stage', () => {
         assert.strictEqual((await storage.select('match')).length, 12);
     });
 
+    it('should create a round-robin stage without BYE vs. BYE matches', async () => {
+        const example = {
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', null,
+                null, null,
+            ],
+            settings: { groupCount: 2 },
+        };
+
+        await manager.create(example);
+
+        // One match must be missing.
+        assert.strictEqual((await storage.select('match')).length, 11);
+    });
+
     it('should create a round-robin stage with to be determined participants', async () => {
         await manager.create({
             name: 'Example',

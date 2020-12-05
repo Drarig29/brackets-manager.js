@@ -1,4 +1,4 @@
-import { Participant, InputStage, Match, SeedOrdering, MatchGame, Stage, Group, Round, Seeding } from 'brackets-model';
+import { Participant, InputStage, Match, SeedOrdering, MatchGame, Stage, Group, Round, Seeding, ParticipantResult } from 'brackets-model';
 import { ordering, defaultMinorOrdering } from './ordering';
 import { Duel, OmitId, ParticipantSlot } from './types';
 import { BracketsManager } from '.';
@@ -98,7 +98,7 @@ export class Create {
 
     /**
      * Creates a round-robin stage.
-     * 
+     *
      * Group count must be given. It will distribute participants in groups and rounds.
      */
     private async roundRobin(): Promise<number> {
@@ -113,7 +113,7 @@ export class Create {
 
     /**
      * Creates a single elimination stage.
-     * 
+     *
      * One bracket and optionally a consolation final between semi-final losers.
      */
     private async singleElimination(): Promise<number> {
@@ -133,7 +133,7 @@ export class Create {
 
     /**
      * Creates a double elimination stage.
-     * 
+     *
      * One upper bracket (winner bracket, WB), one lower bracket (loser bracket, LB) and optionally a grand final
      * between the winner of both bracket, which can be simple or double.
      */
@@ -189,7 +189,7 @@ export class Create {
 
     /**
      * Creates a round-robin group.
-     * 
+     *
      * This will make as many rounds as needed to let each participant match every other once.
      *
      * @param stageId ID of the parent stage.
@@ -213,7 +213,7 @@ export class Create {
 
     /**
      * Creates a standard bracket, which is the only one in single elimination and the upper one in double elimination.
-     * 
+     *
      * This will make as many rounds as needed to end with one winner.
      *
      * @param stageId ID of the parent stage.
@@ -247,7 +247,7 @@ export class Create {
 
     /**
      * Creates a lower bracket, alternating between major and minor rounds.
-     * 
+     *
      * - A major round is a regular round.
      * - A minor round matches the previous (major) round's winners against upper bracket losers of the corresponding round.
      *
@@ -338,7 +338,7 @@ export class Create {
 
     /**
      * Creates a match, possibly with match games.
-     * 
+     *
      * - If `childCount` is 0, then there is no children. The score of the match is directly its intrinsic score.
      * - If `childCount` is greater than 0, then the score of the match will automatically be calculated based on its child games.
      *
@@ -350,6 +350,13 @@ export class Create {
      * @param childCount Child count for this match (number of games).
      */
     private async createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number): Promise<void> {
+        const opponent1 = helpers.toResult(opponents[0]);
+        const opponent2 = helpers.toResult(opponents[1]);
+
+        // Round-robin matches can easily be removed. Prevent BYE vs. BYE matches.
+        if (this.stage.type === 'round_robin' && opponent1 === null && opponent2 === null)
+            return;
+
         const status = helpers.getMatchByeStatus(opponents);
 
         const parentId = await this.insertMatch({
@@ -359,8 +366,8 @@ export class Create {
             round_id: roundId,
             child_count: childCount,
             status: status,
-            opponent1: helpers.toResult(opponents[0]),
-            opponent2: helpers.toResult(opponents[1]),
+            opponent1,
+            opponent2,
         });
 
         if (parentId === -1)
@@ -410,7 +417,7 @@ export class Create {
 
     /**
      * Generic implementation.
-     * 
+     *
      * @param previousDuels Always given.
      * @param currentDuelCount Always given.
      * @param major Only for loser bracket.
