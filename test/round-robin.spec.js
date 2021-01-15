@@ -38,6 +38,80 @@ describe('Create a round-robin stage', () => {
         assert.strictEqual((await storage.select('match')).length, 12);
     });
 
+    it('should create a round-robin stage with a manual seeding', async () => {
+        const example = {
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: {
+                groupCount: 2,
+                manualOrdering: [
+                    [1, 4, 6, 7],
+                    [2, 3, 5, 8],
+                ],
+            },
+        };
+
+        await manager.create(example);
+
+        for (let groupIndex = 0; groupIndex < 2; groupIndex++) {
+            const matches = await storage.select('match', { group_id: groupIndex });
+            const participants = [
+                matches[0].opponent1.position,
+                matches[1].opponent2.position,
+                matches[1].opponent1.position,
+                matches[0].opponent2.position,
+            ];
+
+            assert.deepStrictEqual(participants, example.settings.manualOrdering[groupIndex]);
+        }
+    });
+
+    it('should throw if manual ordering has invalid counts', async () => {
+        assert.isRejected(manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: {
+                groupCount: 2,
+                manualOrdering: [
+                    [1, 4, 6, 7],
+                ],
+            },
+        }));
+
+        assert.isRejected(manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: {
+                groupCount: 2,
+                manualOrdering: [
+                    [1, 4],
+                    [2, 3],
+                ],
+            },
+        }));
+    });
+
     it('should create a round-robin stage without BYE vs. BYE matches', async () => {
         const example = {
             name: 'Example',
