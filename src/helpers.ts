@@ -156,7 +156,7 @@ export function balanceByes(seeding: Seeding, participantCount?: number): Seedin
 
     const nonNullCount = seeding.length;
     const nullCount = participantCount - nonNullCount;
-    const againstEachOther = seeding.slice(0, nonNullCount - nullCount).filter((_, i) => i % 2 == 0).map((_, i) => [seeding[2 * i], seeding[2 * i + 1]]);
+    const againstEachOther = seeding.slice(0, nonNullCount - nullCount).filter((_, i) => i % 2 === 0).map((_, i) => [seeding[2 * i], seeding[2 * i + 1]]);
     const againstNull = seeding.slice(nonNullCount - nullCount, nonNullCount).map(v => [v, null]);
     const flat = [...againstEachOther.flat(), ...againstNull.flat()];
 

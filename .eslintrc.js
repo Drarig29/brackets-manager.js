@@ -14,6 +14,7 @@ module.exports = {
     'brace-style': ['error', '1tbs'],
     'quotes': ['error', 'single'],
     'semi': 'error',
+    'eqeqeq': 'error',
 
     'comma-dangle': ['error', {
       'arrays': 'always-multiline',

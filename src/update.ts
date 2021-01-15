@@ -764,7 +764,7 @@ export class Update {
      * @param roundCount Count of rounds.
      */
     private async getNextMatchesUpperBracketSingleElimination(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<Match[]> {
-        if (roundNumber == roundCount - 1) {
+        if (roundNumber === roundCount - 1) {
             return [
                 await this.getDiagonalMatch(match.group_id, roundNumber, match.number),
                 ...await this.getFirstMatchFinal(match, stageType),
