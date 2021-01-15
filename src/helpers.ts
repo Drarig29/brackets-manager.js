@@ -1,4 +1,18 @@
-import { ParticipantResult, Match, MatchResults, Result, Participant, Seeding, Status, SeedOrdering, MatchGame, Stage, StageType, RoundRobinMode } from 'brackets-model';
+import {
+    Match,
+    MatchGame,
+    MatchResults,
+    Participant,
+    ParticipantResult,
+    Result,
+    RoundRobinMode,
+    Seeding,
+    SeedOrdering,
+    Stage,
+    StageType,
+    Status,
+} from 'brackets-model';
+
 import { ordering } from './ordering';
 import { Duel, OmitId, ParticipantSlot, Scores, Side } from './types';
 import { BracketType } from './update';
@@ -207,7 +221,7 @@ export function ensureEquallySized<T>(left: T[], right: T[]): void {
 
 /**
  * Fixes the seeding by enlarging it if it's not complete.
- * 
+ *
  * @param seeding The seeding of the stage.
  * @param participantCount The number of participants in the stage.
  */
@@ -290,7 +304,7 @@ export function byeWinnerToGrandFinal(opponents: Duel): ParticipantSlot {
 
 /**
  * Returns the pre-computed loser for a match because of BYEs.
- * 
+ *
  * Only used for loser bracket.
  *
  * @param opponents Two opponents.
@@ -643,7 +657,7 @@ export function removeCompleted(stored: MatchResults): void {
 
 /**
  * Ensures the symmetry between opponents.
- * 
+ *
  * Sets an opponent's result to something, based on the result on the other opponent.
  *
  * @param stored A reference to what will be updated in the storage.
@@ -731,18 +745,10 @@ export function extractParticipantsFromSeeding(tournamentId: number, seeding: Se
  *
  * @param seeding The seeding.
  * @param database The participants stored in the database.
+ * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Participant[]): ParticipantSlot[] {
-    const slots = seeding.map((name, i) => {
-        if (name === null) return null; // BYE.
-
-        const found = database.find(participant => participant.name === name);
-        if (!found) throw Error('Participant name not found in database.');
-
-        return { id: found.id, position: i + 1 };
-    });
-
-    return slots;
+export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+    return mapParticipantsToDatabase('name', seeding, database, positions);
 }
 
 /**
@@ -750,18 +756,37 @@ export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Parti
  *
  * @param seeding The seeding.
  * @param database The participants stored in the database.
+ * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Participant[]): ParticipantSlot[] {
-    const slots = seeding.map((id, i) => {
-        if (id === null) return null; // BYE.
+export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+    return mapParticipantsToDatabase('id', seeding, database, positions);
+}
 
-        const found = database.find(participant => participant.id === id);
-        if (!found) throw Error('Participant not found in database.');
+/**
+ * Returns participant slots mapped to the instances stored in the database thanks to a property of theirs.
+ *
+ * @param prop The property to search participants with.
+ * @param seeding The seeding.
+ * @param database The participants stored in the database.
+ * @param positions An optional list of positions (seeds) for a manual ordering.
+ */
+export function mapParticipantsToDatabase(prop: keyof Participant, seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+    const slots = seeding.map((slot, i) => {
+        if (slot === null) return null; // BYE.
+
+        const found = database.find(participant => participant[prop] === slot);
+        if (!found) throw Error(`Participant ${prop} not found in database.`);
 
         return { id: found.id, position: i + 1 };
     });
 
-    return slots;
+    if (!positions)
+        return slots;
+
+    if (positions.length !== slots.length)
+        throw Error('Not enough seeds in at least one group of the manual ordering.');
+
+    return positions.map(position => slots[position - 1]); // position = i + 1
 }
 
 /**
@@ -1007,7 +1032,7 @@ export function getRoundPairCount(participantCount: number): number {
 
 /**
  * Determines whether a double elimination stage is really necessary.
- * 
+ *
  * If the size is only two (less is impossible), then a lower bracket and a grand final are not necessary.
  *
  * @param participantCount The number of participants in the stage.
@@ -1105,7 +1130,7 @@ export function ensureNotRoundRobin(stage: Stage): void {
 
 /**
  * Checks if a group is a winner bracket.
- * 
+ *
  * It's not always the opposite of `inLoserBracket()`: it could be the only bracket of a single elimination stage.
  *
  * @param stageType Type of the stage.
