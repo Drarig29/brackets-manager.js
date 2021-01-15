@@ -444,8 +444,10 @@ export class Create {
      * Returns a list of slots.
      * - If `seeding` was given, inserts them in the storage.
      * - If `size` was given, only returns a list of empty slots.
+     *
+     * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    public async getSlots(): Promise<ParticipantSlot[]> {
+    public async getSlots(positions?: number[]): Promise<ParticipantSlot[]> {
         const size = this.stage.settings?.size || this.stage.seeding?.length || 0;
         helpers.ensureValidSize(size);
 
@@ -465,17 +467,18 @@ export class Create {
             this.stage.seeding = helpers.balanceByes(this.stage.seeding, this.stage.settings.size);
 
         if (helpers.isSeedingWithIds(this.stage.seeding))
-            return this.getSlotsUsingIds(this.stage.seeding);
+            return this.getSlotsUsingIds(this.stage.seeding, positions);
 
-        return this.getSlotsUsingNames(this.stage.seeding);
+        return this.getSlotsUsingNames(this.stage.seeding, positions);
     }
 
     /**
      * Returns the list of slots with a seeding containing names. Participants may be added to database.
      *
      * @param seeding The seeding (names).
+     * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    private async getSlotsUsingNames(seeding: Seeding): Promise<ParticipantSlot[]> {
+    private async getSlotsUsingNames(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {
         const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, seeding);
 
         if (!await this.registerParticipants(participants))
@@ -485,19 +488,20 @@ export class Create {
         const added = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
         if (!added) throw Error('Error getting registered participant.');
 
-        return helpers.mapParticipantsNamesToDatabase(seeding, added);
+        return helpers.mapParticipantsNamesToDatabase(seeding, added, positions);
     }
 
     /**
      * Returns the list of slots with a seeding containing ids. No database mutation.
      *
      * @param seeding The seeding (ids).
+     * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    private async getSlotsUsingIds(seeding: Seeding): Promise<ParticipantSlot[]> {
+    private async getSlotsUsingIds(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {
         const participants = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
         if (!participants) throw Error('No available participants.');
 
-        return helpers.mapParticipantsIdsToDatabase(seeding, participants);
+        return helpers.mapParticipantsIdsToDatabase(seeding, participants, positions);
     }
 
     /**
@@ -553,6 +557,16 @@ export class Create {
     private async getRoundRobinGroups(): Promise<ParticipantSlot[][]> {
         if (this.stage.settings?.groupCount === undefined)
             throw Error('You must specify a group count for round-robin stages.');
+
+        if (this.stage.settings?.manualOrdering) {
+            if (this.stage.settings?.manualOrdering.length !== this.stage.settings?.groupCount)
+                throw Error('Group count in the manual ordering does not correspond to the given group count.');
+
+            const positions = this.stage.settings?.manualOrdering.flat();
+            const slots = await this.getSlots(positions);
+
+            return helpers.makeGroups(slots, this.stage.settings.groupCount);
+        }
 
         if (Array.isArray(this.stage.settings.seedOrdering) && this.stage.settings.seedOrdering.length !== 1)
             throw Error('You must specify one seed ordering method.');
