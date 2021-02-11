@@ -1,7 +1,6 @@
 import { Group, Match, MatchGame, Participant, Round, Stage } from 'brackets-model';
-import { IStorage } from './storage';
+import { ParticipantSlot, Storage } from './types';
 import * as helpers from './helpers';
-import { ParticipantSlot } from './types';
 
 interface StageData {
     stage: Stage,
@@ -13,14 +12,14 @@ interface StageData {
 
 export class Get {
 
-    private storage: IStorage;
+    private storage: Storage;
 
     /**
      * Creates an instance of Get, which will handle retrieving information from the stage.
      *
-     * @param storage The implementation of IStorage.
+     * @param storage The implementation of Storage.
      */
-    constructor(storage: IStorage) {
+    constructor(storage: Storage) {
         this.storage = storage;
     }
 
@@ -28,7 +27,7 @@ export class Get {
      * Returns the data needed to display a stage.
      *
      * @param stageId ID of the stage.
-     * 
+     *
      * For performance reasons, match games are not retrieved here. Use `matchChildren()` for that.
      */
     public async stageData(stageId: number): Promise<StageData> {

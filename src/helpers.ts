@@ -13,8 +13,8 @@ import {
     Status,
 } from 'brackets-model';
 
-import { ordering } from './ordering';
 import { Duel, OmitId, ParticipantSlot, Scores, Side } from './types';
+import { ordering } from './ordering';
 import { BracketType } from './update';
 
 /**

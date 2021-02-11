@@ -1,10 +1,9 @@
-import { Match, Round, Group, Stage, MatchGame, SeedOrdering, Seeding, Status, StageType } from 'brackets-model';
-import { ParticipantSlot, Side } from './types';
+import { Group, Match, MatchGame, Round, Seeding, SeedOrdering, Stage, StageType, Status } from 'brackets-model';
+import { ParticipantSlot, Side, Storage } from './types';
+import * as helpers from './helpers';
 import { SetNextOpponent } from './helpers';
 import { ordering } from './ordering';
-import { IStorage } from './storage';
 import { Create } from './create';
-import * as helpers from './helpers';
 
 export type Level = 'stage' | 'group' | 'round' | 'match';
 export type BracketType = 'single_bracket' | 'winner_bracket' | 'loser_bracket' | 'final_group';
@@ -21,14 +20,14 @@ export type MatchData = {
 
 export class Update {
 
-    private readonly storage: IStorage;
+    private readonly storage: Storage;
 
     /**
      * Creates an instance of Update, which will handle the updates for a stage.
      *
-     * @param storage The implementation of IStorage.
+     * @param storage The implementation of Storage.
      */
-    constructor(storage: IStorage) {
+    constructor(storage: Storage) {
         this.storage = storage;
     }
 

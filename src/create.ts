@@ -1,24 +1,8 @@
-import { Participant, InputStage, Match, SeedOrdering, MatchGame, Stage, Group, Round, Seeding } from 'brackets-model';
-import { ordering, defaultMinorOrdering } from './ordering';
-import { Duel, OmitId, ParticipantSlot } from './types';
+import { Group, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage } from 'brackets-model';
+import { defaultMinorOrdering, ordering } from './ordering';
+import { Duel, Storage, OmitId, ParticipantSlot, StandardBracketResults } from './types';
 import { BracketsManager } from '.';
-import { IStorage } from './storage';
 import * as helpers from './helpers';
-
-/**
- * Contains the losers and the winner of the bracket.
- */
-interface StandardBracketResults {
-    /**
-     * The list of losers for each round of the bracket.
-     */
-    losers: ParticipantSlot[][],
-
-    /**
-     * The winner of the bracket.
-     */
-    winner: ParticipantSlot,
-}
 
 /**
  * Creates a stage.
@@ -33,7 +17,7 @@ export async function create(this: BracketsManager, stage: InputStage): Promise<
 
 export class Create {
 
-    private storage: IStorage;
+    private storage: Storage;
     private stage: InputStage;
     private readonly seedOrdering: SeedOrdering[];
     private readonly updateSeeding: boolean;
@@ -41,11 +25,11 @@ export class Create {
     /**
      * Creates an instance of Create, which will handle the creation of the stage.
      *
-     * @param storage The implementation of IStorage.
+     * @param storage The implementation of Storage.
      * @param stage The stage to create.
      * @param updateSeeding Whether the seeding of the stage is being updated.
      */
-    constructor(storage: IStorage, stage: InputStage, updateSeeding?: boolean) {
+    constructor(storage: Storage, stage: InputStage, updateSeeding?: boolean) {
         this.storage = storage;
         this.stage = stage;
         this.stage.settings = this.stage.settings || {};

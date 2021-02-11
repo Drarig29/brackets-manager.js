@@ -1,5 +1,5 @@
 import { JsonDB } from 'node-json-db';
-import { CrudInterface, Table } from '.';
+import { CrudInterface, Table } from '../types';
 
 type StringIndexedObject = {
     [key: string]: unknown;
