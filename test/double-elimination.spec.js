@@ -463,7 +463,7 @@ describe('Skip first round', () => {
 
         assert.strictEqual( // first match of WB round 1(expected BYE)
             (await storage.select('match', 0)).status,
-            Status.Locked
+            Status.Locked,
         );
 
 
@@ -483,7 +483,7 @@ describe('Skip first round', () => {
         // So it should be completed
         assert.strictEqual(
             (await storage.select('match', 3)).status,
-            Status.Completed
-        )
-    })
+            Status.Completed,
+        );
+    });
 });
