@@ -443,4 +443,47 @@ describe('Skip first round', () => {
 
         await manager.update.match({ id: 22, opponent2: { result: 'win' } });
     });
+
+
+    it('should set winner in lower bracket if opponent is a BYE', async () => {
+        storage.reset();
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', null],
+            settings: { grandFinal: 'simple' },
+        });
+
+        await manager.update.match({
+            id: 1, // Second match of WB round 1
+            opponent1: { score: 1, result: 'win' },
+            opponent2: { score: 0 },
+        });
+
+        assert.strictEqual( // first match of WB round 1(expected BYE)
+            (await storage.select('match', 0)).status,
+            Status.Locked
+        );
+
+
+        await manager.update.match({
+            id: 2, // WB Final
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 9 },
+        });
+
+        assert.strictEqual(
+            (await storage.select('match', 5)).opponent1.id, // Determined opponent for the grand final (round 1)
+            (await storage.select('match', 0)).opponent1.id, // Winner of WB Final
+        );
+
+
+        // Expected BYE vs loser of WB round1
+        // So it should be completed
+        assert.strictEqual(
+            (await storage.select('match', 3)).status,
+            Status.Completed
+        )
+    })
 });

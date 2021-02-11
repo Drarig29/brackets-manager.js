@@ -1,9 +1,9 @@
-import { Group, Match, MatchGame, Round, Seeding, SeedOrdering, Stage, StageType, Status } from 'brackets-model';
-import { ParticipantSlot, Side, Storage } from './types';
+import {Group, Match, MatchGame, Round, Seeding, SeedOrdering, Stage, StageType, Status} from 'brackets-model';
+import {ParticipantSlot, Side, Storage} from './types';
 import * as helpers from './helpers';
-import { SetNextOpponent } from './helpers';
-import { ordering } from './ordering';
-import { Create } from './create';
+import {SetNextOpponent} from './helpers';
+import {ordering} from './ordering';
+import {Create} from './create';
 
 export type Level = 'stage' | 'group' | 'round' | 'match';
 export type BracketType = 'single_bracket' | 'winner_bracket' | 'loser_bracket' | 'final_group';
@@ -550,7 +550,30 @@ export class Update {
         } else {
             const nextSideLB = helpers.getNextSideLoserBracket(match.number, nextMatches[1], roundNumber);
             setNextOpponent(nextMatches, 1, nextSideLB, match, winnerSide && helpers.getOtherSide(winnerSide));
-            await this.storage.update('match', nextMatches[1].id, nextMatches[1]);
+            const nm = nextMatches[1];
+            if(nm.opponent2 === null || nm.opponent1 === null){
+                const realOpponent = nm[nm.opponent1 ? 'opponent1' : 'opponent2']
+                // Not sure what's this case
+                if(!realOpponent) return;
+
+                await this.storage.update('match', nm.id, {
+                    ...nm,
+                    status: Status.Ready
+                });
+
+
+                await this.match({
+                    id: nm.id,
+                    [nm.opponent1 ? 'opponent1' : 'opponent2']: {
+                        result: 'win',
+                        position: (realOpponent.position || 0) + 1 // not sure about this too, hope you know what should be here
+                    },
+                    [!nm.opponent1 ? 'opponent1' : 'opponent2']: null
+                })
+
+            }else {
+                await this.storage.update('match', nextMatches[1].id, nextMatches[1]);
+            }
         }
     }
 
@@ -664,10 +687,17 @@ export class Update {
      * @param roundNumberWB The number of the previous round in the winner bracket.
      */
     private async getMatchesBeforeFirstRoundLB(match: Match, winnerBracketId: number, roundNumberWB: number): Promise<Match[]> {
-        return [
-            await this.findMatch(winnerBracketId, roundNumberWB, helpers.getOriginPosition(match, 'opponent1')),
-            await this.findMatch(winnerBracketId, roundNumberWB, helpers.getOriginPosition(match, 'opponent2')),
-        ];
+        const arr: Match[] = [];
+
+
+        // i still don't know if there is any side effect of doing so. But it makes brackets work :)
+        if(match.opponent1?.position)
+            arr.push(await this.findMatch(winnerBracketId, roundNumberWB, helpers.getOriginPosition(match, 'opponent1')))
+
+        if(match.opponent2?.position)
+            arr.push(await this.findMatch(winnerBracketId, roundNumberWB, helpers.getOriginPosition(match, 'opponent2')))
+
+        return arr;
     }
 
     /**
@@ -957,6 +987,7 @@ export class Update {
             group_id: groupId,
             number: roundNumber,
         });
+
 
         if (!round) throw Error('Round not found.');
 
