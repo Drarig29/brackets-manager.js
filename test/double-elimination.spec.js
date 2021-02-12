@@ -147,6 +147,34 @@ describe('Previous and next match update in double elimination stage', () => {
         );
     });
 
+    it('should propagate winner when BYE is already in next match in loser bracket', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', null],
+            settings: { grandFinal: 'simple' },
+        });
+
+        await manager.update.match({
+            id: 1, // Second match of WB round 1
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        const loserId = (await storage.select('match', 1)).opponent2.id;
+        const matchSemiLB = await storage.select('match', 3);
+
+        assert.strictEqual(matchSemiLB.opponent2.id, loserId);
+        assert.strictEqual(matchSemiLB.opponent2.result, 'win');
+        assert.strictEqual(matchSemiLB.status, Status.Completed);
+
+        assert.strictEqual(
+            (await storage.select('match', 4)).opponent2.id, // Propagated winner in LB Final because of the BYE.
+            loserId,
+        );
+    });
+
     it('should determine matches in grand final', async () => {
         await manager.create({
             name: 'Example',

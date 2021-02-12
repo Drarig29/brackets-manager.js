@@ -206,6 +206,19 @@ export class Update {
     }
 
     /**
+     * Propagates winner against BYEs in related matches.
+     * 
+     * @param match The current match.
+     */
+    private async propagateByeWinners(match: Match): Promise<void> {
+        helpers.setMatchResults(match, match);
+        await this.storage.update('match', match.id, match);
+
+        if (helpers.hasBye(match))
+            await this.updateRelatedMatches(match);
+    }
+
+    /**
      * Updates or resets the seeding of a stage.
      *
      * @param stageId ID of the stage.
@@ -550,7 +563,7 @@ export class Update {
         } else {
             const nextSideLB = helpers.getNextSideLoserBracket(match.number, nextMatches[1], roundNumber);
             setNextOpponent(nextMatches, 1, nextSideLB, match, winnerSide && helpers.getOtherSide(winnerSide));
-            await this.storage.update('match', nextMatches[1].id, nextMatches[1]);
+            await this.propagateByeWinners(nextMatches[1]);
         }
     }
 
@@ -628,6 +641,9 @@ export class Update {
     private async getPreviousMatchesLB(match: Match, stage: Stage, roundNumber: number): Promise<Match[]> {
         if (stage.settings.skipFirstRound && roundNumber === 1)
             return [];
+
+        if (helpers.hasBye(match))
+            return []; // Shortcut because we are coming from propagateByes().
 
         const winnerBracket = await this.getUpperBracket(match.stage_id);
         const actualRoundNumberWB = Math.ceil((roundNumber + 1) / 2);

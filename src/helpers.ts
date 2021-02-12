@@ -387,8 +387,9 @@ export function isMatchStarted(match: Partial<MatchResults>): boolean {
  * @param match Partial match results.
  */
 export function isMatchCompleted(match: Partial<MatchResults>): boolean {
-    return (match.opponent1?.result !== undefined || match.opponent1?.forfeit !== undefined)
-        || (match.opponent2?.result !== undefined || match.opponent2?.forfeit !== undefined);
+    return hasBye(match)
+        || match.opponent1?.result !== undefined || match.opponent1?.forfeit !== undefined
+        || match.opponent2?.result !== undefined || match.opponent2?.forfeit !== undefined;
 }
 
 /**
@@ -422,12 +423,21 @@ export function getMatchByeStatus(opponents: Duel): Status {
 }
 
 /**
+ * Indicates whether a match has at least one BYE or not.
+ * 
+ * @param match Partial match results.
+ */
+export function hasBye(match: Partial<MatchResults>): boolean {
+    return match.opponent1 === null || match.opponent2 === null;
+}
+
+/**
  * Returns the status of a match based on the results of a match.
  *
  * @param match Partial match results.
  */
 export function getMatchStatus(match: Partial<MatchResults>): Status {
-    if (match.opponent1 === null || match.opponent2 === null) // At least one BYE.
+    if (hasBye(match)) // At least one BYE.
         return Status.Locked;
 
     if (match.opponent1?.id === null && match.opponent2?.id === null) // Two TBD opponents.
@@ -632,6 +642,12 @@ export function setCompleted(stored: MatchResults, match: Partial<MatchResults>)
     setResults(stored, match, 'win', 'loss');
     setResults(stored, match, 'loss', 'win');
     setResults(stored, match, 'draw', 'draw');
+
+    if (stored.opponent1 && !stored.opponent2)
+        stored.opponent1.result = 'win'; // Win against opponent 2 BYE.
+
+    if (!stored.opponent1 && stored.opponent2)
+        stored.opponent2.result = 'win'; // Win against opponent 1 BYE.
 
     setForfeits(stored, match);
 }
