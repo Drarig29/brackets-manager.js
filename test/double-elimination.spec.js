@@ -173,6 +173,18 @@ describe('Previous and next match update in double elimination stage', () => {
             (await storage.select('match', 4)).opponent2.id, // Propagated winner in LB Final because of the BYE.
             loserId,
         );
+
+        await manager.update.match({
+            id: 1, // Second match of WB round 1
+            opponent1: { score: 16, result: undefined }, // Unset the result.
+            opponent2: { score: 12 },
+        });
+
+        assert.strictEqual(matchSemiLB.opponent2.id, null);
+        assert.strictEqual(matchSemiLB.opponent2.result, undefined);
+        assert.strictEqual(matchSemiLB.status, Status.Locked);
+
+        assert.strictEqual((await storage.select('match', 4)).opponent2.id, null); // Propagated winner is removed.
     });
 
     it('should determine matches in grand final', async () => {
