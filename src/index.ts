@@ -1,4 +1,5 @@
 import { BracketsManager } from './manager';
+import { JsonDatabase } from './storage/json';
 
 import {
     CrudInterface,
@@ -15,6 +16,7 @@ import {
 
 export {
     BracketsManager,
+    JsonDatabase,
     CrudInterface,
     Duel,
     OmitId,

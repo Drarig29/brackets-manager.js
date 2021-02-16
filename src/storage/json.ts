@@ -7,7 +7,7 @@ type StringIndexedObject = {
 
 type Filter<T> = (obj: T) => boolean;
 
-class JsonDatabase implements CrudInterface {
+export class JsonDatabase implements CrudInterface {
 
     private internal: JsonDB;
 
@@ -241,5 +241,3 @@ class JsonDatabase implements CrudInterface {
         return true;
     }
 }
-
-export const storage = new JsonDatabase();
