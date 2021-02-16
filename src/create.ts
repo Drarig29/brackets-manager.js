@@ -12,7 +12,7 @@ import * as helpers from './helpers';
  */
 export async function create(this: BracketsManager, stage: InputStage): Promise<void> {
     const instance = new Create(this.storage, stage);
-    return instance.run();
+    await instance.run();
 }
 
 export class Create {

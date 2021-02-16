@@ -176,13 +176,17 @@ export class Update {
     public async matchChildCount(level: Level, id: number, childCount: number): Promise<void> {
         switch (level) {
             case 'stage':
-                return this.updateStageMatchChildCount(id, childCount);
+                await this.updateStageMatchChildCount(id, childCount);
+                break;
             case 'group':
-                return this.updateGroupMatchChildCount(id, childCount);
+                await this.updateGroupMatchChildCount(id, childCount);
+                break;
             case 'round':
-                return this.updateRoundMatchChildCount(id, childCount);
+                await this.updateRoundMatchChildCount(id, childCount);
+                break;
             case 'match':
-                return this.updateMatchChildCount(id, childCount);
+                await this.updateMatchChildCount(id, childCount);
+                break;
         }
     }
 
@@ -193,7 +197,7 @@ export class Update {
      * @param seeding The new seeding.
      */
     public async seeding(stageId: number, seeding: Seeding): Promise<void> {
-        return this.updateSeeding(stageId, seeding);
+        await this.updateSeeding(stageId, seeding);
     }
 
     /**
@@ -202,7 +206,7 @@ export class Update {
      * @param stageId ID of the stage.
      */
     public async resetSeeding(stageId: number): Promise<void> {
-        return this.updateSeeding(stageId, null);
+        await this.updateSeeding(stageId, null);
     }
 
     /**
@@ -249,7 +253,7 @@ export class Update {
         const ordered = ordering[method](slots);
         await Update.assertCanUpdateSeeding(matches, ordered);
 
-        return create.run();
+        await create.run();
     }
 
     /**

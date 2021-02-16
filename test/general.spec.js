@@ -8,7 +8,7 @@ const { storage } = require('../dist/storage/json');
 const manager = new BracketsManager(storage);
 
 describe('BYE handling', () => {
-    beforeEach(async () => {
+    beforeEach(() => {
         storage.reset();
     });
 
