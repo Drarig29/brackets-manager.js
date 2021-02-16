@@ -131,7 +131,7 @@ export class JsonDatabase implements CrudInterface {
         }
 
         try {
-            this.internal.push(JsonDatabase.makePath(table), arg.map(object => ({ id: id++, ...object })));
+            this.internal.push(JsonDatabase.makePath(table), arg.map(object => ({ id: id++, ...object })), false);
         } catch (error) {
             return false;
         }
