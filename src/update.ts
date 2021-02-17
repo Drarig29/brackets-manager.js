@@ -82,6 +82,9 @@ export class Update {
         const stored = await this.storage.select<MatchGame>('match_game', game.id);
         if (!stored) throw Error('Match game not found.');
 
+        if (helpers.isMatchUpdateLocked(stored))
+            throw Error('The match game is locked.');
+
         helpers.setMatchResults(stored, game);
         await this.storage.update('match_game', game.id, stored);
 

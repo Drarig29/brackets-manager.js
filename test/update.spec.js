@@ -244,21 +244,21 @@ describe('Locked matches', () => {
 
 describe('Update match games', () => {
 
-    before(async () => {
+    beforeEach(() => {
         storage.reset();
+    });
 
+    it('should update parent score when match game is updated', async () => {
         await manager.create({
             name: 'With match games',
             tournamentId: 0,
             type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
             settings: {
-                size: 4,
                 matchesChildCount: 3, // Bo3.
             },
         });
-    });
 
-    it('should update parent score when match game is updated', async () => {
         await manager.update.matchGame({
             id: 0,
             opponent1: {
@@ -306,6 +306,36 @@ describe('Update match games', () => {
         assert.strictEqual(lastChildReset.status, Status.Running);
         assert.strictEqual(lastChildReset.opponent1.score, 2);
         assert.strictEqual(lastChildReset.opponent2.score, 0);
+    });
+
+    it('should throw if trying to update a locked match game', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: {
+                seedOrdering: ['natural'],
+                size: 4,
+                matchesChildCount: 3, // Example with all Bo3 at creation time.
+            },
+        });
+
+        await assert.isRejected(manager.update.matchGame({ id: 0 }), 'The match game is locked.');
+
+        storage.reset();
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: {
+                seedOrdering: ['natural'],
+                size: 4,
+            },
+        });
+
+        await manager.update.matchChildCount('round', 0, 3); // Example with all Bo3 after creation time.
+        await assert.isRejected(manager.update.matchGame({ id: 0 }), 'The match game is locked.');
     });
 });
 
