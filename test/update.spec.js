@@ -248,6 +248,59 @@ describe('Update match games', () => {
         storage.reset();
     });
 
+    it('should update child games status based on the parent match status', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: {
+                seedOrdering: ['natural'],
+                size: 4,
+            },
+        });
+
+        await manager.update.matchChildCount('stage', 0, 2); // Set Bo2 for all the stage.
+        assert.strictEqual((await storage.select('match', 0)).status, (await storage.select('match_game', 0)).status);
+
+        await manager.update.seeding(0, ['Team 1', 'Team 2', 'Team 3', 'Team 4']);
+        assert.strictEqual((await storage.select('match', 0)).status, (await storage.select('match_game', 0)).status);
+
+        // Semi 1
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match', 0)).opponent1.score, 2);
+        assert.strictEqual((await storage.select('match', 0)).opponent2.score, 0);
+
+        let finalMatchStatus = (await storage.select('match', 2)).status;
+        assert.strictEqual(finalMatchStatus, Status.Waiting);
+        assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
+
+        // Semi 2
+        await manager.update.matchGame({ id: 2, opponent2: { result: 'win' } });
+        await manager.update.matchGame({ id: 3, opponent2: { result: 'win' } });
+
+        finalMatchStatus = (await storage.select('match', 2)).status;
+        assert.strictEqual(finalMatchStatus, Status.Ready);
+        assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
+
+        // Final
+        await manager.update.matchGame({ id: 4, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 5, opponent1: { result: 'win' } });
+
+        finalMatchStatus = (await storage.select('match', 2)).status;
+        assert.strictEqual(finalMatchStatus, Status.Completed);
+        assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
+
+        const semi1Status = (await storage.select('match', 0)).status;
+        assert.strictEqual(semi1Status, Status.Archived);
+        assert.strictEqual(semi1Status, (await storage.select('match_game', 0)).status);
+
+        const semi2Status = (await storage.select('match', 1)).status;
+        assert.strictEqual(semi2Status, Status.Archived);
+        assert.strictEqual(semi2Status, (await storage.select('match_game', 2)).status);
+    });
+
     it('should update parent score when match game is updated', async () => {
         await manager.create({
             name: 'With match games',
@@ -336,6 +389,27 @@ describe('Update match games', () => {
 
         await manager.update.matchChildCount('round', 0, 3); // Example with all Bo3 after creation time.
         await assert.isRejected(manager.update.matchGame({ id: 0 }), 'The match game is locked.');
+    });
+
+    it('should propagate the winner of the parent match in the next match', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { seedOrdering: ['natural'] },
+        });
+
+        await manager.update.matchChildCount('round', 0, 3);
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 2, opponent2: { result: 'win' } });
+
+        assert.strictEqual(
+            (await storage.select('match', 2)).opponent1.id, // Should be determined automatically.
+            (await storage.select('match', 0)).opponent1.id, // Winner of the first BO3 match.
+        );
     });
 });
 

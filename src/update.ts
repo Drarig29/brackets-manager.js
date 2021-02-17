@@ -45,7 +45,7 @@ export class Update {
         const { stored, inRoundRobin } = await this.getMatchData(match.id);
 
         const resultChanged = helpers.setMatchResults(stored, match);
-        await this.storage.update('match', match.id, stored);
+        await this.updateMatch(stored);
 
         // Don't update related matches if it's a simple score update.
         if (!inRoundRobin && resultChanged)
@@ -63,7 +63,7 @@ export class Update {
         const { stored, inRoundRobin } = await this.getMatchData(matchId);
 
         helpers.resetMatchResults(stored);
-        await this.storage.update('match', matchId, stored);
+        await this.updateMatch(stored);
 
         if (!inRoundRobin)
             await this.updateRelatedMatches(stored);
@@ -100,7 +100,7 @@ export class Update {
         helpers.setParentMatchCompleted(storedParent, parent, scores);
         helpers.setMatchResults(storedParent, parent);
 
-        await this.storage.update('match', storedParent.id, storedParent);
+        await this.match(storedParent);
     }
 
     /**
@@ -188,7 +188,9 @@ export class Update {
                 await this.updateRoundMatchChildCount(id, childCount);
                 break;
             case 'match':
-                await this.updateMatchChildCount(id, childCount);
+                const match = await this.storage.select<Match>('match', id);
+                if (!match) throw Error('Match not found.');
+                await this.adjustMatchChildGames(match, childCount);
                 break;
         }
     }
@@ -219,7 +221,7 @@ export class Update {
      */
     private async propagateByeWinners(match: Match): Promise<void> {
         helpers.setMatchResults(match, match);
-        await this.storage.update('match', match.id, match);
+        await this.updateMatch(match);
 
         if (helpers.hasBye(match))
             await this.updateRelatedMatches(match);
@@ -361,7 +363,7 @@ export class Update {
         if (!matches) throw Error('This stage has no match.');
 
         for (const match of matches)
-            await this.updateMatchChildCount(match.id, childCount);
+            await this.adjustMatchChildGames(match, childCount);
     }
 
     /**
@@ -377,7 +379,7 @@ export class Update {
         if (!matches) throw Error('This group has no match.');
 
         for (const match of matches)
-            await this.updateMatchChildCount(match.id, childCount);
+            await this.adjustMatchChildGames(match, childCount);
     }
 
     /**
@@ -393,7 +395,7 @@ export class Update {
         if (!matches) throw Error('This round has no match.');
 
         for (const match of matches)
-            await this.updateMatchChildCount(match.id, childCount);
+            await this.adjustMatchChildGames(match, childCount);
     }
 
     /**
@@ -405,7 +407,7 @@ export class Update {
      */
     private async applyRoundOrdering(roundNumber: number, matches: Match[], positions: number[]): Promise<void> {
         for (const match of matches) {
-            const updated = { ...match }; // Create a copy of the match... workaround for node-json-db, which returns a reference to data.
+            const updated = { ...match };
             updated.opponent1 = helpers.findPosition(matches, positions.shift()!);
 
             // The only rounds where we have a second ordered participant are first rounds of brackets (upper and lower).
@@ -417,20 +419,20 @@ export class Update {
     }
 
     /**
-     * Updates child count for a match.
+     * Adds or deletes match games of a match based on a target child count.
      *
-     * @param matchId ID of the match.
+     * @param match The match of which child games need to be adjusted.
      * @param targetChildCount The target child count.
      */
-    private async updateMatchChildCount(matchId: number, targetChildCount: number): Promise<void> {
-        const games = await this.storage.select<MatchGame>('match_game', { parent_id: matchId });
+    private async adjustMatchChildGames(match: Match, targetChildCount: number): Promise<void> {
+        const games = await this.storage.select<MatchGame>('match_game', { parent_id: match.id });
         let childCount = games ? games.length : 0;
 
         while (childCount < targetChildCount) {
             await this.storage.insert<MatchGame>('match_game', {
                 number: childCount + 1,
-                parent_id: matchId,
-                status: Status.Locked,
+                parent_id: match.id,
+                status: match.status,
                 opponent1: { id: null },
                 opponent2: { id: null },
             });
@@ -440,7 +442,7 @@ export class Update {
 
         while (childCount > targetChildCount) {
             await this.storage.delete<MatchGame>('match_game', {
-                parent_id: matchId,
+                parent_id: match.id,
                 number: childCount,
             });
 
@@ -451,21 +453,38 @@ export class Update {
     /**
      * Updates the matches related (previous and next) to a match.
      *
-     * @param stored The match stored in database.
+     * @param match A match.
      */
-    private async updateRelatedMatches(stored: Match): Promise<void> {
-        const { roundNumber, roundCount } = await this.getRoundInfos(stored.group_id, stored.round_id);
+    private async updateRelatedMatches(match: Match): Promise<void> {
+        const { roundNumber, roundCount } = await this.getRoundInfos(match.group_id, match.round_id);
 
-        const stage = await this.storage.select<Stage>('stage', stored.stage_id);
+        const stage = await this.storage.select<Stage>('stage', match.stage_id);
         if (!stage) throw Error('Stage not found.');
 
-        const group = await this.storage.select<Group>('group', stored.group_id);
+        const group = await this.storage.select<Group>('group', match.group_id);
         if (!group) throw Error('Group not found.');
 
         const matchLocation = helpers.getMatchLocation(stage.type, group.number);
 
-        await this.updatePrevious(stored, matchLocation, stage, roundNumber);
-        await this.updateNext(stored, matchLocation, stage, roundNumber, roundCount);
+        await this.updatePrevious(match, matchLocation, stage, roundNumber);
+        await this.updateNext(match, matchLocation, stage, roundNumber, roundCount);
+    }
+
+    /**
+     * Updates a match and its child games.
+     *
+     * @param match A match.
+     */
+    private async updateMatch(match: Match): Promise<void> {
+        await this.storage.update('match', match.id, match);
+
+        if (match.child_count > 0) {
+            await this.storage.update<MatchGame>('match_game', { parent_id: match.id }, {
+                status: match.status,
+                opponent1: helpers.toResult(match.opponent1),
+                opponent2: helpers.toResult(match.opponent2),
+            });
+        }
     }
 
     /**
@@ -484,32 +503,32 @@ export class Update {
         if (match.status === Status.Completed && !winnerSide) throw Error('Cannot find a winner.');
 
         if (winnerSide)
-            await this.setPrevious(previousMatches);
+            await this.archiveMatches(previousMatches);
         else
-            await this.resetPrevious(previousMatches);
+            await this.resetMatchesStatus(previousMatches);
     }
 
     /**
-     * Sets the status of previous matches to archived.
+     * Sets the status of a list of matches to archived.
      *
-     * @param previousMatches The matches to update.
+     * @param matches The matches to update.
      */
-    private async setPrevious(previousMatches: Match[]): Promise<void> {
-        for (const match of previousMatches) {
+    private async archiveMatches(matches: Match[]): Promise<void> {
+        for (const match of matches) {
             match.status = Status.Archived;
-            await this.storage.update('match', match.id, match);
+            await this.updateMatch(match);
         }
     }
 
     /**
-     * Resets the status of previous matches to what it should currently be.
+     * Resets the status of a list of matches to what it should currently be.
      *
-     * @param previousMatches The matches to update.
+     * @param matches The matches to update.
      */
-    private async resetPrevious(previousMatches: Match[]): Promise<void> {
-        for (const match of previousMatches) {
+    private async resetMatchesStatus(matches: Match[]): Promise<void> {
+        for (const match of matches) {
             match.status = helpers.getMatchStatus(match);
-            await this.storage.update('match', match.id, match);
+            await this.updateMatch(match);
         }
     }
 
@@ -552,13 +571,13 @@ export class Update {
         if (matchLocation === 'final_group') {
             setNextOpponent(nextMatches, 0, 'opponent1', match, 'opponent1');
             setNextOpponent(nextMatches, 0, 'opponent2', match, 'opponent2');
-            await this.storage.update('match', nextMatches[0].id, nextMatches[0]);
+            await this.updateMatch(nextMatches[0]);
             return;
         }
 
         const nextSide = helpers.getNextSide(match.number, roundNumber, roundCount, matchLocation);
         setNextOpponent(nextMatches, 0, nextSide, match, winnerSide);
-        await this.storage.update('match', nextMatches[0].id, nextMatches[0]);
+        await this.updateMatch(nextMatches[0]);
 
         if (nextMatches.length !== 2) return;
 
@@ -566,7 +585,7 @@ export class Update {
 
         if (matchLocation === 'single_bracket') {
             setNextOpponent(nextMatches, 1, nextSide, match, winnerSide && helpers.getOtherSide(winnerSide));
-            await this.storage.update('match', nextMatches[1].id, nextMatches[1]);
+            await this.updateMatch(nextMatches[1]);
         } else {
             const nextSideLB = helpers.getNextSideLoserBracket(match.number, nextMatches[1], roundNumber);
             setNextOpponent(nextMatches, 1, nextSideLB, match, winnerSide && helpers.getOtherSide(winnerSide));

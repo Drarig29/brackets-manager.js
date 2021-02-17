@@ -343,6 +343,18 @@ export class Create {
 
         const status = helpers.getMatchByeStatus(opponents);
 
+        let existing: Match | null = null;
+
+        if (this.updateSeeding) {
+            existing = await this.storage.selectFirst<Match>('match', {
+                round_id: roundId,
+                number: matchNumber,
+            });
+
+            const currentChildCount = existing?.child_count;
+            childCount = currentChildCount === undefined ? childCount : currentChildCount;
+        }
+
         const parentId = await this.insertMatch({
             number: matchNumber,
             stage_id: stageId,
@@ -352,7 +364,7 @@ export class Create {
             status: status,
             opponent1,
             opponent2,
-        });
+        }, existing);
 
         if (parentId === -1)
             throw Error('Could not insert the match.');
@@ -667,16 +679,7 @@ export class Create {
      *
      * @param match The match to insert.
      */
-    private async insertMatch(match: OmitId<Match>): Promise<number> {
-        let existing: Match | null = null;
-
-        if (this.updateSeeding) {
-            existing = await this.storage.selectFirst<Match>('match', {
-                round_id: match.round_id,
-                number: match.number,
-            });
-        }
-
+    private async insertMatch(match: OmitId<Match>, existing: Match | null): Promise<number> {
         if (!existing)
             return this.storage.insert<Match>('match', match);
 
