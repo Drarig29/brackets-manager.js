@@ -1,6 +1,8 @@
 import { JsonDB } from 'node-json-db';
 import { CrudInterface, Table } from '../types';
 
+const clone = require('rfdc')();
+
 type StringIndexedObject = {
     [key: string]: unknown;
 };
@@ -171,12 +173,13 @@ export class JsonDatabase implements CrudInterface {
     public async select<T>(table: Table, arg?: number | Partial<T>): Promise<T | T[] | null> {
         try {
             if (arg === undefined)
-                return this.internal.getData(JsonDatabase.makePath(table));
+                return this.internal.getData(JsonDatabase.makePath(table)).map(clone);
 
             if (typeof arg === 'number')
-                return this.internal.getData(JsonDatabase.makeArrayIndexPath(table, arg));
+                return clone(this.internal.getData(JsonDatabase.makeArrayIndexPath(table, arg)));
 
-            return this.internal.filter(JsonDatabase.makePath(table), this.makeFilter(arg)) || null;
+            const values = this.internal.filter<T>(JsonDatabase.makePath(table), this.makeFilter(arg)) || null;
+            return values && values.map(clone);
         } catch (error) {
             return null;
         }

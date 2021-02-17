@@ -29,6 +29,7 @@ module.exports = {
     'jsdoc/require-returns': 0,
     'jsdoc/require-returns-type': 0,
 
+    '@typescript-eslint/no-var-requires': 'off',
     '@typescript-eslint/explicit-function-return-type': ['error'],
 
     // I use them rarely but they are understandable and commented. They simplify the code.
