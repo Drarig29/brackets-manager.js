@@ -163,7 +163,7 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         const loserId = (await storage.select('match', 1)).opponent2.id;
-        const matchSemiLB = await storage.select('match', 3);
+        let matchSemiLB = await storage.select('match', 3);
 
         assert.strictEqual(matchSemiLB.opponent2.id, loserId);
         assert.strictEqual(matchSemiLB.opponent2.result, 'win');
@@ -180,6 +180,7 @@ describe('Previous and next match update in double elimination stage', () => {
             opponent2: { score: 12 },
         });
 
+        matchSemiLB = await storage.select('match', 3);
         assert.strictEqual(matchSemiLB.opponent2.id, null);
         assert.strictEqual(matchSemiLB.opponent2.result, undefined);
         assert.strictEqual(matchSemiLB.status, Status.Locked);

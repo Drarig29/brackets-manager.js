@@ -285,9 +285,17 @@ describe('Seeding and ordering in elimination', () => {
     });
 
     it('should update the orderings in rounds', async () => {
+        let firstRoundMatchWB = await storage.select('match', 0);
+
+        // Inner outer before changing.
+        assert.strictEqual(firstRoundMatchWB.opponent1.position, 1);
+        assert.strictEqual(firstRoundMatchWB.opponent2.position, 16);
+
         await manager.update.roundOrdering(0, 'pair_flip');
 
-        const firstRoundMatchWB = await storage.select('match', 0);
+        firstRoundMatchWB = await storage.select('match', 0);
+
+        // Should now be pair_flip.
         assert.strictEqual(firstRoundMatchWB.opponent1.position, 2);
         assert.strictEqual(firstRoundMatchWB.opponent2.position, 1);
 

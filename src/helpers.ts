@@ -629,7 +629,7 @@ export function setScores(stored: MatchResults, match: Partial<MatchResults>): v
         return;
     }
 
-    if (!stored.opponent1 || !stored.opponent2) throw Error('No team is defined yet. Can\'t set the score.');
+    if (!stored.opponent1 || !stored.opponent2) throw Error('No team is defined yet. Cannot set the score.');
 
     // Default when scores are updated.
     stored.status = Status.Running;
