@@ -612,7 +612,7 @@ export class Create {
     }
 
     /**
-     * Insert a stage or finds an existing one.
+     * Inserts a stage or finds an existing one.
      *
      * @param stage The stage to insert.
      */
@@ -633,7 +633,7 @@ export class Create {
     }
 
     /**
-     * Insert a group or finds an existing one.
+     * Inserts a group or finds an existing one.
      *
      * @param group The group to insert.
      */
@@ -654,7 +654,7 @@ export class Create {
     }
 
     /**
-     * Insert a round or finds an existing one.
+     * Inserts a round or finds an existing one.
      *
      * @param round The round to insert.
      */
@@ -675,9 +675,10 @@ export class Create {
     }
 
     /**
-     * Insert a match or finds an existing one (and updates it).
+     * Inserts a match or updates an existing one.
      *
      * @param match The match to insert.
+     * @param existing An existing match corresponding to the current one.
      */
     private async insertMatch(match: OmitId<Match>, existing: Match | null): Promise<number> {
         if (!existing)
@@ -689,7 +690,7 @@ export class Create {
     }
 
     /**
-     * Insert a match game or finds an existing one (and updates it).
+     * Inserts a match game or finds an existing one (and updates it).
      *
      * @param matchGame The match game to insert.
      */
@@ -712,7 +713,7 @@ export class Create {
     }
 
     /**
-     * Insert missing participants.
+     * Inserts missing participants.
      *
      * @param participants The list of participants to process.
      */
