@@ -74,7 +74,7 @@ describe('Create a round-robin stage', () => {
     });
 
     it('should throw if manual ordering has invalid counts', async () => {
-        assert.isRejected(manager.create({
+        await assert.isRejected(manager.create({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -90,9 +90,9 @@ describe('Create a round-robin stage', () => {
                     [1, 4, 6, 7],
                 ],
             },
-        }));
+        }), 'Group count in the manual ordering does not correspond to the given group count.');
 
-        assert.isRejected(manager.create({
+        await assert.isRejected(manager.create({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -109,7 +109,7 @@ describe('Create a round-robin stage', () => {
                     [2, 3],
                 ],
             },
-        }));
+        }), 'Not enough seeds in at least one group of the manual ordering.');
     });
 
     it('should create a round-robin stage without BYE vs. BYE matches', async () => {

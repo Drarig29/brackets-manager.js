@@ -696,9 +696,11 @@ export function removeCompleted(stored: MatchResults): void {
  */
 export function setResults(stored: MatchResults, match: Partial<MatchResults>, check: Result, change: Result): void {
     if (match.opponent1 && match.opponent2) {
-        if ((match.opponent1.result === 'win' && match.opponent2.result === 'win') ||
-            (match.opponent1.result === 'loss' && match.opponent2.result === 'loss'))
+        if (match.opponent1.result === 'win' && match.opponent2.result === 'win')
             throw Error('There are two winners.');
+
+        if (match.opponent1.result === 'loss' && match.opponent2.result === 'loss')
+            throw Error('There are two losers.');
 
         if (match.opponent1.forfeit === true && match.opponent2.forfeit === true)
             throw Error('There are two forfeits.');

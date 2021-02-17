@@ -208,13 +208,13 @@ describe('Update matches', () => {
             id: 3,
             opponent1: { result: 'win' },
             opponent2: { result: 'win' },
-        }));
+        }), 'There are two winners.');
 
         await assert.isRejected(manager.update.match({
             id: 3,
             opponent1: { result: 'loss' },
             opponent2: { result: 'loss' },
-        }));
+        }), 'There are two losers.');
     });
 });
 

@@ -143,14 +143,14 @@ describe('Special cases', () => {
         await assert.isRejected(manager.create({
             tournamentId: 0,
             type: 'single_elimination',
-        }));
+        }), 'You must provide a name for the stage.');
     });
 
     it('should throw if the tournament id of the stage is not provided', async () => {
         await assert.isRejected(manager.create({
             name: 'Example',
             type: 'single_elimination',
-        }));
+        }), 'You must provide a tournament id for the stage.');
     });
 
     it('should throw if the participant count of a stage is not a power of two', async () => {
@@ -164,14 +164,14 @@ describe('Special cases', () => {
                 'Team 5', 'Team 6',
                 'Team 7',
             ],
-        }));
+        }), 'The library only supports a participant count which is a power of two.');
 
         await assert.isRejected(manager.create({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
             settings: { size: 3 },
-        }));
+        }), 'The library only supports a participant count which is a power of two.');
     });
 
     it('should throw if the participant count of a stage is less than two', async () => {
@@ -180,14 +180,14 @@ describe('Special cases', () => {
             tournamentId: 0,
             type: 'single_elimination',
             settings: { size: 0 },
-        }));
+        }), 'Impossible to create an empty stage. If you want an empty seeding, just set the size of the stage.');
 
         await assert.isRejected(manager.create({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
             settings: { size: 1 },
-        }));
+        }), 'Impossible to create a stage with less than 2 participants.');
     });
 });
 
