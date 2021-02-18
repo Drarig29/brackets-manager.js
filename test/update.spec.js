@@ -312,53 +312,23 @@ describe('Update match games', () => {
             },
         });
 
-        await manager.update.matchGame({
-            id: 0,
-            opponent1: {
-                result: 'win',
-            },
-        });
-
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
         const firstChildCompleted = await storage.select('match', 0);
         assert.strictEqual(firstChildCompleted.status, Status.Running);
         assert.strictEqual(firstChildCompleted.opponent1.score, 1);
         assert.strictEqual(firstChildCompleted.opponent2.score, 0);
 
-        await manager.update.matchGame({
-            id: 1,
-            opponent1: {
-                result: 'win',
-            },
-        });
-
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
         const secondChildCompleted = await storage.select('match', 0);
-        assert.strictEqual(secondChildCompleted.status, Status.Running);
+        assert.strictEqual(secondChildCompleted.status, Status.Completed);
         assert.strictEqual(secondChildCompleted.opponent1.score, 2);
         assert.strictEqual(secondChildCompleted.opponent2.score, 0);
 
-        await manager.update.matchGame({
-            id: 2,
-            opponent1: {
-                result: 'loss',
-            },
-        });
-
-        const lastChildCompleted = await storage.select('match', 0);
-        assert.strictEqual(lastChildCompleted.status, Status.Completed);
-        assert.strictEqual(lastChildCompleted.opponent1.score, 2);
-        assert.strictEqual(lastChildCompleted.opponent2.score, 1);
-
-        await manager.update.matchGame({
-            id: 2,
-            opponent1: {
-                result: undefined,
-            },
-        });
-
-        const lastChildReset = await storage.select('match', 0);
-        assert.strictEqual(lastChildReset.status, Status.Running);
-        assert.strictEqual(lastChildReset.opponent1.score, 2);
-        assert.strictEqual(lastChildReset.opponent2.score, 0);
+        await manager.update.matchGame({ id: 1, opponent1: { result: undefined } });
+        const secondChildReset = await storage.select('match', 0);
+        assert.strictEqual(secondChildReset.status, Status.Running);
+        assert.strictEqual(secondChildReset.opponent1.score, 1);
+        assert.strictEqual(secondChildReset.opponent2.score, 0);
     });
 
     it('should throw if trying to update a locked match game', async () => {

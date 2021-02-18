@@ -121,14 +121,14 @@ export class Update {
         const games = await this.storage.select<MatchGame>('match_game', { parent_id: stored.parent_id });
         if (!games) throw Error('No match games.');
 
-        const scores = helpers.getChildGamesResults(games);
-        const parent = helpers.getParentMatchResults(storedParent, scores);
+        const parentScores = helpers.getChildGamesResults(games);
+        const parent = helpers.getParentMatchResults(storedParent, parentScores);
 
         const stage = await this.storage.select<Stage>('stage', storedParent.stage_id);
         if (!stage) throw Error('Stage not found.');
 
         const inRoundRobin = helpers.isRoundRobin(stage);
-        helpers.setParentMatchCompleted(storedParent, parent, scores, inRoundRobin);
+        helpers.setParentMatchCompleted(storedParent, parent, inRoundRobin);
         helpers.setMatchResults(storedParent, parent);
 
         await this.match(storedParent);
