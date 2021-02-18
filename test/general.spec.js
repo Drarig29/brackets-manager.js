@@ -419,3 +419,65 @@ describe('Get module', () => {
         assert.strictEqual(seeding[5], null);
     });
 });
+
+describe('Best-Of series matches completion', () => {
+
+    beforeEach(() => {
+        storage.reset();
+    });
+
+    it('should end Bo1 matches', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                matchesChildCount: 1,
+            },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.result, 'win');
+    });
+
+    it('should end Bo2 matches in round-robin stage', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                matchesChildCount: 2,
+                groupCount: 1,
+            },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent2: { result: 'win' } });
+
+        const match = await storage.select('match', 0);
+        assert.strictEqual(match.opponent1.result, 'draw');
+        assert.strictEqual(match.opponent2.result, 'draw');
+    });
+
+    it('should throw if a Bo2 match has a tie in an elimination stage', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                matchesChildCount: 2,
+            },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+
+        await assert.isRejected(manager.update.matchGame({
+            id: 1,
+            opponent2: { result: 'win' },
+        }), 'Match games result in a tie for the parent match.');
+    });
+});

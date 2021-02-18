@@ -13,11 +13,6 @@ export type RoundInformation = {
     roundCount: number,
 }
 
-export type MatchData = {
-    stored: Match,
-    inRoundRobin: boolean,
-}
-
 export class Update {
 
     private readonly storage: Storage;
@@ -42,13 +37,22 @@ export class Update {
         if (match.id === undefined)
             throw Error('No match id given.');
 
-        const { stored, inRoundRobin } = await this.getMatchData(match.id);
+        const stored = await this.storage.select<Match>('match', match.id);
+        if (!stored) throw Error('Match not found.');
+
+        if (helpers.isMatchUpdateLocked(stored))
+            throw Error('The match is locked.');
 
         const resultChanged = helpers.setMatchResults(stored, match);
         await this.updateMatch(stored);
 
         // Don't update related matches if it's a simple score update.
-        if (!inRoundRobin && resultChanged)
+        if (!resultChanged) return;
+
+        const stage = await this.storage.select<Stage>('stage', stored.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        if (!helpers.isRoundRobin(stage))
             await this.updateRelatedMatches(stored);
     }
 
@@ -60,13 +64,36 @@ export class Update {
      * @param matchId ID of the match.
      */
     public async resetMatch(matchId: number): Promise<void> {
-        const { stored, inRoundRobin } = await this.getMatchData(matchId);
+        const stored = await this.storage.select<Match>('match', matchId);
+        if (!stored) throw Error('Match not found.');
+
+        if (helpers.isMatchUpdateLocked(stored))
+            throw Error('The match is locked.');
 
         helpers.resetMatchResults(stored);
         await this.updateMatch(stored);
 
-        if (!inRoundRobin)
+        const stage = await this.storage.select<Stage>('stage', stored.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        if (!helpers.isRoundRobin(stage))
             await this.updateRelatedMatches(stored);
+    }
+
+    /**
+     * Resets the results of a match game.
+     *
+     * @param gameId ID of the match game.
+     */
+    public async resetMatchGame(gameId: number): Promise<void> {
+        const stored = await this.storage.select<MatchGame>('match_game', gameId);
+        if (!stored) throw Error('Match game not found.');
+
+        if (helpers.isMatchUpdateLocked(stored))
+            throw Error('The match game is locked.');
+
+        helpers.resetMatchResults(stored);
+        await this.storage.update('match_game', stored.id, stored);
     }
 
     /**
@@ -97,7 +124,11 @@ export class Update {
         const scores = helpers.getChildGamesResults(games);
         const parent = helpers.getParentMatchResults(storedParent, scores);
 
-        helpers.setParentMatchCompleted(storedParent, parent, scores);
+        const stage = await this.storage.select<Stage>('stage', storedParent.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        const inRoundRobin = helpers.isRoundRobin(stage);
+        helpers.setParentMatchCompleted(storedParent, parent, scores, inRoundRobin);
         helpers.setMatchResults(storedParent, parent);
 
         await this.match(storedParent);
@@ -882,25 +913,6 @@ export class Update {
      */
     private async getMatchAfterMinorRoundLB(match: Match, roundNumber: number): Promise<Match[]> {
         return [await this.getDiagonalMatch(match.group_id, roundNumber, match.number)];
-    }
-
-    /**
-     * Returns what is needed to update a match.
-     *
-     * @param matchId ID of the match.
-     */
-    private async getMatchData(matchId: number): Promise<MatchData> {
-        const stored = await this.storage.select<Match>('match', matchId);
-        if (!stored) throw Error('Match not found.');
-
-        const stage = await this.storage.select<Stage>('stage', stored.stage_id);
-        if (!stage) throw Error('Stage not found.');
-
-        const inRoundRobin = helpers.isRoundRobin(stage);
-        if (!inRoundRobin && helpers.isMatchUpdateLocked(stored))
-            throw Error('The match is locked.');
-
-        return { stored, inRoundRobin };
     }
 
     /**

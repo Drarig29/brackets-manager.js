@@ -915,16 +915,23 @@ export function transitionToMinor(previousDuels: Duel[], losers: ParticipantSlot
  * @param storedParent The parent match stored in the database.
  * @param parent The partial parent match to update.
  * @param scores The scores of the match child games.
+ * @param inRoundRobin Indicates whether the parent match is in a round-robin stage.
  */
-export function setParentMatchCompleted(storedParent: Match, parent: Partial<MatchResults>, scores: Scores): void {
+export function setParentMatchCompleted(storedParent: Match, parent: Partial<MatchResults>, scores: Scores, inRoundRobin: boolean): void {
     const parentCompleted = scores.opponent1 + scores.opponent2 === storedParent.child_count;
     if (!parentCompleted) return;
 
+    if (!parent.opponent1 || !parent.opponent2)
+        throw Error('Either opponent1 or opponent2 is falsy.');
+
     if (scores.opponent1 > scores.opponent2)
-        parent.opponent1!.result = 'win';
+        parent.opponent1.result = 'win';
     else if (scores.opponent2 > scores.opponent1)
-        parent.opponent2!.result = 'win';
-    else
+        parent.opponent2.result = 'win';
+    else if (inRoundRobin) {
+        parent.opponent1.result = 'draw';
+        parent.opponent2.result = 'draw';
+    } else
         throw Error('Match games result in a tie for the parent match.');
 }
 
