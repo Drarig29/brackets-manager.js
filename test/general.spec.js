@@ -497,17 +497,17 @@ describe('Best-Of series matches completion', () => {
             },
         });
 
-        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
 
         const firstMatch = await storage.select('match', 0);
         assert.strictEqual(firstMatch.opponent1.score, 2);
         assert.strictEqual(firstMatch.opponent2.score, 0);
         assert.strictEqual(firstMatch.opponent1.result, 'win');
 
-        await manager.update.matchGame({ id: 3, opponent2: { result: 'win' } });
-        await manager.update.matchGame({ id: 4, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 5, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 1, opponent2: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 3, opponent1: { result: 'win' } });
 
         const secondMatch = await storage.select('match', 1);
         assert.strictEqual(secondMatch.opponent1.score, 2);
@@ -526,15 +526,15 @@ describe('Best-Of series matches completion', () => {
             },
         });
 
-        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
 
         let match = await storage.select('match', 0);
         assert.strictEqual(match.opponent1.score, 2);
         assert.strictEqual(match.opponent2.score, 0);
         assert.strictEqual(match.opponent1.result, 'win');
 
-        await manager.update.matchGame({ id: 2, opponent2: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 3, opponent2: { result: 'win' } });
 
         match = await storage.select('match', 0);
         assert.strictEqual(match.opponent1.score, 2);
@@ -553,30 +553,30 @@ describe('Best-Of series matches completion', () => {
             },
         });
 
-        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 3, opponent1: { result: 'win' } });
 
         const firstMatch = await storage.select('match', 0);
         assert.strictEqual(firstMatch.opponent1.score, 3);
         assert.strictEqual(firstMatch.opponent2.score, 0);
         assert.strictEqual(firstMatch.opponent1.result, 'win');
 
-        await manager.update.matchGame({ id: 5, opponent2: { result: 'win' } });
-        await manager.update.matchGame({ id: 6, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 7, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 8, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 1, opponent2: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 3, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 4, opponent1: { result: 'win' } });
 
         const secondMatch = await storage.select('match', 1);
         assert.strictEqual(secondMatch.opponent1.score, 3);
         assert.strictEqual(secondMatch.opponent2.score, 1);
         assert.strictEqual(secondMatch.opponent1.result, 'win');
 
-        await manager.update.matchGame({ id: 10, opponent2: { result: 'win' } });
-        await manager.update.matchGame({ id: 11, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 12, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 13, opponent2: { result: 'win' } });
-        await manager.update.matchGame({ id: 14, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 2, number: 1, opponent2: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 2, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 2, number: 3, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 2, number: 4, opponent2: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 2, number: 5, opponent1: { result: 'win' } });
 
         const thirdMatch = await storage.select('match', 2);
         assert.strictEqual(thirdMatch.opponent1.score, 3);

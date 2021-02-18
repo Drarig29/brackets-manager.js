@@ -266,8 +266,8 @@ describe('Update match games', () => {
         assert.strictEqual((await storage.select('match', 0)).status, (await storage.select('match_game', 0)).status);
 
         // Semi 1
-        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
         assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
         assert.strictEqual((await storage.select('match', 0)).opponent1.score, 2);
         assert.strictEqual((await storage.select('match', 0)).opponent2.score, 0);
@@ -277,16 +277,16 @@ describe('Update match games', () => {
         assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
 
         // Semi 2
-        await manager.update.matchGame({ id: 2, opponent2: { result: 'win' } });
-        await manager.update.matchGame({ id: 3, opponent2: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 1, opponent2: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 2, opponent2: { result: 'win' } });
 
         finalMatchStatus = (await storage.select('match', 2)).status;
         assert.strictEqual(finalMatchStatus, Status.Ready);
         assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
 
         // Final
-        await manager.update.matchGame({ id: 4, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 5, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 2, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 2, number: 2, opponent1: { result: 'win' } });
 
         finalMatchStatus = (await storage.select('match', 2)).status;
         assert.strictEqual(finalMatchStatus, Status.Completed);
@@ -380,6 +380,32 @@ describe('Update match games', () => {
             (await storage.select('match', 2)).opponent1.id, // Should be determined automatically.
             (await storage.select('match', 0)).opponent1.id, // Winner of the first BO3 match.
         );
+    });
+
+    it('should select a match game with its parent match id and number', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                matchesChildCount: 3,
+            },
+        });
+
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.score, 2);
     });
 });
 

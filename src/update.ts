@@ -97,41 +97,22 @@ export class Update {
     }
 
     /**
-     * Updates partial information of a match game. It's id must be given.
+     * Updates partial information of a match game. Its id must be given.
      *
      * This will update the parent match accordingly.
      *
      * @param game Values to change in a match game.
      */
     public async matchGame(game: Partial<MatchGame>): Promise<void> {
-        if (game.id === undefined) throw Error('No match game id given.');
-
-        const stored = await this.storage.select<MatchGame>('match_game', game.id);
-        if (!stored) throw Error('Match game not found.');
+        const stored = await this.findMatchGame(game);
 
         if (helpers.isMatchUpdateLocked(stored))
             throw Error('The match game is locked.');
 
         helpers.setMatchResults(stored, game);
-        await this.storage.update('match_game', game.id, stored);
+        await this.storage.update('match_game', stored.id, stored);
 
-        const storedParent = await this.storage.select<Match>('match', stored.parent_id);
-        if (!storedParent) throw Error('Parent not found.');
-
-        const games = await this.storage.select<MatchGame>('match_game', { parent_id: stored.parent_id });
-        if (!games) throw Error('No match games.');
-
-        const parentScores = helpers.getChildGamesResults(games);
-        const parent = helpers.getParentMatchResults(storedParent, parentScores);
-
-        const stage = await this.storage.select<Stage>('stage', storedParent.stage_id);
-        if (!stage) throw Error('Stage not found.');
-
-        const inRoundRobin = helpers.isRoundRobin(stage);
-        helpers.setParentMatchCompleted(storedParent, parent, inRoundRobin);
-        helpers.setMatchResults(storedParent, parent);
-
-        await this.match(storedParent);
+        await this.updateParentMatch(stored.parent_id);
     }
 
     /**
@@ -256,6 +237,31 @@ export class Update {
 
         if (helpers.hasBye(match))
             await this.updateRelatedMatches(match);
+    }
+
+    /**
+     * Updates a parent match based on its child games.
+     * 
+     * @param parentId ID of the parent match.
+     */
+    private async updateParentMatch(parentId: number): Promise<void> {
+        const storedParent = await this.storage.select<Match>('match', parentId);
+        if (!storedParent) throw Error('Parent not found.');
+
+        const games = await this.storage.select<MatchGame>('match_game', { parent_id: parentId });
+        if (!games) throw Error('No match games.');
+
+        const parentScores = helpers.getChildGamesResults(games);
+        const parent = helpers.getParentMatchResults(storedParent, parentScores);
+
+        const stage = await this.storage.select<Stage>('stage', storedParent.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        const inRoundRobin = helpers.isRoundRobin(stage);
+        helpers.setParentMatchCompleted(storedParent, parent, inRoundRobin);
+        helpers.setMatchResults(storedParent, parent);
+
+        await this.match(storedParent);
     }
 
     /**
@@ -1020,6 +1026,32 @@ export class Update {
         });
 
         if (!match) throw Error('Match not found.');
+
         return match;
+    }
+
+    /**
+     * Finds a match game based on its `id` or based on the combination of its `parent_id` and `number`.
+     * 
+     * @param game Values to change in a match game.
+     */
+    private async findMatchGame(game: Partial<MatchGame>): Promise<MatchGame> {
+        if (game.id !== undefined) {
+            const stored = await this.storage.select<MatchGame>('match_game', game.id);
+            if (!stored) throw Error('Match game not found.');
+            return stored;
+        }
+
+        if (game.parent_id !== undefined && game.number) {
+            const stored = await this.storage.selectFirst<MatchGame>('match_game', {
+                parent_id: game.parent_id,
+                number: game.number,
+            });
+
+            if (!stored) throw Error('Match game not found.');
+            return stored;
+        }
+
+        throw Error('No match game id nor parent id and number given.');
     }
 }
