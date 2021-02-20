@@ -614,7 +614,7 @@ export class Update {
 
         const nextSide = helpers.getNextSide(match.number, roundNumber, roundCount, matchLocation);
         setNextOpponent(nextMatches, 0, nextSide, match, winnerSide);
-        await this.updateMatch(nextMatches[0]);
+        await this.propagateByeWinners(nextMatches[0]);
 
         if (nextMatches.length !== 2) return;
 

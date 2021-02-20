@@ -452,7 +452,7 @@ describe('Best-Of series matches completion', () => {
             type: 'round_robin',
             seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
             settings: {
-                matchesChildCount: 2,
+                matchesChildCount: 2, // Bo2
                 groupCount: 1,
             },
         });
@@ -474,7 +474,7 @@ describe('Best-Of series matches completion', () => {
             type: 'single_elimination',
             seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
             settings: {
-                matchesChildCount: 2,
+                matchesChildCount: 2, // Bo2
             },
         });
 
@@ -582,5 +582,26 @@ describe('Best-Of series matches completion', () => {
         assert.strictEqual(thirdMatch.opponent1.score, 3);
         assert.strictEqual(thirdMatch.opponent2.score, 2);
         assert.strictEqual(thirdMatch.opponent1.result, 'win');
+    });
+
+    it('should handle match auto-win against a BYE after a BoX series', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+            settings: {
+                seedOrdering: ['natural'],
+                matchesChildCount: 3,
+                size: 8,
+                consolationFinal: true,
+            },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+
+        assert.equal((await storage.select('match', 4)).opponent1.result, 'win');
+        assert.equal((await storage.select('match', 6)).opponent1.result, 'win');
     });
 });
