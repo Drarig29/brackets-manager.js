@@ -144,18 +144,29 @@ describe('Update matches', () => {
         assert.strictEqual(after.opponent2.result, 'loss');
     });
 
-    it('should remove results from a match', async () => {
+    it('should remove results from a match without score', async () => {
         await manager.update.match({
             id: 0,
             opponent1: { result: 'win' },
             opponent2: { result: 'loss' },
         });
 
+        await manager.update.resetMatchResults(0);
+
+        const after = await storage.select('match', 0);
+        assert.strictEqual(after.status, Status.Ready);
+        assert.notExists(after.opponent1.result);
+        assert.notExists(after.opponent2.result);
+    });
+
+    it('should remove results from a match with score', async () => {
         await manager.update.match({
             id: 0,
-            opponent1: { result: undefined },
-            opponent2: { result: undefined },
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12, result: 'loss' },
         });
+
+        await manager.update.resetMatchResults(0);
 
         const after = await storage.select('match', 0);
         assert.strictEqual(after.status, Status.Running);
@@ -163,7 +174,9 @@ describe('Update matches', () => {
         assert.notExists(after.opponent2.result);
     });
 
-    it('should set the other score to 0 if only one given', async () => {
+    it('should not set the other score to 0 if only one given', async () => {
+        // It shouldn't be our decision to set the other score to 0.
+
         await manager.update.match({
             id: 1,
             opponent1: { score: 1 },
@@ -172,7 +185,7 @@ describe('Update matches', () => {
         const after = await storage.select('match', 1);
         assert.strictEqual(after.status, Status.Running);
         assert.strictEqual(after.opponent1.score, 1);
-        assert.strictEqual(after.opponent2.score, 0);
+        assert.notExists(after.opponent2.score);
     });
 
     it('should end the match by setting the winner and the scores', async () => {
