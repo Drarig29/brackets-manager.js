@@ -267,10 +267,21 @@ export function ensureNotTied(scores: [number, number]): void {
  * @param slot A participant slot.
  */
 export function toResult(slot: ParticipantSlot): ParticipantResult | null {
-    return slot ? {
+    return slot && {
+        id: slot.id,
+    };
+}
+
+/**
+ * Converts a participant slot to a result stored in storage, with the position the participant is coming from.
+ *
+ * @param slot A participant slot.
+ */
+export function toResultWithPosition(slot: ParticipantSlot): ParticipantResult | null {
+    return slot && {
         id: slot.id,
         position: slot.position,
-    } : null;
+    };
 }
 
 /**
@@ -477,15 +488,21 @@ export function getMatchStatus(match: Partial<MatchResults>): Status {
  */
 export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>): boolean {
     const completed = isMatchCompleted(match);
-
-    if (match.status === Status.Completed && !completed) throw Error('The match is not really completed.');
+    const currentlyCompleted = isMatchCompleted(stored);
 
     setScores(stored, match);
 
-    if (completed) {
+    if (completed && currentlyCompleted) {
+        setCompleted(stored, match);
+        return false;
+    }
+
+    if (completed && !currentlyCompleted) {
         setCompleted(stored, match);
         return true;
-    } else if (isMatchCompleted(stored)) {
+    }
+
+    if (!completed && currentlyCompleted) {
         removeCompleted(stored);
         return true;
     }
@@ -499,14 +516,14 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
  * @param stored A reference to what will be updated in the storage.
  */
 export function resetMatchResults(stored: MatchResults): void {
+    // TODO: try to refactor with removeCompleted(), it looks the same
+
     if (stored.opponent1) {
-        stored.opponent1.score = undefined;
         stored.opponent1.forfeit = undefined;
         stored.opponent1.result = undefined;
     }
 
     if (stored.opponent2) {
-        stored.opponent2.score = undefined;
         stored.opponent2.forfeit = undefined;
         stored.opponent2.result = undefined;
     }
@@ -520,7 +537,7 @@ export function resetMatchResults(stored: MatchResults): void {
  * @param match The match to get the opponent from.
  * @param side The side where to get the opponent from.
  */
-export function getOpponentId(match: Match, side: Side): number | null {
+export function getOpponentId(match: MatchResults, side: Side): number | null {
     const opponent = match[side];
     return opponent && opponent.id;
 }
@@ -578,6 +595,7 @@ export function getNextSideLoserBracket(matchNumber: number, nextMatch: Match, r
     return 'opponent2';
 }
 
+// TODO: refactor this and don't take an array and index but just the match.
 export type SetNextOpponent = (nextMatches: Match[], index: number, nextSide: Side, match?: Match, currentSide?: Side) => void;
 
 /**
@@ -591,9 +609,10 @@ export type SetNextOpponent = (nextMatches: Match[], index: number, nextSide: Si
  */
 export function setNextOpponent(nextMatches: Match[], index: number, nextSide: Side, match?: Match, currentSide?: Side): void {
     const nextMatch = nextMatches[index];
-    nextMatch[nextSide] = {
+
+    nextMatch[nextSide] = match![currentSide!] && { // Keep BYE.
         id: getOpponentId(match!, currentSide!), // This implementation of SetNextOpponent always has those arguments.
-        position: nextMatch[nextSide]?.position,
+        position: nextMatch[nextSide]?.position, // Keep position.
     };
 
     if (nextMatch.status < Status.Ready)
@@ -609,11 +628,13 @@ export function setNextOpponent(nextMatches: Match[], index: number, nextSide: S
  */
 export function resetNextOpponent(nextMatches: Match[], index: number, nextSide: Side): void {
     const nextMatch = nextMatches[index];
-    nextMatch.status = Status.Locked;
-    nextMatch[nextSide] = {
+
+    nextMatch[nextSide] = nextMatch[nextSide] && { // Keep BYE.
         id: null,
-        position: nextMatch[nextSide]?.position,
+        position: nextMatch[nextSide]?.position, // Keep position.
     };
+
+    nextMatch.status = Status.Locked;
 }
 
 /**
@@ -623,11 +644,9 @@ export function resetNextOpponent(nextMatches: Match[], index: number, nextSide:
  * @param match Input of the update.
  */
 export function setScores(stored: MatchResults, match: Partial<MatchResults>): void {
-    if (match.opponent1?.score === undefined && match.opponent2?.score === undefined) {
-        // No score update.
-        if (match.status) stored.status = match.status;
+    // Skip if no score update.
+    if (match.opponent1?.score === undefined && match.opponent2?.score === undefined)
         return;
-    }
 
     if (!stored.opponent1 || !stored.opponent2) throw Error('No team is defined yet. Cannot set the score.');
 
@@ -912,15 +931,15 @@ export function transitionToMinor(previousDuels: Duel[], losers: ParticipantSlot
 /**
  * Sets the parent match to a completed status if all its child games are completed.
  *
- * @param storedParent The parent match stored in the database.
  * @param parent The partial parent match to update.
+ * @param childCount Child count of this parent match.
  * @param inRoundRobin Indicates whether the parent match is in a round-robin stage.
  */
-export function setParentMatchCompleted(storedParent: Match, parent: Partial<MatchResults>, inRoundRobin: boolean): void {
+export function setParentMatchCompleted(parent: Partial<MatchResults>, childCount: number, inRoundRobin: boolean): void {
     if (parent.opponent1?.score === undefined || parent.opponent2?.score === undefined)
         throw Error('Either opponent1, opponent2 or their scores are falsy.');
 
-    const minToWin = (storedParent.child_count + 1) / 2;
+    const minToWin = minScoreToWinBestOfX(childCount);
 
     if (parent.opponent1.score >= minToWin) {
         parent.opponent1.result = 'win';
@@ -932,7 +951,7 @@ export function setParentMatchCompleted(storedParent: Match, parent: Partial<Mat
         return;
     }
 
-    if (parent.opponent1.score === parent.opponent2.score && parent.opponent1.score + parent.opponent2.score > storedParent.child_count - 1) {
+    if (parent.opponent1.score === parent.opponent2.score && parent.opponent1.score + parent.opponent2.score > childCount - 1) {
         if (inRoundRobin) {
             parent.opponent1.result = 'draw';
             parent.opponent2.result = 'draw';
@@ -1153,6 +1172,15 @@ export function getDiagonalMatchNumber(matchNumber: number): number {
  */
 export function getNearestPowerOfTwo(input: number): number {
     return Math.pow(2, Math.ceil(Math.log2(input)));
+}
+
+/**
+ * Returns the minimum score a participant must have to win a Best Of X series match.
+ * 
+ * @param x The count of child games in the series.
+ */
+function minScoreToWinBestOfX(x: number): number {
+    return (x + 1) / 2;
 }
 
 /**

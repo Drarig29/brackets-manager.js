@@ -334,8 +334,8 @@ export class Create {
      * @param childCount Child count for this match (number of games).
      */
     private async createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number): Promise<void> {
-        const opponent1 = helpers.toResult(opponents[0]);
-        const opponent2 = helpers.toResult(opponents[1]);
+        const opponent1 = helpers.toResultWithPosition(opponents[0]);
+        const opponent2 = helpers.toResultWithPosition(opponents[1]);
 
         // Round-robin matches can easily be removed. Prevent BYE vs. BYE matches.
         if (this.stage.type === 'round_robin' && opponent1 === null && opponent2 === null)

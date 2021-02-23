@@ -38,7 +38,8 @@ describe('Update matches', () => {
 
         await manager.update.match({
             id: 0,
-            status: Status.Running,
+            opponent1: { score: 0 },
+            opponent2: { score: 0 },
         });
 
         const after = await storage.select('match', 0);
@@ -46,9 +47,6 @@ describe('Update matches', () => {
     });
 
     it('should update the scores for a match and set it to running', async () => {
-        const before = await storage.select('match', 0);
-        assert.notExists(before.opponent1.score);
-
         await manager.update.match({
             id: 0,
             opponent1: { score: 2 },
@@ -61,13 +59,6 @@ describe('Update matches', () => {
 
         // Name should stay. It shouldn't be overwritten.
         assert.strictEqual(after.opponent1.id, 0);
-    });
-
-    it('should throw if end a match without winner', async () => {
-        await assert.isRejected(manager.update.match({
-            id: 4,
-            status: Status.Completed,
-        }), 'The match is not really completed.');
     });
 
     it('should end the match by only setting the winner', async () => {
@@ -86,8 +77,6 @@ describe('Update matches', () => {
     });
 
     it('should update the status of the next match', async () => {
-        await manager.update.resetMatch(0);
-
         await manager.update.match({
             id: 0,
             opponent1: { result: 'win' },

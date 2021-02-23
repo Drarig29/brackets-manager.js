@@ -605,3 +605,135 @@ describe('Best-Of series matches completion', () => {
         assert.equal((await storage.select('match', 6)).opponent1.result, 'win');
     });
 });
+
+describe('Reset match and match games', () => {
+
+    beforeEach(() => {
+        storage.reset();
+    });
+
+    it('should reset results of a match', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+            settings: {
+                seedOrdering: ['natural'],
+                size: 8,
+            },
+        });
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        let match = await storage.select('match', 0);
+        assert.equal(match.opponent1.score, 16);
+        assert.equal(match.opponent2.score, 12);
+        assert.equal(match.opponent1.result, 'win');
+
+        let semi1 = await storage.select('match', 4);
+        assert.equal(semi1.opponent1.result, 'win');
+        assert.equal(semi1.opponent2, null);
+
+        let final = await storage.select('match', 6);
+        assert.equal(final.opponent1.result, 'win');
+        assert.equal(final.opponent2, null);
+
+        await manager.update.resetMatchResults(0); // Score stays as is.
+
+        match = await storage.select('match', 0);
+        assert.equal(match.opponent1.score, 16);
+        assert.equal(match.opponent2.score, 12);
+        assert.equal(match.opponent1.result, undefined);
+
+        semi1 = await storage.select('match', 4);
+        assert.equal(semi1.opponent1.result, undefined);
+        assert.equal(semi1.opponent2, null);
+
+        final = await storage.select('match', 6);
+        assert.equal(final.opponent1.result, undefined);
+        assert.equal(final.opponent2, null);
+    });
+
+    it('should throw when at least one of the following match is locked', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                seedOrdering: ['natural'],
+            },
+        });
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await manager.update.match({
+            id: 1,
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await manager.update.match({
+            id: 2,
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await assert.isRejected(manager.update.resetMatchResults(0), 'The match is locked.');
+    });
+
+    it('should reset results of a match game', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+            settings: {
+                seedOrdering: ['natural'],
+                matchesChildCount: 3,
+                consolationFinal: true,
+                size: 8,
+            },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+
+        assert.equal((await storage.select('match', 4)).opponent1.result, 'win');
+        assert.equal((await storage.select('match', 6)).opponent1.result, 'win');
+        assert.equal((await storage.select('match', 7)).opponent1, null); // BYE in consolation final.
+
+        await manager.update.resetMatchGameResults(1);
+
+        assert.equal((await storage.select('match', 4)).opponent1.result, undefined);
+        assert.equal((await storage.select('match', 6)).opponent1.result, undefined);
+        assert.equal((await storage.select('match', 7)).opponent1, null); // Still BYE in consolation final.
+    });
+
+    it('should throw when the following match game is locked', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+            settings: {
+                seedOrdering: ['natural'],
+                matchesChildCount: 5,
+            },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+
+        await assert.isRejected(manager.update.resetMatchGameResults(0), 'The match game is locked.');
+    });
+});
