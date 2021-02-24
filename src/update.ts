@@ -54,6 +54,9 @@ export class Update {
         const stored = await this.storage.select<Match>('match', matchId);
         if (!stored) throw Error('Match not found.');
 
+        if (stored.child_count > 0)
+            throw Error('The parent match is controlled by its child games and its result cannot be reset.')
+
         const stage = await this.storage.select<Stage>('stage', stored.stage_id);
         if (!stage) throw Error('Stage not found.');
 
@@ -68,7 +71,7 @@ export class Update {
             throw Error('The match is locked.');
 
         helpers.resetMatchResults(stored);
-        await this.applyMatchUpdate(stored); // TODO: make sure to reset the child games too
+        await this.applyMatchUpdate(stored);
 
         if (!helpers.isRoundRobin(stage))
             await this.updateRelatedMatches(stored, true, true);

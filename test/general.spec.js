@@ -601,8 +601,8 @@ describe('Best-Of series matches completion', () => {
         await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
         await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
 
-        assert.equal((await storage.select('match', 4)).opponent1.result, 'win');
-        assert.equal((await storage.select('match', 6)).opponent1.result, 'win');
+        assert.strictEqual((await storage.select('match', 4)).opponent1.result, 'win');
+        assert.strictEqual((await storage.select('match', 6)).opponent1.result, 'win');
     });
 });
 
@@ -631,32 +631,32 @@ describe('Reset match and match games', () => {
         });
 
         let match = await storage.select('match', 0);
-        assert.equal(match.opponent1.score, 16);
-        assert.equal(match.opponent2.score, 12);
-        assert.equal(match.opponent1.result, 'win');
+        assert.strictEqual(match.opponent1.score, 16);
+        assert.strictEqual(match.opponent2.score, 12);
+        assert.strictEqual(match.opponent1.result, 'win');
 
         let semi1 = await storage.select('match', 4);
-        assert.equal(semi1.opponent1.result, 'win');
-        assert.equal(semi1.opponent2, null);
+        assert.strictEqual(semi1.opponent1.result, 'win');
+        assert.strictEqual(semi1.opponent2, null);
 
         let final = await storage.select('match', 6);
-        assert.equal(final.opponent1.result, 'win');
-        assert.equal(final.opponent2, null);
+        assert.strictEqual(final.opponent1.result, 'win');
+        assert.strictEqual(final.opponent2, null);
 
         await manager.update.resetMatchResults(0); // Score stays as is.
 
         match = await storage.select('match', 0);
-        assert.equal(match.opponent1.score, 16);
-        assert.equal(match.opponent2.score, 12);
-        assert.equal(match.opponent1.result, undefined);
+        assert.strictEqual(match.opponent1.score, 16);
+        assert.strictEqual(match.opponent2.score, 12);
+        assert.strictEqual(match.opponent1.result, undefined);
 
         semi1 = await storage.select('match', 4);
-        assert.equal(semi1.opponent1.result, undefined);
-        assert.equal(semi1.opponent2, null);
+        assert.strictEqual(semi1.opponent1.result, undefined);
+        assert.strictEqual(semi1.opponent2, null);
 
         final = await storage.select('match', 6);
-        assert.equal(final.opponent1.result, undefined);
-        assert.equal(final.opponent2, null);
+        assert.strictEqual(final.opponent1.result, undefined);
+        assert.strictEqual(final.opponent2, null);
     });
 
     it('should throw when at least one of the following match is locked', async () => {
@@ -708,14 +708,14 @@ describe('Reset match and match games', () => {
         await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
         await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
 
-        assert.equal((await storage.select('match', 4)).opponent1.result, 'win');
-        assert.equal((await storage.select('match', 6)).opponent1.result, 'win');
-        assert.equal((await storage.select('match', 7)).opponent1, null); // BYE in consolation final.
+        assert.strictEqual((await storage.select('match', 4)).opponent1.result, 'win');
+        assert.strictEqual((await storage.select('match', 6)).opponent1.result, 'win');
+        assert.strictEqual((await storage.select('match', 7)).opponent1, null); // BYE in consolation final.
 
         await manager.update.resetMatchGameResults(1);
 
-        assert.equal((await storage.select('match', 4)).opponent1.result, undefined);
-        assert.equal((await storage.select('match', 6)).opponent1.result, undefined);
-        assert.equal((await storage.select('match', 7)).opponent1, null); // Still BYE in consolation final.
+        assert.strictEqual((await storage.select('match', 4)).opponent1.result, undefined);
+        assert.strictEqual((await storage.select('match', 6)).opponent1.result, undefined);
+        assert.strictEqual((await storage.select('match', 7)).opponent1, null); // Still BYE in consolation final.
     });
 });

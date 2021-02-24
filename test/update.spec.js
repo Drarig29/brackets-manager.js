@@ -441,6 +441,39 @@ describe('Update match games', () => {
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.score, 2);
     });
+
+    it('should throw if trying to reset the results of a parent match', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+            settings: {
+                matchesChildCount: 3,
+            },
+        });
+
+        await assert.isRejected(manager.update.resetMatchResults(0), 'The parent match is controlled by its child games and its result cannot be reset.');
+    });
+
+    it('should reset the results of a parent match when a child game\'s results are reset', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+            settings: {
+                matchesChildCount: 3,
+            },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
+
+        await manager.update.resetMatchGameResults(0);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
+    });
 });
 
 describe('Seeding', () => {
@@ -605,9 +638,9 @@ describe('Match games status', () => {
         });
 
         const games = await storage.select('match_game', { parent_id: 2 });
-        assert.equal(games[0].status, Status.Locked);
-        assert.equal(games[1].status, Status.Locked);
-        assert.equal(games[2].status, Status.Locked);
+        assert.strictEqual(games[0].status, Status.Locked);
+        assert.strictEqual(games[1].status, Status.Locked);
+        assert.strictEqual(games[2].status, Status.Locked);
     });
 
     it('should set all the child games to Waiting', async () => {
@@ -623,9 +656,9 @@ describe('Match games status', () => {
         await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
 
         const games = await storage.select('match_game', { parent_id: 2 });
-        assert.equal(games[0].status, Status.Waiting);
-        assert.equal(games[1].status, Status.Waiting);
-        assert.equal(games[2].status, Status.Waiting);
+        assert.strictEqual(games[0].status, Status.Waiting);
+        assert.strictEqual(games[1].status, Status.Waiting);
+        assert.strictEqual(games[2].status, Status.Waiting);
     });
 
     it('should set all the child games to Ready', async () => {
@@ -644,9 +677,9 @@ describe('Match games status', () => {
         await manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'win' } });
 
         const games = await storage.select('match_game', { parent_id: 2 });
-        assert.equal(games[0].status, Status.Ready);
-        assert.equal(games[1].status, Status.Ready);
-        assert.equal(games[2].status, Status.Ready);
+        assert.strictEqual(games[0].status, Status.Ready);
+        assert.strictEqual(games[1].status, Status.Ready);
+        assert.strictEqual(games[2].status, Status.Ready);
     });
 
     it('should set the parent match to Running when one match game starts', async () => {
@@ -667,11 +700,11 @@ describe('Match games status', () => {
         const games = await storage.select('match_game', { parent_id: 0 });
 
         // Siblings are left untouched.
-        assert.equal(games[0].status, Status.Ready);
-        assert.equal(games[2].status, Status.Ready);
+        assert.strictEqual(games[0].status, Status.Ready);
+        assert.strictEqual(games[2].status, Status.Ready);
 
-        assert.equal(games[1].status, Status.Running);
-        assert.equal((await storage.select('match', 0)).status, Status.Running);
+        assert.strictEqual(games[1].status, Status.Running);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
     });
 
     it('should set the child game to Completed without changing the siblings or the parent match status', async () => {
@@ -688,11 +721,11 @@ describe('Match games status', () => {
         const games = await storage.select('match_game', { parent_id: 0 });
 
         // Siblings and parent match are left untouched.
-        assert.equal(games[0].status, Status.Ready);
-        assert.equal(games[2].status, Status.Ready);
-        assert.equal((await storage.select('match', 0)).status, Status.Running);
+        assert.strictEqual(games[0].status, Status.Ready);
+        assert.strictEqual(games[2].status, Status.Ready);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
 
-        assert.equal(games[1].status, Status.Completed);
+        assert.strictEqual(games[1].status, Status.Completed);
     });
 
     it('should set the parent match to Completed', async () => {
@@ -706,14 +739,14 @@ describe('Match games status', () => {
 
         await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
         await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
-        assert.equal((await storage.select('match', 0)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
 
         // Left untouched, can be played if we want.
-        assert.equal((await storage.select('match_game', 2)).status, Status.Ready);
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
 
         await manager.update.matchGame({ id: 2, opponent1: { result: 'win' } });
-        assert.equal((await storage.select('match', 0)).status, Status.Completed);
-        assert.equal((await storage.select('match_game', 2)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Completed);
     });
 
     it('should archive previous matches and their games when next match is started', async () => {
@@ -739,17 +772,17 @@ describe('Match games status', () => {
         });
 
         const firstMatchGames = await storage.select('match_game', { parent_id: 0 });
-        assert.equal(firstMatchGames[0].status, Status.Archived);
-        assert.equal(firstMatchGames[1].status, Status.Archived);
-        assert.equal(firstMatchGames[2].status, Status.Archived);
+        assert.strictEqual(firstMatchGames[0].status, Status.Archived);
+        assert.strictEqual(firstMatchGames[1].status, Status.Archived);
+        assert.strictEqual(firstMatchGames[2].status, Status.Archived);
 
-        assert.equal((await storage.select('match', 0)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Archived);
 
         const secondMatchGames = await storage.select('match_game', { parent_id: 1 });
-        assert.equal(secondMatchGames[0].status, Status.Archived);
-        assert.equal(secondMatchGames[1].status, Status.Archived);
-        assert.equal(secondMatchGames[2].status, Status.Archived);
+        assert.strictEqual(secondMatchGames[0].status, Status.Archived);
+        assert.strictEqual(secondMatchGames[1].status, Status.Archived);
+        assert.strictEqual(secondMatchGames[2].status, Status.Archived);
 
-        assert.equal((await storage.select('match', 1)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Archived);
     });
 });
