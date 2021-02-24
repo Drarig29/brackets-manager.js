@@ -120,7 +120,7 @@ describe('Update matches', () => {
         });
 
         const after = await storage.select('match', 2);
-        assert.strictEqual(after.status, Status.Running);
+        assert.strictEqual(after.status, Status.Ready);
         assert.notExists(after.opponent1.forfeit);
         assert.notExists(after.opponent1.result);
         assert.notExists(after.opponent2.result);

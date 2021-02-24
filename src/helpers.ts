@@ -506,7 +506,7 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
     }
 
     if (!completed && currentlyCompleted) {
-        removeCompleted(stored);
+        resetMatchResults(stored);
         return { statusChanged: true, resultChanged: true };
     }
 
@@ -514,13 +514,11 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
 }
 
 /**
- * Resets the results of a match. (status, score, forfeit, result)
+ * Resets the results of a match. (status, forfeit, result)
  *
  * @param stored A reference to what will be updated in the storage.
  */
 export function resetMatchResults(stored: MatchResults): void {
-    // TODO: try to refactor with removeCompleted(), it looks the same
-
     if (stored.opponent1) {
         stored.opponent1.forfeit = undefined;
         stored.opponent1.result = undefined;
@@ -598,21 +596,17 @@ export function getNextSideLoserBracket(matchNumber: number, nextMatch: Match, r
     return 'opponent2';
 }
 
-// TODO: refactor this and don't take an array and index but just the match.
-export type SetNextOpponent = (nextMatches: Match[], index: number, nextSide: Side, match?: Match, currentSide?: Side) => void;
+export type SetNextOpponent = (nextMatch: Match, nextSide: Side, match?: Match, currentSide?: Side) => void;
 
 /**
  * Sets an opponent in the next match he has to go.
  *
- * @param nextMatches The matches which follow the current one.
- * @param index Index of the match to set in the next matches.
+ * @param nextMatch A match which follows the current one.
  * @param nextSide The side the opponent will be on in the next match.
  * @param match The current match.
  * @param currentSide The side the opponent is currently on.
  */
-export function setNextOpponent(nextMatches: Match[], index: number, nextSide: Side, match?: Match, currentSide?: Side): void {
-    const nextMatch = nextMatches[index];
-
+export function setNextOpponent(nextMatch: Match, nextSide: Side, match?: Match, currentSide?: Side): void {
     nextMatch[nextSide] = match![currentSide!] && { // Keep BYE.
         id: getOpponentId(match!, currentSide!), // This implementation of SetNextOpponent always has those arguments.
         position: nextMatch[nextSide]?.position, // Keep position.
@@ -625,13 +619,10 @@ export function setNextOpponent(nextMatches: Match[], index: number, nextSide: S
 /**
  * Resets an opponent in the match following the current one.
  *
- * @param nextMatches The matches which follow the current one.
- * @param index Index of the match to set in the next matches.
+ * @param nextMatch A match which follows the current one.
  * @param nextSide The side the opponent will be on in the next match.
  */
-export function resetNextOpponent(nextMatches: Match[], index: number, nextSide: Side): void {
-    const nextMatch = nextMatches[index];
-
+export function resetNextOpponent(nextMatch: Match, nextSide: Side): void {
     nextMatch[nextSide] = nextMatch[nextSide] && { // Keep BYE.
         id: null,
         position: nextMatch[nextSide]?.position, // Keep position.
@@ -684,25 +675,6 @@ export function setCompleted(stored: MatchResults, match: Partial<MatchResults>)
         stored.opponent2.result = 'win'; // Win against opponent 1 BYE.
 
     setForfeits(stored, match);
-}
-
-/**
- * Removes the completed status of a match, set it back to running and removes results.
- *
- * @param stored A reference to what will be updated in the storage.
- */
-export function removeCompleted(stored: MatchResults): void {
-    stored.status = Status.Running;
-
-    if (stored.opponent1) {
-        stored.opponent1.forfeit = undefined;
-        stored.opponent1.result = undefined;
-    }
-
-    if (stored.opponent2) {
-        stored.opponent2.forfeit = undefined;
-        stored.opponent2.result = undefined;
-    }
 }
 
 /**

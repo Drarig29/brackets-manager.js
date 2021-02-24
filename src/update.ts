@@ -626,14 +626,14 @@ export class Update {
      */
     private async applyToNextMatches(setNextOpponent: SetNextOpponent, match: Match, matchLocation: BracketType, roundNumber: number, roundCount: number, nextMatches: Match[], winnerSide?: Side): Promise<void> {
         if (matchLocation === 'final_group') {
-            setNextOpponent(nextMatches, 0, 'opponent1', match, 'opponent1');
-            setNextOpponent(nextMatches, 0, 'opponent2', match, 'opponent2');
+            setNextOpponent(nextMatches[0], 'opponent1', match, 'opponent1');
+            setNextOpponent(nextMatches[0], 'opponent2', match, 'opponent2');
             await this.applyMatchUpdate(nextMatches[0]);
             return;
         }
 
         const nextSide = helpers.getNextSide(match.number, roundNumber, roundCount, matchLocation);
-        setNextOpponent(nextMatches, 0, nextSide, match, winnerSide);
+        setNextOpponent(nextMatches[0], nextSide, match, winnerSide);
         await this.propagateByeWinners(nextMatches[0]);
 
         if (nextMatches.length !== 2) return;
@@ -641,11 +641,11 @@ export class Update {
         // The second match is either the consolation final (single elimination) or a loser bracket match (double elimination).
 
         if (matchLocation === 'single_bracket') {
-            setNextOpponent(nextMatches, 1, nextSide, match, winnerSide && helpers.getOtherSide(winnerSide));
+            setNextOpponent(nextMatches[1], nextSide, match, winnerSide && helpers.getOtherSide(winnerSide));
             await this.applyMatchUpdate(nextMatches[1]);
         } else {
             const nextSideLB = helpers.getNextSideLoserBracket(match.number, nextMatches[1], roundNumber);
-            setNextOpponent(nextMatches, 1, nextSideLB, match, winnerSide && helpers.getOtherSide(winnerSide));
+            setNextOpponent(nextMatches[1], nextSideLB, match, winnerSide && helpers.getOtherSide(winnerSide));
             await this.propagateByeWinners(nextMatches[1]);
         }
     }
