@@ -363,6 +363,38 @@ describe('Update match games', () => {
         await assert.isRejected(manager.update.matchGame({ id: 0 }), 'The match game is locked.');
     });
 
+    it('should throw if trying to update a child game of a locked match', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                seedOrdering: ['natural'],
+                matchesChildCount: 3, // Bo3
+            },
+        });
+
+        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
+
+        await manager.update.matchGame({ parent_id: 1, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'win' } });
+
+        // Starting the next match will lock previous matches and their match games.
+        await manager.update.matchGame({
+            parent_id: 2,
+            number: 1,
+            opponent1: { score: 0 },
+            opponent2: { score: 0 },
+        });
+
+        await assert.isRejected(manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'loss' } }), 'The match game is locked.');
+        await assert.isRejected(manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'loss' } }), 'The match game is locked.');
+        await assert.isRejected(manager.update.matchGame({ parent_id: 1, number: 1, opponent1: { result: 'loss' } }), 'The match game is locked.');
+        await assert.isRejected(manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'loss' } }), 'The match game is locked.');
+    });
+
     it('should propagate the winner of the parent match in the next match', async () => {
         await manager.create({
             name: 'Example',
@@ -554,5 +586,170 @@ describe('Seeding', () => {
             'Team E', 'Team F',
             'Team G', // Missing value.
         ]), 'The size of the seeding is incorrect.');
+    });
+});
+
+describe('Match games status', () => {
+
+    beforeEach(() => {
+        storage.reset();
+    });
+
+    it('should have all the child games to Locked when the parent match is Locked', async () => {
+        await manager.create({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        const games = await storage.select('match_game', { parent_id: 2 });
+        assert.equal(games[0].status, Status.Locked);
+        assert.equal(games[1].status, Status.Locked);
+        assert.equal(games[2].status, Status.Locked);
+    });
+
+    it('should set all the child games to Waiting', async () => {
+        await manager.create({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
+
+        const games = await storage.select('match_game', { parent_id: 2 });
+        assert.equal(games[0].status, Status.Waiting);
+        assert.equal(games[1].status, Status.Waiting);
+        assert.equal(games[2].status, Status.Waiting);
+    });
+
+    it('should set all the child games to Ready', async () => {
+        await manager.create({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
+
+        await manager.update.matchGame({ parent_id: 1, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'win' } });
+
+        const games = await storage.select('match_game', { parent_id: 2 });
+        assert.equal(games[0].status, Status.Ready);
+        assert.equal(games[1].status, Status.Ready);
+        assert.equal(games[2].status, Status.Ready);
+    });
+
+    it('should set the parent match to Running when one match game starts', async () => {
+        await manager.create({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({
+            id: 1,
+            opponent1: { score: 0 },
+            opponent2: { score: 0 },
+        });
+
+        const games = await storage.select('match_game', { parent_id: 0 });
+
+        // Siblings are left untouched.
+        assert.equal(games[0].status, Status.Ready);
+        assert.equal(games[2].status, Status.Ready);
+
+        assert.equal(games[1].status, Status.Running);
+        assert.equal((await storage.select('match', 0)).status, Status.Running);
+    });
+
+    it('should set the child game to Completed without changing the siblings or the parent match status', async () => {
+        await manager.create({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+
+        const games = await storage.select('match_game', { parent_id: 0 });
+
+        // Siblings and parent match are left untouched.
+        assert.equal(games[0].status, Status.Ready);
+        assert.equal(games[2].status, Status.Ready);
+        assert.equal((await storage.select('match', 0)).status, Status.Running);
+
+        assert.equal(games[1].status, Status.Completed);
+    });
+
+    it('should set the parent match to Completed', async () => {
+        await manager.create({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+        assert.equal((await storage.select('match', 0)).status, Status.Completed);
+
+        // Left untouched, can be played if we want.
+        assert.equal((await storage.select('match_game', 2)).status, Status.Ready);
+
+        await manager.update.matchGame({ id: 2, opponent1: { result: 'win' } });
+        assert.equal((await storage.select('match', 0)).status, Status.Completed);
+        assert.equal((await storage.select('match_game', 2)).status, Status.Completed);
+    });
+
+    it('should archive previous matches and their games when next match is started', async () => {
+        await manager.create({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
+
+        await manager.update.matchGame({ parent_id: 1, number: 1, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'win' } });
+
+        await manager.update.matchGame({
+            parent_id: 2,
+            number: 1,
+            opponent1: { score: 0 },
+            opponent2: { score: 0 },
+        });
+
+        const firstMatchGames = await storage.select('match_game', { parent_id: 0 });
+        assert.equal(firstMatchGames[0].status, Status.Archived);
+        assert.equal(firstMatchGames[1].status, Status.Archived);
+        assert.equal(firstMatchGames[2].status, Status.Archived);
+
+        assert.equal((await storage.select('match', 0)).status, Status.Archived);
+
+        const secondMatchGames = await storage.select('match_game', { parent_id: 1 });
+        assert.equal(secondMatchGames[0].status, Status.Archived);
+        assert.equal(secondMatchGames[1].status, Status.Archived);
+        assert.equal(secondMatchGames[2].status, Status.Archived);
+
+        assert.equal((await storage.select('match', 1)).status, Status.Archived);
     });
 });

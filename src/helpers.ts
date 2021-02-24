@@ -484,30 +484,33 @@ export function getMatchStatus(match: Partial<MatchResults>): Status {
  *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
- * @returns `true` if the result of the match changed, `false` otherwise.
  */
-export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>): boolean {
+export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>): {
+    statusChanged: boolean,
+    resultChanged: boolean,
+} {
     const completed = isMatchCompleted(match);
     const currentlyCompleted = isMatchCompleted(stored);
 
-    setScores(stored, match);
+    const statusChanged = setScores(stored, match);
 
     if (completed && currentlyCompleted) {
+        // Ensure everything is good.
         setCompleted(stored, match);
-        return false;
+        return { statusChanged: false, resultChanged: false };
     }
 
     if (completed && !currentlyCompleted) {
         setCompleted(stored, match);
-        return true;
+        return { statusChanged: true, resultChanged: true };
     }
 
     if (!completed && currentlyCompleted) {
         removeCompleted(stored);
-        return true;
+        return { statusChanged: true, resultChanged: true };
     }
 
-    return false;
+    return { statusChanged, resultChanged: false };
 }
 
 /**
@@ -642,21 +645,23 @@ export function resetNextOpponent(nextMatches: Match[], index: number, nextSide:
  *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
+ * @returns `true` if the status of the match changed, `false` otherwise.
  */
-export function setScores(stored: MatchResults, match: Partial<MatchResults>): void {
+export function setScores(stored: MatchResults, match: Partial<MatchResults>): boolean {
     // Skip if no score update.
-    if (match.opponent1?.score === undefined && match.opponent2?.score === undefined)
-        return;
+    if (match.opponent1?.score === stored.opponent1?.score && match.opponent2?.score === stored.opponent2?.score)
+        return false;
 
-    if (!stored.opponent1 || !stored.opponent2) throw Error('No team is defined yet. Cannot set the score.');
-
+    const oldStatus = stored.status;
     stored.status = Status.Running;
 
-    if (match.opponent1?.score !== undefined)
+    if (match.opponent1 && stored.opponent1)
         stored.opponent1.score = match.opponent1.score;
 
-    if (match.opponent2?.score !== undefined)
+    if (match.opponent2 && stored.opponent2)
         stored.opponent2.score = match.opponent2.score;
+
+    return stored.status !== oldStatus;
 }
 
 /**

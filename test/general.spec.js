@@ -718,22 +718,4 @@ describe('Reset match and match games', () => {
         assert.equal((await storage.select('match', 6)).opponent1.result, undefined);
         assert.equal((await storage.select('match', 7)).opponent1, null); // Still BYE in consolation final.
     });
-
-    it('should throw when the following match game is locked', async () => {
-        await manager.create({
-            name: 'Example',
-            tournamentId: 0,
-            type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2'],
-            settings: {
-                seedOrdering: ['natural'],
-                matchesChildCount: 5,
-            },
-        });
-
-        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
-
-        await assert.isRejected(manager.update.resetMatchGameResults(0), 'The match game is locked.');
-    });
 });

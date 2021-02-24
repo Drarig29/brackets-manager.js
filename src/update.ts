@@ -68,10 +68,10 @@ export class Update {
             throw Error('The match is locked.');
 
         helpers.resetMatchResults(stored);
-        await this.applyMatchUpdate(stored, true); // TODO: attention à bien reset les child games
+        await this.applyMatchUpdate(stored); // TODO: make sure to reset the child games too
 
         if (!helpers.isRoundRobin(stage))
-            await this.updateRelatedMatches(stored);
+            await this.updateRelatedMatches(stored, true, true);
     }
 
     /**
@@ -87,35 +87,10 @@ export class Update {
         if (helpers.isMatchUpdateLocked(stored))
             throw Error('The match game is locked.');
 
-        const resultChanged = helpers.setMatchResults(stored, game);
+        helpers.setMatchResults(stored, game);
         await this.storage.update('match_game', stored.id, stored);
 
-        // Don't update related matches if it's a simple score update.
-        if (!resultChanged) return;
-
-        await this.updatePreviousGame(stored);
         await this.updateParentMatch(stored.parent_id);
-    }
-
-    /**
-     * Updates the previous game status.
-     * 
-     * @param game The current game.
-     */
-    private async updatePreviousGame(game: MatchGame): Promise<void> {
-        // First game doesn't have a previous game.
-        if (game.number === 1) return;
-
-        const winnerSide = helpers.getMatchResult(game);
-        if (game.status === Status.Completed && !winnerSide) throw Error('Cannot find a winner.');
-
-        const previousGame = await this.findMatchGame({
-            parent_id: game.parent_id,
-            number: game.number - 1,
-        });
-
-        previousGame.status = winnerSide ? Status.Archived : helpers.getMatchStatus(previousGame);
-        await this.storage.update('match_game', previousGame.id, previousGame);
     }
 
     /**
@@ -126,14 +101,6 @@ export class Update {
     public async resetMatchGameResults(gameId: number): Promise<void> {
         const stored = await this.storage.select<MatchGame>('match_game', gameId);
         if (!stored) throw Error('Match game not found.');
-
-        const previousGame = await this.findMatchGame({
-            parent_id: stored.parent_id,
-            number: stored.number + 1,
-        });
-
-        if (previousGame.status >= Status.Running)
-            throw Error('The match game is locked.');
 
         helpers.resetMatchResults(stored);
         await this.storage.update('match_game', stored.id, stored);
@@ -259,10 +226,10 @@ export class Update {
      */
     private async propagateByeWinners(match: Match): Promise<void> {
         helpers.setMatchResults(match, match);
-        await this.applyMatchUpdate(match, true);
+        await this.applyMatchUpdate(match);
 
         if (helpers.hasBye(match))
-            await this.updateRelatedMatches(match);
+            await this.updateRelatedMatches(match, true, true);
     }
 
     /**
@@ -516,8 +483,10 @@ export class Update {
      * Updates the matches related (previous and next) to a match.
      *
      * @param match A match.
+     * @param updatePrevious Whether to update the previous matches.
+     * @param updateNext Whether to update the next matches.
      */
-    private async updateRelatedMatches(match: Match): Promise<void> {
+    private async updateRelatedMatches(match: Match, updatePrevious: boolean, updateNext: boolean): Promise<void> {
         const { roundNumber, roundCount } = await this.getRoundInfos(match.group_id, match.round_id);
 
         const stage = await this.storage.select<Stage>('stage', match.stage_id);
@@ -528,8 +497,8 @@ export class Update {
 
         const matchLocation = helpers.getMatchLocation(stage.type, group.number);
 
-        await this.updatePrevious(match, matchLocation, stage, roundNumber);
-        await this.updateNext(match, matchLocation, stage, roundNumber, roundCount);
+        updatePrevious && await this.updatePrevious(match, matchLocation, stage, roundNumber);
+        updateNext && await this.updateNext(match, matchLocation, stage, roundNumber, roundCount);
     }
 
     /**
@@ -543,35 +512,38 @@ export class Update {
         if (!force && helpers.isMatchUpdateLocked(stored))
             throw Error('The match is locked.');
 
-        const resultChanged = helpers.setMatchResults(stored, match);
-        await this.applyMatchUpdate(stored, resultChanged);
+        const { statusChanged, resultChanged } = helpers.setMatchResults(stored, match);
+        await this.applyMatchUpdate(stored);
 
         // Don't update related matches if it's a simple score update.
-        if (!resultChanged) return;
+        if (!statusChanged && !resultChanged) return;
 
         const stage = await this.storage.select<Stage>('stage', stored.stage_id);
         if (!stage) throw Error('Stage not found.');
 
         if (!helpers.isRoundRobin(stage))
-            await this.updateRelatedMatches(stored);
+            await this.updateRelatedMatches(stored, statusChanged, resultChanged);
     }
 
     /**
      * Updates a match and its child games.
      *
      * @param match A match.
-     * @param setChildStatus Whether to set the child games status.
      */
-    private async applyMatchUpdate(match: Match, setChildStatus: boolean): Promise<void> {
+    private async applyMatchUpdate(match: Match): Promise<void> {
         await this.storage.update('match', match.id, match);
 
-        if (match.child_count > 0) {
-            await this.storage.update<MatchGame>('match_game', { parent_id: match.id }, {
-                ...setChildStatus && { status: match.status },
-                opponent1: helpers.toResult(match.opponent1),
-                opponent2: helpers.toResult(match.opponent2),
-            });
-        }
+        if (match.child_count === 0) return;
+
+        const update: Partial<MatchGame> = {
+            opponent1: helpers.toResult(match.opponent1),
+            opponent2: helpers.toResult(match.opponent2),
+        };
+
+        if (match.status <= Status.Ready || match.status === Status.Archived)
+            update.status = match.status;
+
+        await this.storage.update<MatchGame>('match_game', { parent_id: match.id }, update);
     }
 
     /**
@@ -586,10 +558,7 @@ export class Update {
         const previousMatches = await this.getPreviousMatches(match, matchLocation, stage, roundNumber);
         if (previousMatches.length === 0) return;
 
-        const winnerSide = helpers.getMatchResult(match);
-        if (match.status === Status.Completed && !winnerSide) throw Error('Cannot find a winner.');
-
-        if (winnerSide)
+        if (match.status >= Status.Running)
             await this.archiveMatches(previousMatches);
         else
             await this.resetMatchesStatus(previousMatches);
@@ -603,7 +572,7 @@ export class Update {
     private async archiveMatches(matches: Match[]): Promise<void> {
         for (const match of matches) {
             match.status = Status.Archived;
-            await this.applyMatchUpdate(match, true);
+            await this.applyMatchUpdate(match);
         }
     }
 
@@ -615,7 +584,7 @@ export class Update {
     private async resetMatchesStatus(matches: Match[]): Promise<void> {
         for (const match of matches) {
             match.status = helpers.getMatchStatus(match);
-            await this.applyMatchUpdate(match, true);
+            await this.applyMatchUpdate(match);
         }
     }
 
@@ -633,8 +602,6 @@ export class Update {
         if (nextMatches.length === 0) return;
 
         const winnerSide = helpers.getMatchResult(match);
-        if (match.status === Status.Completed && !winnerSide) throw Error('Cannot find a winner.');
-
         const actualRoundNumber = (stage.settings.skipFirstRound && matchLocation === 'winner_bracket') ? roundNumber + 1 : roundNumber;
 
         if (winnerSide)
@@ -658,7 +625,7 @@ export class Update {
         if (matchLocation === 'final_group') {
             setNextOpponent(nextMatches, 0, 'opponent1', match, 'opponent1');
             setNextOpponent(nextMatches, 0, 'opponent2', match, 'opponent2');
-            await this.applyMatchUpdate(nextMatches[0], true);
+            await this.applyMatchUpdate(nextMatches[0]);
             return;
         }
 
@@ -672,7 +639,7 @@ export class Update {
 
         if (matchLocation === 'single_bracket') {
             setNextOpponent(nextMatches, 1, nextSide, match, winnerSide && helpers.getOtherSide(winnerSide));
-            await this.applyMatchUpdate(nextMatches[1], true);
+            await this.applyMatchUpdate(nextMatches[1]);
         } else {
             const nextSideLB = helpers.getNextSideLoserBracket(match.number, nextMatches[1], roundNumber);
             setNextOpponent(nextMatches, 1, nextSideLB, match, winnerSide && helpers.getOtherSide(winnerSide));
