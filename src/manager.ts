@@ -3,6 +3,7 @@ import { InputStage } from 'brackets-model';
 import { create } from './create';
 import { Update } from './update';
 import { Get } from './get';
+import { Reset } from './reset';
 
 /**
  * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
@@ -12,6 +13,7 @@ export class BracketsManager {
     protected storage: Storage;
     public update: Update;
     public get: Get;
+    public reset: Reset;
 
     /**
      * Creates an instance of BracketsManager, which will handle all the stuff from the library.
@@ -37,6 +39,7 @@ export class BracketsManager {
         this.create = create;
         this.update = new Update(this.storage);
         this.get = new Get(this.storage);
+        this.reset = new Reset(this.storage);
     }
 
     /**

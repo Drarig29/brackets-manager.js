@@ -643,7 +643,7 @@ describe('Reset match and match games', () => {
         assert.strictEqual(final.opponent1.result, 'win');
         assert.strictEqual(final.opponent2, null);
 
-        await manager.update.resetMatchResults(0); // Score stays as is.
+        await manager.reset.matchResults(0); // Score stays as is.
 
         match = await storage.select('match', 0);
         assert.strictEqual(match.opponent1.score, 16);
@@ -688,7 +688,7 @@ describe('Reset match and match games', () => {
             opponent2: { score: 12 },
         });
 
-        await assert.isRejected(manager.update.resetMatchResults(0), 'The match is locked.');
+        await assert.isRejected(manager.reset.matchResults(0), 'The match is locked.');
     });
 
     it('should reset results of a match game', async () => {
@@ -712,7 +712,7 @@ describe('Reset match and match games', () => {
         assert.strictEqual((await storage.select('match', 6)).opponent1.result, 'win');
         assert.strictEqual((await storage.select('match', 7)).opponent1, null); // BYE in consolation final.
 
-        await manager.update.resetMatchGameResults(1);
+        await manager.reset.matchGameResults(1);
 
         assert.strictEqual((await storage.select('match', 4)).opponent1.result, undefined);
         assert.strictEqual((await storage.select('match', 6)).opponent1.result, undefined);

@@ -114,7 +114,7 @@ describe('Update matches', () => {
             opponent1: { forfeit: true },
         });
 
-        await manager.update.resetMatchResults(2);
+        await manager.reset.matchResults(2);
 
         const after = await storage.select('match', 2);
         assert.strictEqual(after.status, Status.Ready);
@@ -148,7 +148,7 @@ describe('Update matches', () => {
             opponent2: { result: 'loss' },
         });
 
-        await manager.update.resetMatchResults(0);
+        await manager.reset.matchResults(0);
 
         const after = await storage.select('match', 0);
         assert.strictEqual(after.status, Status.Ready);
@@ -163,7 +163,7 @@ describe('Update matches', () => {
             opponent2: { score: 12, result: 'loss' },
         });
 
-        await manager.update.resetMatchResults(0);
+        await manager.reset.matchResults(0);
 
         const after = await storage.select('match', 0);
         assert.strictEqual(after.status, Status.Running);
@@ -323,7 +323,7 @@ describe('Update match games', () => {
         assert.strictEqual(secondChildCompleted.opponent1.score, 2);
         assert.strictEqual(secondChildCompleted.opponent2.score, 0);
 
-        await manager.update.resetMatchGameResults(1);
+        await manager.reset.matchGameResults(1);
         const secondChildReset = await storage.select('match', 0);
         assert.strictEqual(secondChildReset.status, Status.Running);
         assert.strictEqual(secondChildReset.opponent1.score, 1);
@@ -450,7 +450,7 @@ describe('Update match games', () => {
             },
         });
 
-        await assert.isRejected(manager.update.resetMatchResults(0), 'The parent match is controlled by its child games and its result cannot be reset.');
+        await assert.isRejected(manager.reset.matchResults(0), 'The parent match is controlled by its child games and its result cannot be reset.');
     });
 
     it('should reset the results of a parent match when a child game\'s results are reset', async () => {
@@ -468,7 +468,7 @@ describe('Update match games', () => {
         await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
         assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
 
-        await manager.update.resetMatchGameResults(0);
+        await manager.reset.matchGameResults(0);
         assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
     });
 });
@@ -509,7 +509,7 @@ describe('Seeding', () => {
             'Team 7', 'Team 8',
         ]);
 
-        await manager.update.resetSeeding(0);
+        await manager.reset.seeding(0);
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, null);
         assert.strictEqual((await storage.select('participant')).length, 8); // Participants aren't removed.

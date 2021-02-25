@@ -174,7 +174,7 @@ describe('Previous and next match update in double elimination stage', () => {
             loserId,
         );
 
-        await manager.update.resetMatchResults(1); // Second match of WB round 1
+        await manager.reset.matchResults(1); // Second match of WB round 1
 
         matchSemiLB = await storage.select('match', 3);
         assert.strictEqual(matchSemiLB.opponent2.id, null);
@@ -264,7 +264,7 @@ describe('Previous and next match update in double elimination stage', () => {
         assert.strictEqual(beforeReset.opponent1.id, (await storage.select('match', 0)).opponent2.id);
         assert.strictEqual(beforeReset.opponent1.position, 1); // Must be set.
 
-        await manager.update.resetMatchResults(0); // First match of WB round 1
+        await manager.reset.matchResults(0); // First match of WB round 1
 
         const afterReset = await storage.select('match', 3); // Determined opponent for LB round 1
         assert.strictEqual(afterReset.opponent1.id, null);
@@ -306,7 +306,7 @@ describe('Previous and next match update in double elimination stage', () => {
         await manager.update.match({ id: 2, opponent1: { score: undefined }, opponent2: { score: undefined } });
 
         // ...and reset the result
-        await manager.update.resetMatchResults(2); // WB Final
+        await manager.reset.matchResults(2); // WB Final
 
         // Should remove the archived status
         assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
