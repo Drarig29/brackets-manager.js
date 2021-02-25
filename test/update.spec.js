@@ -114,10 +114,7 @@ describe('Update matches', () => {
             opponent1: { forfeit: true },
         });
 
-        await manager.update.match({
-            id: 2,
-            opponent1: { forfeit: undefined },
-        });
+        await manager.update.resetMatchResults(2);
 
         const after = await storage.select('match', 2);
         assert.strictEqual(after.status, Status.Ready);
@@ -326,7 +323,7 @@ describe('Update match games', () => {
         assert.strictEqual(secondChildCompleted.opponent1.score, 2);
         assert.strictEqual(secondChildCompleted.opponent2.score, 0);
 
-        await manager.update.matchGame({ id: 1, opponent1: { result: undefined } });
+        await manager.update.resetMatchGameResults(1);
         const secondChildReset = await storage.select('match', 0);
         assert.strictEqual(secondChildReset.status, Status.Running);
         assert.strictEqual(secondChildReset.opponent1.score, 1);

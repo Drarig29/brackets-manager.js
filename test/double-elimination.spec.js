@@ -174,11 +174,7 @@ describe('Previous and next match update in double elimination stage', () => {
             loserId,
         );
 
-        await manager.update.match({
-            id: 1, // Second match of WB round 1
-            opponent1: { score: 16, result: undefined }, // Unset the result.
-            opponent2: { score: 12 },
-        });
+        await manager.update.resetMatchResults(1); // Second match of WB round 1
 
         matchSemiLB = await storage.select('match', 3);
         assert.strictEqual(matchSemiLB.opponent2.id, null);
@@ -268,10 +264,7 @@ describe('Previous and next match update in double elimination stage', () => {
         assert.strictEqual(beforeReset.opponent1.id, (await storage.select('match', 0)).opponent2.id);
         assert.strictEqual(beforeReset.opponent1.position, 1); // Must be set.
 
-        await manager.update.match({
-            id: 0, // First match of WB round 1
-            opponent1: { result: undefined },
-        });
+        await manager.update.resetMatchResults(0); // First match of WB round 1
 
         const afterReset = await storage.select('match', 3); // Determined opponent for LB round 1
         assert.strictEqual(afterReset.opponent1.id, null);
@@ -309,21 +302,15 @@ describe('Previous and next match update in double elimination stage', () => {
         assert.strictEqual((await storage.select('match', 0)).status, Status.Archived);
         assert.strictEqual((await storage.select('match', 1)).status, Status.Archived);
 
-        /*
+        // Reset the score...
+        await manager.update.match({ id: 2, opponent1: { score: undefined }, opponent2: { score: undefined } });
 
-        TODO: Fix #66
-
-        // Reset the result
-        await manager.update.match({
-            id: 2, // WB Final
-            opponent1: { result: undefined },
-        });
+        // ...and reset the result
+        await manager.update.resetMatchResults(2); // WB Final
 
         // Should remove the archived status
         assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
         assert.strictEqual((await storage.select('match', 1)).status, Status.Completed);
-        
-        */
 
         await manager.update.match({
             id: 3, // Only match of LB round 1
