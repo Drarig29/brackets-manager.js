@@ -217,6 +217,68 @@ describe('Update matches', () => {
     });
 });
 
+describe('Give opponent IDs when updating', () => {
+
+    beforeEach(async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Amateur',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+            ],
+            settings: { seedOrdering: ['natural'] },
+        });
+    });
+
+    it('should update the right opponents based on their IDs', async () => {
+        await manager.update.match({
+            id: 0,
+            opponent1: {
+                id: 1,
+                score: 10,
+            },
+            opponent2: {
+                id: 0,
+                score: 5,
+            },
+        });
+
+        // Actual results must be inverted.
+        const after = await storage.select('match', 0);
+        assert.strictEqual(after.opponent1.score, 5);
+        assert.strictEqual(after.opponent2.score, 10);
+    });
+
+    it('should update the right opponent based on its ID, the other one is the remaining one', async () => {
+        await manager.update.match({
+            id: 0,
+            opponent1: {
+                id: 1,
+                score: 10,
+            },
+        });
+
+        // Actual results must be inverted.
+        const after = await storage.select('match', 0);
+        assert.notExists(after.opponent1.score);
+        assert.strictEqual(after.opponent2.score, 10);
+    });
+
+    it('should throw when the given opponent ID does not exist in the match', async () => {
+        await assert.isRejected(manager.update.match({
+            id: 0,
+            opponent1: {
+                id: 2, // Belongs to match id 1.
+                score: 10,
+            },
+        }), /The given opponent[12] ID does not exist in this match./);
+    });
+});
+
 describe('Locked matches', () => {
 
     before(async () => {

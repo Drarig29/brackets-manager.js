@@ -492,6 +492,8 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
     const completed = isMatchCompleted(match);
     const currentlyCompleted = isMatchCompleted(stored);
 
+    handleOpponentsInversion(stored, match);
+
     const statusChanged = setScores(stored, match);
 
     if (completed && currentlyCompleted) {
@@ -629,6 +631,38 @@ export function resetNextOpponent(nextMatch: Match, nextSide: Side): void {
     };
 
     nextMatch.status = Status.Locked;
+}
+
+/**
+ * Inverts opponents if requested by the input.
+ * 
+ * @param stored A reference to what will be updated in the storage.
+ * @param match Input of the update.
+ */
+export function handleOpponentsInversion(stored: MatchResults, match: Partial<MatchResults>): void {
+    const id1 = match.opponent1?.id;
+    const id2 = match.opponent2?.id;
+
+    const storedId1 = stored.opponent1?.id;
+    const storedId2 = stored.opponent2?.id;
+
+    if (Number.isInteger(id1) && id1 !== storedId1 && id1 !== storedId2)
+        throw Error('The given opponent1 ID does not exist in this match.');
+
+    if (Number.isInteger(id2) && id2 !== storedId1 && id2 !== storedId2)
+        throw Error('The given opponent2 ID does not exist in this match.');
+
+    if (Number.isInteger(id1) && id1 === storedId2 || Number.isInteger(id2) && id2 === storedId1)
+        invertOpponents(match);
+}
+
+/**
+ * Inverts `opponent1` and `opponent2` in a match.
+ * 
+ * @param match A match to update.
+ */
+export function invertOpponents(match: Partial<MatchResults>): void {
+    [match.opponent1, match.opponent2] = [match.opponent2, match.opponent1];
 }
 
 /**
