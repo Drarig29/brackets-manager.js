@@ -28,7 +28,7 @@ export class Reset extends BaseUpdater {
         const matchLocation = helpers.getMatchLocation(stage.type, group.number);
         const nextMatches = await this.getNextMatches(stored, matchLocation, stage, roundNumber, roundCount);
 
-        if (nextMatches.some(match => match.status >= Status.Running && !helpers.isMatchByeCompleted(match)))
+        if (nextMatches.some(match => match && match.status >= Status.Running && !helpers.isMatchByeCompleted(match)))
             throw Error('The match is locked.');
 
         helpers.resetMatchResults(stored);

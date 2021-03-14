@@ -315,8 +315,9 @@ export class BaseUpdater {
      * @param nextMatches The matches following the current match.
      * @param winnerSide Side of the winner in the current match.
      */
-    protected async applyToNextMatches(setNextOpponent: SetNextOpponent, match: Match, matchLocation: BracketType, roundNumber: number, roundCount: number, nextMatches: Match[], winnerSide?: Side): Promise<void> {
+    protected async applyToNextMatches(setNextOpponent: SetNextOpponent, match: Match, matchLocation: BracketType, roundNumber: number, roundCount: number, nextMatches: (Match | null)[], winnerSide?: Side): Promise<void> {
         if (matchLocation === 'final_group') {
+            if (!nextMatches[0]) throw Error('First next match is null.');
             setNextOpponent(nextMatches[0], 'opponent1', match, 'opponent1');
             setNextOpponent(nextMatches[0], 'opponent2', match, 'opponent2');
             await this.applyMatchUpdate(nextMatches[0]);
@@ -324,10 +325,14 @@ export class BaseUpdater {
         }
 
         const nextSide = helpers.getNextSide(match.number, roundNumber, roundCount, matchLocation);
-        setNextOpponent(nextMatches[0], nextSide, match, winnerSide);
-        await this.propagateByeWinners(nextMatches[0]);
+
+        if (nextMatches[0]) {
+            setNextOpponent(nextMatches[0], nextSide, match, winnerSide);
+            await this.propagateByeWinners(nextMatches[0]);
+        }
 
         if (nextMatches.length !== 2) return;
+        if (!nextMatches[1]) throw Error('Second next match is null.');
 
         // The second match is either the consolation final (single elimination) or a loser bracket match (double elimination).
 
@@ -499,7 +504,7 @@ export class BaseUpdater {
      * @param roundNumber The number of the current round.
      * @param roundCount Count of rounds.
      */
-    protected async getNextMatches(match: Match, matchLocation: BracketType, stage: Stage, roundNumber: number, roundCount: number): Promise<Match[]> {
+    protected async getNextMatches(match: Match, matchLocation: BracketType, stage: Stage, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
         switch (matchLocation) {
             case 'single_bracket':
                 return this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount);
@@ -520,7 +525,7 @@ export class BaseUpdater {
      * @param roundNumber The number of the current round.
      * @param roundCount Count of rounds.
      */
-    protected async getNextMatchesWB(match: Match, stage: Stage, roundNumber: number, roundCount: number): Promise<Match[]> {
+    protected async getNextMatchesWB(match: Match, stage: Stage, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
         const loserBracket = await this.getLoserBracket(match.stage_id);
         if (loserBracket === null) // Only one match in the stage, there is no loser bracket.
             return [];
@@ -547,12 +552,12 @@ export class BaseUpdater {
      * @param roundNumber The number of the current round.
      * @param roundCount Count of rounds.
      */
-    protected async getNextMatchesUpperBracket(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<Match[]> {
+    protected async getNextMatchesUpperBracket(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
         if (stageType === 'single_elimination')
             return this.getNextMatchesUpperBracketSingleElimination(match, stageType, roundNumber, roundCount);
 
         if (stageType === 'double_elimination' && roundNumber === roundCount)
-            return this.getFirstMatchFinal(match, stageType);
+            return [await this.getFirstMatchFinal(match, stageType)];
 
         return [await this.getDiagonalMatch(match.group_id, roundNumber, match.number)];
     }
@@ -567,9 +572,10 @@ export class BaseUpdater {
      */
     protected async getNextMatchesUpperBracketSingleElimination(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<Match[]> {
         if (roundNumber === roundCount - 1) {
+            const final = await this.getFirstMatchFinal(match, stageType);
             return [
                 await this.getDiagonalMatch(match.group_id, roundNumber, match.number),
-                ...await this.getFirstMatchFinal(match, stageType),
+                ...final ? [final] : [],
             ];
         }
 
@@ -588,8 +594,10 @@ export class BaseUpdater {
      * @param roundCount Count of rounds.
      */
     protected async getNextMatchesLB(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<Match[]> {
-        if (roundNumber === roundCount)
-            return this.getFirstMatchFinal(match, stageType);
+        if (roundNumber === roundCount) {
+            const final = await this.getFirstMatchFinal(match, stageType);
+            return final ? [final] : [];
+        }
 
         if (roundNumber % 2 === 1)
             return this.getMatchAfterMajorRoundLB(match, roundNumber);
@@ -603,12 +611,12 @@ export class BaseUpdater {
      * @param match The current match.
      * @param stageType Type of the stage.
      */
-    protected async getFirstMatchFinal(match: Match, stageType: StageType): Promise<Match[]> {
+    protected async getFirstMatchFinal(match: Match, stageType: StageType): Promise<Match | null> {
         const finalGroupId = await this.getFinalGroupId(match.stage_id, stageType);
         if (finalGroupId === null)
-            return [];
+            return null;
 
-        return [await this.findMatch(finalGroupId, 1, 1)];
+        return this.findMatch(finalGroupId, 1, 1);
     }
 
     /**
