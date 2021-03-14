@@ -1,6 +1,6 @@
-import { Group, Match, MatchGame, Stage, Status } from "brackets-model";
-import { BaseUpdater } from "./update";
-import * as helpers from "./helpers";
+import { Group, Match, MatchGame, Stage, Status } from 'brackets-model';
+import { BaseUpdater } from './update';
+import * as helpers from './helpers';
 
 export class Reset extends BaseUpdater {
 
@@ -16,7 +16,7 @@ export class Reset extends BaseUpdater {
         if (!stored) throw Error('Match not found.');
 
         if (stored.child_count > 0)
-            throw Error('The parent match is controlled by its child games and its result cannot be reset.')
+            throw Error('The parent match is controlled by its child games and its result cannot be reset.');
 
         const stage = await this.storage.select<Stage>('stage', stored.stage_id);
         if (!stage) throw Error('Stage not found.');
@@ -54,10 +54,10 @@ export class Reset extends BaseUpdater {
     }
 
     /**
-    * Resets the seeding of a stage.
-    *
-    * @param stageId ID of the stage.
-    */
+     * Resets the seeding of a stage.
+     *
+     * @param stageId ID of the stage.
+     */
     public async seeding(stageId: number): Promise<void> {
         await this.updateSeeding(stageId, null);
     }
