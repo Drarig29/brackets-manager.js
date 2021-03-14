@@ -15,9 +15,11 @@ export class JsonDatabase implements CrudInterface {
 
     /**
      * Creates an instance of JsonDatabase, an implementation of CrudInterface for a json file.
+     *
+     * @param filename An optional filename for the database.
      */
-    constructor() {
-        this.internal = new JsonDB('db.json', true, true);
+    constructor(filename?: string) {
+        this.internal = new JsonDB(filename || 'db.json', true, true);
         this.init();
     }
 
