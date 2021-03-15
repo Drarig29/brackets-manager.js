@@ -4,7 +4,6 @@ import {
     MatchGame,
     MatchResults,
     Participant,
-    ParticipantResult,
     Result,
     RoundRobinMode,
     Seeding,
@@ -698,7 +697,7 @@ export function getGrandFinalDecisiveMatch(type: GrandFinalType, matches: Match[
         return matches[0];
     }
 
-    throw Error('The Grand Final is disabled.')
+    throw Error('The Grand Final is disabled.');
 }
 
 /**

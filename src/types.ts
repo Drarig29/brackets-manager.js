@@ -1,4 +1,4 @@
-import { SeedOrdering } from 'brackets-model';
+import { Group, Match, Participant, Round, SeedOrdering, Stage } from 'brackets-model';
 
 /**
  * Type of an object implementing every ordering method.
@@ -30,6 +30,25 @@ export type Side = 'opponent1' | 'opponent2';
  */
 export type Scores = { opponent1: number, opponent2: number };
 
+/**
+ * All the data linked to a stage.
+ */
+export interface StageData {
+    stage: Stage,
+    groups: Group[],
+    rounds: Round[],
+    matches: Match[],
+    participants: Participant[],
+}
+
+/**
+ * An item in the final standings of an elimination stage.
+ */
+export interface FinalStandingsItem {
+    id: number,
+    name: string,
+    rank: number,
+}
 
 /**
  * Contains the losers and the winner of the bracket.

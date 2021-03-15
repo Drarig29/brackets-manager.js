@@ -1,14 +1,6 @@
 import { Group, Match, MatchGame, Participant, Round, Stage } from 'brackets-model';
-import { ParticipantSlot, Storage } from './types';
+import { FinalStandingsItem, ParticipantSlot, StageData, Storage } from './types';
 import * as helpers from './helpers';
-
-interface StageData {
-    stage: Stage,
-    groups: Group[],
-    rounds: Round[],
-    matches: Match[],
-    participants: Participant[],
-}
 
 export class Get {
 
@@ -77,6 +69,25 @@ export class Get {
     }
 
     /**
+     * Returns the final standings of a stage.
+     *
+     * @param stageId ID of the stage.
+     */
+    public async finalStandings(stageId: number): Promise<FinalStandingsItem[]> {
+        const stage = await this.storage.select<Stage>('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
+
+        switch (stage.type) {
+            case 'round_robin':
+                throw Error('A round-robin stage does not have standings.');
+            case 'single_elimination':
+                return this.singleEliminationStandings(stageId);
+            case 'double_elimination':
+                return this.doubleEliminationStandings(stageId);
+        }
+    }
+
+    /**
      * Returns the seeding of a round-robin stage.
      *
      * @param stageId ID of the stage.
@@ -104,5 +115,79 @@ export class Get {
         if (!matches) throw Error('Error getting matches.');
 
         return helpers.matchesToSeeding(matches);
+    }
+
+    /**
+     * Returns the final standings of a single elimination stage.
+     *
+     * @param stageId ID of the stage.
+     */
+    private async singleEliminationStandings(stageId: number): Promise<FinalStandingsItem[]> {
+        const grouped: Participant[][] = [];
+
+        const { stage, groups, matches, participants } = await this.stageData(stageId);
+        const [singleBracket, finalGroup] = groups;
+
+        const final = matches.filter(match => match.group_id === singleBracket.id).pop();
+        if (!final) throw Error('Final not found.');
+
+        // 1st place: Final winner.
+        grouped[0] = [helpers.findParticipant(participants, helpers.getWinner(final))];
+
+        // Rest: every loser in reverse order.
+        const losers = helpers.getLosers(participants, matches.filter(match => match.group_id === singleBracket.id));
+        grouped.push(...losers.reverse());
+
+        if (stage.settings?.consolationFinal) {
+            const consolationFinal = matches.filter(match => match.group_id === finalGroup.id).pop();
+            if (!consolationFinal) throw Error('Consolation final not found.');
+
+            // Overwrite semi-final losers with the consolation final results.
+            grouped[2][0] = helpers.findParticipant(participants, helpers.getWinner(consolationFinal));
+            grouped[2][1] = helpers.findParticipant(participants, helpers.getLoser(consolationFinal));
+        }
+
+        return helpers.makeFinalStandings(grouped);
+    }
+
+    /**
+     * Returns the final standings of a double elimination stage.
+     *
+     * @param stageId ID of the stage.
+     */
+    private async doubleEliminationStandings(stageId: number): Promise<FinalStandingsItem[]> {
+        const grouped: Participant[][] = [];
+
+        const { stage, groups, matches, participants } = await this.stageData(stageId);
+        const [winnerBracket, loserBracket, finalGroup] = groups;
+
+        if (stage.settings?.grandFinal === 'none') {
+            const finalWB = matches.filter(match => match.group_id === winnerBracket.id).pop();
+            if (!finalWB) throw Error('WB final not found.');
+
+            const finalLB = matches.filter(match => match.group_id === loserBracket.id).pop();
+            if (!finalLB) throw Error('LB final not found.');
+
+            // 1st place: WB Final winner.
+            grouped[0] = [helpers.findParticipant(participants, helpers.getWinner(finalWB))];
+
+            // 2nd place: LB Final winner.
+            grouped[1] = [helpers.findParticipant(participants, helpers.getWinner(finalLB))];
+        } else {
+            const grandFinalMatches = matches.filter(match => match.group_id === finalGroup.id);
+            const decisiveMatch = helpers.getGrandFinalDecisiveMatch(stage.settings?.grandFinal || 'none', grandFinalMatches);
+
+            // 1st place: Grand Final winner.
+            grouped[0] = [helpers.findParticipant(participants, helpers.getWinner(decisiveMatch))];
+
+            // 2nd place: Grand Final loser.
+            grouped[1] = [helpers.findParticipant(participants, helpers.getLoser(decisiveMatch))];
+        }
+
+        // Rest: every loser in reverse order.
+        const losers = helpers.getLosers(participants, matches.filter(match => match.group_id === loserBracket.id));
+        grouped.push(...losers.reverse());
+
+        return helpers.makeFinalStandings(grouped);
     }
 }
