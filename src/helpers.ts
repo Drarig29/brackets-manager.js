@@ -1,4 +1,5 @@
 import {
+    GrandFinalType,
     Match,
     MatchGame,
     MatchResults,
@@ -13,7 +14,7 @@ import {
     Status,
 } from 'brackets-model';
 
-import { Duel, OmitId, ParticipantSlot, Scores, Side } from './types';
+import { Duel, FinalStandingsItem, OmitId, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
 import { BracketType } from './update';
 
@@ -266,7 +267,7 @@ export function ensureNotTied(scores: [number, number]): void {
  *
  * @param slot A participant slot.
  */
-export function toResult(slot: ParticipantSlot): ParticipantResult | null {
+export function toResult(slot: ParticipantSlot): ParticipantSlot {
     return slot && {
         id: slot.id,
     };
@@ -277,11 +278,33 @@ export function toResult(slot: ParticipantSlot): ParticipantResult | null {
  *
  * @param slot A participant slot.
  */
-export function toResultWithPosition(slot: ParticipantSlot): ParticipantResult | null {
+export function toResultWithPosition(slot: ParticipantSlot): ParticipantSlot {
     return slot && {
         id: slot.id,
         position: slot.position,
     };
+}
+
+/**
+ * Returns the winner of a match.
+ *
+ * @param match The match.
+ */
+export function getWinner(match: MatchResults): ParticipantSlot {
+    const winnerSide = getMatchResult(match);
+    if (!winnerSide) return null;
+    return match[winnerSide];
+}
+
+/**
+ * Returns the loser of a match.
+ *
+ * @param match The match.
+ */
+export function getLoser(match: MatchResults): ParticipantSlot {
+    const winnerSide = getMatchResult(match);
+    if (!winnerSide) return null;
+    return match[getOtherSide(winnerSide)];
 }
 
 /**
@@ -334,12 +357,21 @@ export function byeLoser(opponents: Duel, index: number): ParticipantSlot {
  * @param match A match's results.
  */
 export function getMatchResult(match: MatchResults): Side | null {
+    if (!isMatchCompleted(match))
+        return null;
+
+    if (isMatchDrawCompleted(match))
+        return null;
+
+    if (match.opponent1 === null && match.opponent2 === null)
+        return null;
+
     let winner: Side | null = null;
 
-    if (match.opponent1?.result === 'win')
+    if (match.opponent1?.result === 'win' || match.opponent2 === null || match.opponent2.forfeit)
         winner = 'opponent1';
 
-    if (match.opponent2?.result === 'win') {
+    if (match.opponent2?.result === 'win' || match.opponent1 === null || match.opponent1.forfeit) {
         if (winner !== null) throw Error('There are two winners.');
         winner = 'opponent2';
     }
@@ -353,7 +385,7 @@ export function getMatchResult(match: MatchResults): Side | null {
  * @param matches A list of matches to search into.
  * @param position The position to find.
  */
-export function findPosition(matches: Match[], position: number): ParticipantResult | null {
+export function findPosition(matches: Match[], position: number): ParticipantSlot {
     for (const match of matches) {
         if (match.opponent1?.position === position)
             return match.opponent1;
@@ -398,9 +430,44 @@ export function isMatchStarted(match: Partial<MatchResults>): boolean {
  * @param match Partial match results.
  */
 export function isMatchCompleted(match: Partial<MatchResults>): boolean {
-    return isMatchByeCompleted(match)
-        || match.opponent1?.result !== undefined || match.opponent1?.forfeit !== undefined
-        || match.opponent2?.result !== undefined || match.opponent2?.forfeit !== undefined;
+    return isMatchByeCompleted(match) || isMatchForfeitCompleted(match) || isMatchResultCompleted(match);
+}
+
+/**
+ * Checks if a match is completed because of a forfeit.
+ * 
+ * @param match Partial match results.
+ */
+export function isMatchForfeitCompleted(match: Partial<MatchResults>): boolean {
+    return match.opponent1?.forfeit !== undefined || match.opponent2?.forfeit !== undefined;
+}
+
+/**
+ * Checks if a match is completed because of a either a draw or a win.
+ * 
+ * @param match Partial match results.
+ */
+export function isMatchResultCompleted(match: Partial<MatchResults>): boolean {
+    return isMatchDrawCompleted(match) || isMatchWinCompleted(match);
+}
+
+/**
+ * Checks if a match is completed because of a draw.
+ * 
+ * @param match Partial match results.
+ */
+export function isMatchDrawCompleted(match: Partial<MatchResults>): boolean {
+    return match.opponent1?.result === 'draw' && match.opponent2?.result === 'draw';
+}
+
+/**
+ * Checks if a match is completed because of a win.
+ * 
+ * @param match Partial match results.
+ */
+export function isMatchWinCompleted(match: Partial<MatchResults>): boolean {
+    return match.opponent1?.result === 'win' || match.opponent2?.result === 'win'
+        || match.opponent1?.result === 'loss' || match.opponent2?.result === 'loss';
 }
 
 /**
@@ -560,6 +627,93 @@ export function getOriginPosition(match: Match, side: Side): number {
 }
 
 /**
+ * Returns every loser in a list of matches.
+ * 
+ * @param participants The list of participants.
+ * @param matches A list of matches to get losers of.
+ */
+export function getLosers(participants: Participant[], matches: Match[]): Participant[][] {
+    const losers: Participant[][] = [];
+
+    let currentRound: number | null = null;
+    let roundIndex = -1;
+
+    for (const match of matches) {
+        if (match.round_id !== currentRound) {
+            currentRound = match.round_id;
+            roundIndex++;
+            losers[roundIndex] = [];
+        }
+
+        const loser = getLoser(match);
+        if (loser === null)
+            continue;
+
+        losers[roundIndex].push(findParticipant(participants, loser));
+    }
+
+    return losers;
+}
+
+/**
+ * Makes final standings based on participants grouped by ranking.
+ * 
+ * @param grouped A list of participants grouped by ranking.
+ */
+export function makeFinalStandings(grouped: Participant[][]): FinalStandingsItem[] {
+    const standings: FinalStandingsItem[] = [];
+
+    let rank = 1;
+
+    for (const group of grouped) {
+        for (const participant of group) {
+            standings.push({
+                id: participant.id,
+                name: participant.name,
+                rank,
+            });
+        }
+        rank++;
+    }
+
+    return standings;
+}
+
+/**
+ * Returns the decisive match of a Grand Final.
+ * 
+ * @param type The type of Grand Final.
+ * @param matches The matches in the Grand Final.
+ */
+export function getGrandFinalDecisiveMatch(type: GrandFinalType, matches: Match[]): Match {
+    if (type === 'simple')
+        return matches[0];
+
+    if (type === 'double') {
+        const result = getMatchResult(matches[0]);
+
+        if (result === 'opponent2')
+            return matches[1];
+
+        return matches[0];
+    }
+
+    throw Error('The Grand Final is disabled.')
+}
+
+/**
+ * Finds a participant in a list.
+ * 
+ * @param participants The list of participants.
+ * @param slot The slot of the participant to find.
+ */
+export function findParticipant(participants: Participant[], slot: ParticipantSlot): Participant {
+    const participant = participants.find(participant => participant.id === slot?.id);
+    if (!participant) throw Error('Participant not found.');
+    return participant;
+}
+
+/**
  * Gets the side the winner of the current match will go to in the next match.
  *
  * @param matchNumber Number of the current match.
@@ -712,7 +866,7 @@ export function setCompleted(stored: MatchResults, match: Partial<MatchResults>)
 }
 
 /**
- * Ensures the symmetry between opponents.
+ * Enforces the symmetry between opponents.
  *
  * Sets an opponent's result to something, based on the result on the other opponent.
  *
