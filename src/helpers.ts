@@ -565,7 +565,7 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
     if (completed && currentlyCompleted) {
         // Ensure everything is good.
         setCompleted(stored, match);
-        return { statusChanged: false, resultChanged: false };
+        return { statusChanged: false, resultChanged: true };
     }
 
     if (completed && !currentlyCompleted) {
@@ -767,8 +767,7 @@ export function setNextOpponent(nextMatch: Match, nextSide: Side, match?: Match,
         position: nextMatch[nextSide]?.position, // Keep position.
     };
 
-    if (nextMatch.status < Status.Ready)
-        nextMatch.status++;
+    nextMatch.status = getMatchStatus(nextMatch);
 }
 
 /**

@@ -76,6 +76,29 @@ describe('Update matches', () => {
         assert.strictEqual(after.opponent2.result, 'loss');
     });
 
+    it('should change the winner of the match and update in the next match', async () => {
+        await manager.update.match({
+            id: 0,
+            opponent1: { result: 'win' },
+        });
+
+        assert.strictEqual((await storage.select('match', 8)).opponent1.id, 0);
+        
+        await manager.update.match({
+            id: 0,
+            opponent2: { result: 'win' },
+        });
+        
+        const after = await storage.select('match', 0);
+        assert.strictEqual(after.status, Status.Completed);
+        assert.strictEqual(after.opponent1.result, 'loss');
+        assert.strictEqual(after.opponent2.result, 'win');
+        
+        const nextMatch = await storage.select('match', 8);
+        assert.strictEqual(nextMatch.status, Status.Waiting);
+        assert.strictEqual(nextMatch.opponent1.id, 1);
+    });
+
     it('should update the status of the next match', async () => {
         await manager.update.match({
             id: 0,
