@@ -718,4 +718,58 @@ describe('Reset match and match games', () => {
         assert.strictEqual((await storage.select('match', 6)).opponent1.result, undefined);
         assert.strictEqual((await storage.select('match', 7)).opponent1, null); // Still BYE in consolation final.
     });
+
+    it('should update storage with imported data', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                seedOrdering: ['natural'],
+            },
+        });
+
+        const group = await storage.select('group');
+        const match = await storage.select('match');
+        const match_game = await storage.select('match_game');
+        const participant = await storage.select('participant');
+        const round = await storage.select('round');
+        const stage = await storage.select('stage');
+
+        const initialBracketData = {
+            group,
+            match,
+            match_game,
+            participant,
+            round,
+            stage,
+        };
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await manager.update.match({
+            id: 1,
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await manager.update.match({
+            id: 2,
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.result, 'win');
+        assert.strictEqual((await storage.select('match', 1)).opponent1.result, 'win');
+
+        await storage.import(initialBracketData);
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.result, undefined);
+        assert.strictEqual((await storage.select('match', 1)).opponent1.result, undefined);
+    });
 });
