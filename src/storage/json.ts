@@ -1,5 +1,5 @@
 import { JsonDB } from 'node-json-db';
-import { CrudInterface, Table } from '../types';
+import { CrudInterface, StageData, Table } from '../types';
 
 const clone = require('rfdc')();
 
@@ -243,6 +243,18 @@ export class JsonDatabase implements CrudInterface {
         const predicate = this.makeFilter(filter);
 
         this.internal.push(path, values.filter(value => !predicate(value)));
+        return true;
+    }
+
+    /**
+     * Delete data in a table, based on a filter.
+     *
+     * @param data Where to delete in.
+     */
+    public async import(data: StageData): Promise<boolean> {
+        if (!data) return false;
+
+        this.internal.resetData(data)
         return true;
     }
 }

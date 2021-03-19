@@ -138,6 +138,13 @@ export interface CrudInterface {
      * @param filter An object to filter data.
      */
     delete<T>(table: Table, filter: Partial<T>): Promise<boolean>
+
+    /**
+     * Import given stage data.
+     *
+     * @param data Stage date to import
+     */
+    import(data: StageData): Promise<boolean>
 }
 
 export interface Storage extends CrudInterface {
