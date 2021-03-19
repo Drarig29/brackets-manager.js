@@ -140,9 +140,9 @@ export interface CrudInterface {
     delete<T>(table: Table, filter: Partial<T>): Promise<boolean>
 
     /**
-     * Import given stage data.
+     * Imports given data and replaces the current bracket database.
      *
-     * @param data Stage date to import
+     * @param data Data to import.
      */
     import(data: StageData): Promise<boolean>
 }

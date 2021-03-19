@@ -247,14 +247,14 @@ export class JsonDatabase implements CrudInterface {
     }
 
     /**
-     * Delete data in a table, based on a filter.
+     * Imports given data and replaces the current bracket database.
      *
-     * @param data Where to delete in.
+     * @param data Data to import.
      */
     public async import(data: StageData): Promise<boolean> {
         if (!data) return false;
 
-        this.internal.resetData(data)
+        this.internal.resetData(data);
         return true;
     }
 }
