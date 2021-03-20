@@ -233,10 +233,16 @@ export class JsonDatabase implements CrudInterface {
      * Delete data in a table, based on a filter.
      *
      * @param table Where to delete in.
-     * @param filter An object to filter data.
+     * @param filter An object to filter data or undefined to empty the table.
      */
-    public async delete<T extends { [key: string]: unknown }>(table: Table, filter: Partial<T>): Promise<boolean> {
+    public async delete<T extends { [key: string]: unknown }>(table: Table, filter?: Partial<T>): Promise<boolean> {
         const path = JsonDatabase.makePath(table);
+
+        if (!filter) {
+            this.internal.push(path, []);
+            return true;
+        }
+
         const values: T[] = this.internal.getData(path);
         if (!values) return false;
 

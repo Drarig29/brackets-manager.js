@@ -1,4 +1,4 @@
-import { Group, Match, Participant, Round, SeedOrdering, Stage } from 'brackets-model';
+import { Group, Match, MatchGame, Participant, Round, SeedOrdering, Stage } from 'brackets-model';
 
 /**
  * Type of an object implementing every ordering method.
@@ -39,6 +39,18 @@ export interface StageData {
     rounds: Round[],
     matches: Match[],
     participants: Participant[],
+}
+
+/**
+ * All the data contained in a database.
+ */
+export interface Database {
+    stage: Stage[],
+    group: Group[],
+    round: Round[],
+    match: Match[],
+    match_game: MatchGame[],
+    participant: Participant[],
 }
 
 /**
@@ -130,6 +142,13 @@ export interface CrudInterface {
      * @param value How to update.
      */
     update<T>(table: Table, filter: Partial<T>, value: Partial<T>): Promise<boolean>
+
+    /**
+     * Empties a table completely.
+     * 
+     * @param table Where to delete everything.
+     */
+    delete(table: Table): Promise<boolean>
 
     /**
      * Delete data in a table, based on a filter.
