@@ -718,6 +718,13 @@ describe('Reset match and match games', () => {
         assert.strictEqual((await storage.select('match', 6)).opponent1.result, undefined);
         assert.strictEqual((await storage.select('match', 7)).opponent1, null); // Still BYE in consolation final.
     });
+});
+
+describe('Import / export', () => {
+
+    beforeEach(() => {
+        storage.reset();
+    });
 
     it('should import data in the storage', async () => {
         await manager.create({
@@ -727,6 +734,7 @@ describe('Reset match and match games', () => {
             seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
             settings: {
                 seedOrdering: ['natural'],
+                matchesChildCount: 1,
             },
         });
 
@@ -753,14 +761,7 @@ describe('Reset match and match games', () => {
         assert.strictEqual((await storage.select('match', 0)).opponent1.result, 'win');
         assert.strictEqual((await storage.select('match', 1)).opponent1.result, 'win');
 
-        await manager.import({
-            participant: initialData.participants,
-            stage: [initialData.stage],
-            group: initialData.groups,
-            round: initialData.rounds,
-            match: initialData.matches,
-            match_game: [],
-        });
+        await manager.import(initialData);
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.result, undefined);
         assert.strictEqual((await storage.select('match', 1)).opponent1.result, undefined);
@@ -776,6 +777,7 @@ describe('Reset match and match games', () => {
             seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
             settings: {
                 groupCount: 1,
+                matchesChildCount: 1,
             },
         });
 
@@ -786,16 +788,17 @@ describe('Reset match and match games', () => {
             seeding: ['Team 5', 'Team 6', 'Team 7', 'Team 8'],
             settings: {
                 seedOrdering: ['natural'],
+                matchesChildCount: 1,
             },
         });
 
         const initialData = await manager.get.stageData(1);
 
-        assert.strictEqual(initialData.stage.id, 1);
-        assert.deepEqual(initialData.participants[0], { id: 1, tournament_id: 0, name: 'Team 1' });
-        assert.deepEqual(initialData.groups[0], { id: 1, stage_id: 1, number: 1 });
-        assert.deepEqual(initialData.rounds[0], { id: 3, stage_id: 1, group_id: 1, number: 1 });
-        assert.deepEqual(initialData.matches[0], {
+        assert.strictEqual(initialData.stage[0].id, 1);
+        assert.deepEqual(initialData.participant[0], { id: 1, tournament_id: 0, name: 'Team 1' });
+        assert.deepEqual(initialData.group[0], { id: 1, stage_id: 1, number: 1 });
+        assert.deepEqual(initialData.round[0], { id: 3, stage_id: 1, group_id: 1, number: 1 });
+        assert.deepEqual(initialData.match[0], {
             id: 6,
             stage_id: 1,
             group_id: 1,
@@ -804,25 +807,27 @@ describe('Reset match and match games', () => {
             opponent2: { id: 6, position: 2 },
             number: 1,
             status: 2,
-            child_count: 0,
+            child_count: 1,
+        });
+        assert.deepEqual(initialData.match_game[0], {
+            id: 6,
+            number: 1,
+            stage_id: 1,
+            parent_id: 6,
+            status: 2,
+            opponent1: { id: 5 },
+            opponent2: { id: 6 },
         });
 
-        await manager.import({
-            participant: initialData.participants,
-            stage: [initialData.stage],
-            group: initialData.groups,
-            round: initialData.rounds,
-            match: initialData.matches,
-            match_game: [],
-        });
+        await manager.import(initialData);
 
         const data = await manager.get.stageData(0);
 
-        assert.strictEqual(data.stage.id, 0);
-        assert.deepEqual(data.participants[0], { id: 0, tournament_id: 0, name: 'Team 1' });
-        assert.deepEqual(data.groups[0], { id: 0, stage_id: 0, number: 1 });
-        assert.deepEqual(data.rounds[0], { id: 0, stage_id: 0, group_id: 0, number: 1 });
-        assert.deepEqual(data.matches[0], {
+        assert.strictEqual(data.stage[0].id, 0);
+        assert.deepEqual(data.participant[0], { id: 0, tournament_id: 0, name: 'Team 1' });
+        assert.deepEqual(data.group[0], { id: 0, stage_id: 0, number: 1 });
+        assert.deepEqual(data.round[0], { id: 0, stage_id: 0, group_id: 0, number: 1 });
+        assert.deepEqual(data.match[0], {
             id: 0,
             stage_id: 0,
             group_id: 0,
@@ -831,7 +836,16 @@ describe('Reset match and match games', () => {
             opponent2: { id: 5, position: 2 },
             number: 1,
             status: 2,
-            child_count: 0,
+            child_count: 1,
+        });
+        assert.deepEqual(data.match_game[0], {
+            id: 0,
+            number: 1,
+            stage_id: 0,
+            parent_id: 0,
+            status: 2,
+            opponent1: { id: 4 },
+            opponent2: { id: 5 },
         });
     });
 

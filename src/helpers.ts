@@ -227,6 +227,7 @@ export function normalizeIds(data: Database): Database {
         match_game: data.match_game.map(value => ({
             ...value,
             id: mappings.match_game[value.id],
+            stage_id: mappings.stage[value.stage_id],
             parent_id: mappings.match[value.parent_id],
             opponent1: normalizeParticipant(value.opponent1, mappings.participant),
             opponent2: normalizeParticipant(value.opponent2, mappings.participant),
