@@ -7,7 +7,53 @@ const { BracketsManager, JsonDatabase } = require('../dist');
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
 
-describe('Final Standings', () => {
+describe('Get child games', () => {
+
+    beforeEach(() => {
+        storage.reset();
+    });
+
+    it('should get child games of a list of matches', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', 'Team 2', 'Team 3', 'Team 4',
+            ],
+            settings: { matchesChildCount: 2 },
+        });
+
+        const matches = await storage.select('match', { round_id: 0 });
+        const games = await manager.get.matchGames(matches);
+
+        assert.strictEqual(matches.length, 2);
+        assert.strictEqual(games.length, 4);
+        assert.strictEqual(games[2].parent_id, 1);
+    });
+
+    it('should get child games of a list of matches with some which do not have child games', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', 'Team 2', 'Team 3', 'Team 4',
+            ],
+            settings: { matchesChildCount: 2 },
+        });
+
+        await manager.update.matchChildCount('match', 1, 0); // Remove child games from match id 1.
+
+        const matches = await storage.select('match', { round_id: 0 });
+        const games = await manager.get.matchGames(matches);
+
+        assert.strictEqual(matches.length, 2);
+        assert.strictEqual(games.length, 2); // Only two child games.
+    });
+});
+
+describe('Get final standings', () => {
 
     beforeEach(() => {
         storage.reset();

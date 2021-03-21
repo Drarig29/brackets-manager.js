@@ -49,12 +49,14 @@ export class Get {
     }
 
     /**
-     * Returns the match games of a list of matches.
+     * Returns the match games associated to a list of matches.
      *
-     * @param matches A list of parent matches.
+     * @param matches A list of matches.
      */
     public async matchGames(matches: Match[]): Promise<MatchGame[]> {
-        const matchGamesQueries = await Promise.all(matches.map(match => this.storage.select<MatchGame>('match_game', { parent_id: match.id })));
+        const parentMatches = matches.filter(match => match.child_count > 0);
+
+        const matchGamesQueries = await Promise.all(parentMatches.map(match => this.storage.select<MatchGame>('match_game', { parent_id: match.id })));
         if (matchGamesQueries.some(game => game === null)) throw Error('Error getting match games.');
 
         // Use a TS type guard to exclude null from the query results type.
