@@ -1,5 +1,5 @@
 import { Group, Match, MatchGame, Participant, Round, Stage } from 'brackets-model';
-import { FinalStandingsItem, ParticipantSlot, StageData, Storage } from './types';
+import { Database, FinalStandingsItem, ParticipantSlot, Storage } from './types';
 import * as helpers from './helpers';
 
 export class Get {
@@ -19,10 +19,8 @@ export class Get {
      * Returns the data needed to display a stage.
      *
      * @param stageId ID of the stage.
-     *
-     * For performance reasons, match games are not retrieved here. Use `matchChildren()` for that.
      */
-    public async stageData(stageId: number): Promise<StageData> {
+    public async stageData(stageId: number): Promise<Database> {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -38,19 +36,31 @@ export class Get {
         const participants = await this.storage.select<Participant>('participant', { tournament_id: stage.tournament_id });
         if (!participants) throw Error('Error getting participants.');
 
-        return { stage, groups, rounds, matches, participants };
+        const matchGames = await this.matchGames(matches);
+
+        return {
+            stage: [stage],
+            group: groups,
+            round: rounds,
+            match: matches,
+            match_game: matchGames,
+            participant: participants,
+        };
     }
 
     /**
-     * Returns the match games of a match.
+     * Returns the match games of a list of matches.
      *
-     * @param parentId ID of the parent match.
+     * @param matches A list of parent matches.
      */
-    public async matchChildren(parentId: number): Promise<MatchGame[]> {
-        const games = await this.storage.select<MatchGame>('match_game', { parent_id: parentId });
-        if (!games) throw Error('Error getting match games (children).');
+    public async matchGames(matches: Match[]): Promise<MatchGame[]> {
+        const matchGamesQueries = await Promise.all(matches.map(match => this.storage.select<MatchGame>('match_game', { parent_id: match.id })));
+        if (matchGamesQueries.some(game => game === null)) throw Error('Error getting match games.');
 
-        return games;
+        // Use a TS type guard to exclude null from the query results type.
+        const matchGames = matchGamesQueries.filter((queryResult): queryResult is MatchGame[] => queryResult !== null).flat();
+
+        return matchGames;
     }
 
     /**
@@ -125,7 +135,9 @@ export class Get {
     private async singleEliminationStandings(stageId: number): Promise<FinalStandingsItem[]> {
         const grouped: Participant[][] = [];
 
-        const { stage, groups, matches, participants } = await this.stageData(stageId);
+        const { stage: stages, group: groups, match: matches, participant: participants } = await this.stageData(stageId);
+
+        const [stage] = stages;
         const [singleBracket, finalGroup] = groups;
 
         const final = matches.filter(match => match.group_id === singleBracket.id).pop();
@@ -158,7 +170,9 @@ export class Get {
     private async doubleEliminationStandings(stageId: number): Promise<FinalStandingsItem[]> {
         const grouped: Participant[][] = [];
 
-        const { stage, groups, matches, participants } = await this.stageData(stageId);
+        const { stage: stages, group: groups, match: matches, participant: participants } = await this.stageData(stageId);
+
+        const [stage] = stages;
         const [winnerBracket, loserBracket, finalGroup] = groups;
 
         if (stage.settings?.grandFinal === 'none') {
