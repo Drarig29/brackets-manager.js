@@ -86,4 +86,39 @@ export class BracketsManager {
         if (!await this.storage.insert<MatchGame>('match_game', data.match_game))
             throw Error('Could not import match games.');
     }
+
+    /**
+     * Exports data from the database.
+     */
+    public async export(): Promise<Database> {
+        const participants = await this.storage.select<Participant>('participant');
+        if (!participants) throw Error('Error getting participants.');
+
+        const stages = await this.storage.select<Stage>('stage');
+        if (!stages) throw Error('Error getting stages.');
+
+        const groups = await this.storage.select<Group>('group');
+        if (!groups) throw Error('Error getting groups.');
+
+        const rounds = await this.storage.select<Round>('round');
+        if (!rounds) throw Error('Error getting rounds.');
+
+        const matches = await this.storage.select<Match>('match');
+        if (!matches) throw Error('Error getting matches.');
+
+        const matchGamesQueries = await Promise.all(matches.map(match => this.storage.select<MatchGame>('match_game', { parent_id: match.id })));
+        if (matchGamesQueries.some(game => game === null)) throw Error('Error getting match games.');
+
+        // Use a TS type guard to exclude null from the query results type.
+        const matchGames = matchGamesQueries.filter((queryResult): queryResult is MatchGame[] => queryResult !== null).flat();
+
+        return {
+            participant: participants,
+            stage: stages,
+            group: groups,
+            round: rounds,
+            match: matches,
+            match_game: matchGames,
+        };
+    }
 }

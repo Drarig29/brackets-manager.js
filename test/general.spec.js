@@ -719,7 +719,7 @@ describe('Reset match and match games', () => {
         assert.strictEqual((await storage.select('match', 7)).opponent1, null); // Still BYE in consolation final.
     });
 
-    it('should update storage with imported data', async () => {
+    it('should import data in the storage', async () => {
         await manager.create({
             name: 'Example',
             tournamentId: 0,
@@ -766,7 +766,7 @@ describe('Reset match and match games', () => {
         assert.strictEqual((await storage.select('match', 1)).opponent1.result, undefined);
     });
 
-    it('should update storage with imported data and normalize IDs', async () => {
+    it('should import data in the storage with normalized IDs', async () => {
         await storage.insert('participant', { name: 'Unused team' });
 
         await manager.create({
@@ -833,5 +833,29 @@ describe('Reset match and match games', () => {
             status: 2,
             child_count: 0,
         });
+    });
+
+    it('should export data from the storage', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                seedOrdering: ['natural'],
+                matchesChildCount: 2,
+            },
+        });
+
+        const data = await manager.export();
+
+        assert.containsAllKeys(data, ['participant', 'stage', 'group', 'round', 'match', 'match_game']);
+
+        assert.deepEqual(await storage.select('participant'), data.participant);
+        assert.deepEqual(await storage.select('stage'), data.stage);
+        assert.deepEqual(await storage.select('group'), data.group);
+        assert.deepEqual(await storage.select('round'), data.round);
+        assert.deepEqual(await storage.select('match'), data.match);
+        assert.deepEqual(await storage.select('match_game'), data.match_game);
     });
 });
