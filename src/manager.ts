@@ -106,11 +106,7 @@ export class BracketsManager {
         const matches = await this.storage.select<Match>('match');
         if (!matches) throw Error('Error getting matches.');
 
-        const matchGamesQueries = await Promise.all(matches.map(match => this.storage.select<MatchGame>('match_game', { parent_id: match.id })));
-        if (matchGamesQueries.some(game => game === null)) throw Error('Error getting match games.');
-
-        // Use a TS type guard to exclude null from the query results type.
-        const matchGames = matchGamesQueries.filter((queryResult): queryResult is MatchGame[] => queryResult !== null).flat();
+        const matchGames = await this.get.matchGames(matches);
 
         return {
             participant: participants,
