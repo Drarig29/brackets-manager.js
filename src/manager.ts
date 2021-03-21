@@ -11,7 +11,7 @@ import * as helpers from './helpers';
  */
 export class BracketsManager {
 
-    protected storage: Storage;
+    public storage: Storage;
     public update: Update;
     public get: Get;
     public reset: Reset;
@@ -44,6 +44,8 @@ export class BracketsManager {
 
     /**
      * Creates a stage for an existing tournament. The tournament won't be created.
+     *
+     * @param stage A stage to create.
      */
     public async create(stage: InputStage): Promise<void> {
         await create.call(this, stage);
