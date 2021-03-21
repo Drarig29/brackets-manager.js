@@ -36,18 +36,7 @@ export type Side = 'opponent1' | 'opponent2';
 export type Scores = { opponent1: number, opponent2: number };
 
 /**
- * All the data linked to a stage.
- */
-export interface StageData {
-    stage: Stage,
-    groups: Group[],
-    rounds: Round[],
-    matches: Match[],
-    participants: Participant[],
-}
-
-/**
- * All the data contained in a database.
+ * Format of the data in a database.
  */
 export interface Database {
     stage: Stage[],
