@@ -48,7 +48,7 @@ export class Reset extends BaseUpdater {
         if (!stored) throw Error('Match game not found.');
 
         helpers.resetMatchResults(stored);
-        await this.storage.update('match_game', stored.id, stored);
+        await this.storage.update<MatchGame>('match_game', stored.id, stored);
 
         await this.updateParentMatch(stored.parent_id);
     }

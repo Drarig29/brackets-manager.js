@@ -481,7 +481,7 @@ export class Create {
         if (!await this.registerParticipants(participants))
             throw Error('Error registering the participants.');
 
-        // Get participants back with ids.
+        // Get participants back with IDs.
         const added = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
         if (!added) throw Error('Error getting registered participant.');
 
@@ -489,9 +489,9 @@ export class Create {
     }
 
     /**
-     * Returns the list of slots with a seeding containing ids. No database mutation.
+     * Returns the list of slots with a seeding containing IDs. No database mutation.
      *
-     * @param seeding The seeding (ids).
+     * @param seeding The seeding (IDs).
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
     private async getSlotsUsingIds(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {

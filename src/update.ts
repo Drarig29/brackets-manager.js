@@ -225,7 +225,7 @@ export class BaseUpdater {
      * @param match A match.
      */
     protected async applyMatchUpdate(match: Match): Promise<void> {
-        await this.storage.update('match', match.id, match);
+        await this.storage.update<Match>('match', match.id, match);
 
         if (match.child_count === 0) return;
 
@@ -821,7 +821,7 @@ export class Update extends BaseUpdater {
             throw Error('The match game is locked.');
 
         helpers.setMatchResults(stored, game);
-        await this.storage.update('match_game', stored.id, stored);
+        await this.storage.update<MatchGame>('match_game', stored.id, stored);
 
         await this.updateParentMatch(stored.parent_id);
     }

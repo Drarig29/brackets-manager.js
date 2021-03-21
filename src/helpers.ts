@@ -1012,7 +1012,7 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
 }
 
 /**
- * Indicates if a seeding is filled with participants' names or ids.
+ * Indicates if a seeding is filled with participants' names or IDs.
  *
  * @param seeding The seeding.
  */

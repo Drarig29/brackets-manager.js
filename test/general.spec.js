@@ -110,7 +110,7 @@ describe('Special cases', () => {
         storage.reset();
     });
 
-    it('should create a stage and add participants ids in seeding', async () => {
+    it('should create a stage and add participants IDs in seeding', async () => {
         const teams = [
             'Team 1', 'Team 2',
             'Team 3', 'Team 4',
@@ -133,7 +133,7 @@ describe('Special cases', () => {
             settings: { size: 8 },
         });
 
-        // Update seeding with already existing ids.
+        // Update seeding with already existing IDs.
         await manager.update.seeding(0, [0, 1, 2, 3, 4, 5, 6, 7]);
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
