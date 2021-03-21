@@ -1027,5 +1027,7 @@ export class Update extends BaseUpdater {
 
             childCount--;
         }
+
+        await this.storage.update<Match>('match', match.id, { ...match, child_count: targetChildCount });
     }
 }

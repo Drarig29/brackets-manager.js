@@ -211,7 +211,15 @@ describe('Update match child count', () => {
 
     it('should change match child count at match level', async () => {
         await manager.update.matchChildCount('match', 0, 3);
+        assert.strictEqual((await storage.select('match', 0)).child_count, 3);
         assert.strictEqual((await storage.select('match_game')).length, 6 + 3);
+    });
+
+    it('should remove all child games of the match', async () => {
+        await manager.update.matchChildCount('match', 0, 3); // Bo3
+        await manager.update.matchChildCount('match', 0, 0); // No child games.
+        assert.strictEqual((await storage.select('match', 0)).child_count, 0);
+        assert.strictEqual((await storage.select('match_game')).length, 6);
     });
 
     it('should change match child count at round level', async () => {
