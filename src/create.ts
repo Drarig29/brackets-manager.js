@@ -372,6 +372,7 @@ export class Create {
         for (let i = 0; i < childCount; i++) {
             const id = await this.insertMatchGame({
                 number: i + 1,
+                stage_id: stageId,
                 parent_id: parentId,
                 status: status,
                 opponent1: helpers.toResult(opponents[0]),

@@ -1232,7 +1232,7 @@ export function getParentMatchResults(storedParent: Match, scores: Scores): Part
  *
  * @param match The up to date match.
  */
-export function getUpdatedMatchResults(match: OmitId<MatchResults>): OmitId<MatchResults> {
+export function getUpdatedMatchResults(match: MatchResults): MatchResults {
     return {
         status: match.status,
         opponent1: match.opponent1,

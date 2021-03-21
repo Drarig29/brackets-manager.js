@@ -1009,6 +1009,7 @@ export class Update extends BaseUpdater {
         while (childCount < targetChildCount) {
             await this.storage.insert<MatchGame>('match_game', {
                 number: childCount + 1,
+                stage_id: match.stage_id,
                 parent_id: match.id,
                 status: match.status,
                 opponent1: { id: null },
