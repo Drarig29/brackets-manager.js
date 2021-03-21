@@ -11,6 +11,11 @@ export type OrderingMap = { [key in SeedOrdering]: <T>(array: T[], ...args: numb
 export type OmitId<T> = Omit<T, 'id'>;
 
 /**
+ * An object which maps an ID to another ID.
+ */
+export type IdMapping = { [id: number]: number };
+
+/**
  * Used by the library to handle placements. Is `null` if is a BYE. Has a `null` name if it's yet to be determined.
  */
 export type ParticipantSlot = { id: number | null, position?: number } | null;

@@ -4,6 +4,7 @@ import {
     MatchGame,
     MatchResults,
     Participant,
+    ParticipantResult,
     Result,
     RoundRobinMode,
     Seeding,
@@ -13,7 +14,7 @@ import {
     Status,
 } from 'brackets-model';
 
-import { Duel, FinalStandingsItem, OmitId, ParticipantSlot, Scores, Side } from './types';
+import { Database, Duel, FinalStandingsItem, IdMapping, OmitId, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
 import { BracketType } from './update';
 
@@ -175,6 +176,91 @@ export function balanceByes(seeding: Seeding, participantCount?: number): Seedin
     const flat = [...againstEachOther.flat(), ...againstNull.flat()];
 
     return setArraySize(flat, participantCount, null);
+}
+
+/**
+ * Normalizes IDs in a database.
+ * 
+ * Every ID - and references to it - is remapped to consecutive IDs starting from 0.
+ * 
+ * @param data Data to normalize.
+ */
+export function normalizeIds(data: Database): Database {
+    const mappings = {
+        participant: makeNormalizedIdMapping(data.participant),
+        stage: makeNormalizedIdMapping(data.stage),
+        group: makeNormalizedIdMapping(data.group),
+        round: makeNormalizedIdMapping(data.round),
+        match: makeNormalizedIdMapping(data.match),
+        match_game: makeNormalizedIdMapping(data.match_game),
+    };
+
+    return {
+        participant: data.participant.map(value => ({
+            ...value,
+            id: mappings.participant[value.id],
+        })),
+        stage: data.stage.map(value => ({
+            ...value,
+            id: mappings.stage[value.id],
+        })),
+        group: data.group.map(value => ({
+            ...value,
+            id: mappings.group[value.id],
+            stage_id: mappings.stage[value.stage_id],
+        })),
+        round: data.round.map(value => ({
+            ...value,
+            id: mappings.round[value.id],
+            stage_id: mappings.stage[value.stage_id],
+            group_id: mappings.group[value.group_id],
+        })),
+        match: data.match.map(value => ({
+            ...value,
+            id: mappings.match[value.id],
+            stage_id: mappings.stage[value.stage_id],
+            group_id: mappings.group[value.group_id],
+            round_id: mappings.round[value.round_id],
+            opponent1: normalizeParticipant(value.opponent1, mappings.participant),
+            opponent2: normalizeParticipant(value.opponent2, mappings.participant),
+        })),
+        match_game: data.match_game.map(value => ({
+            ...value,
+            id: mappings.match_game[value.id],
+            parent_id: mappings.match[value.parent_id],
+            opponent1: normalizeParticipant(value.opponent1, mappings.participant),
+            opponent2: normalizeParticipant(value.opponent2, mappings.participant),
+        })),
+    };
+}
+
+/**
+ * Makes a mapping between old IDs and new normalized IDs.
+ * 
+ * @param elements A list of elements with IDs.
+ */
+export function makeNormalizedIdMapping(elements: { id: number }[]): IdMapping {
+    let currentId = 0;
+
+    return elements.reduce((acc, current) => ({
+        ...acc,
+        [current.id]: currentId++,
+    }), {}) as IdMapping;
+}
+
+/**
+ * Apply a normalizing mapping to a participant.
+ * 
+ * @param participant The participant.
+ * @param mapping The mapping of IDs.
+ */
+export function normalizeParticipant(participant: ParticipantResult | null, mapping: IdMapping): ParticipantResult | null {
+    if (participant === null) return null;
+
+    return {
+        ...participant,
+        id: participant.id !== null ? mapping[participant.id] : null,
+    };
 }
 
 /**

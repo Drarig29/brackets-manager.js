@@ -4,6 +4,7 @@ import { create } from './create';
 import { Update } from './update';
 import { Get } from './get';
 import { Reset } from './reset';
+import * as helpers from './helpers';
 
 /**
  * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
@@ -53,6 +54,8 @@ export class BracketsManager {
      * @param data Data to import.
      */
     public async import(data: Database): Promise<void> {
+        data = helpers.normalizeIds(data);
+
         if (!await this.storage.delete('participant'))
             throw Error('Could not empty the participant table.');
         if (!await this.storage.insert<Participant>('participant', data.participant))
