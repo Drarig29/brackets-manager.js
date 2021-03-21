@@ -37,7 +37,6 @@ export class BracketsManager {
         };
 
         this.storage = storage;
-        this.create = create;
         this.update = new Update(this.storage);
         this.get = new Get(this.storage);
         this.reset = new Reset(this.storage);
@@ -46,7 +45,9 @@ export class BracketsManager {
     /**
      * Creates a stage for an existing tournament. The tournament won't be created.
      */
-    public create: (stage: InputStage) => Promise<void>;
+    public async create(stage: InputStage): Promise<void> {
+        await create.call(this, stage);
+    }
 
     /**
      * Imports data in the database.
