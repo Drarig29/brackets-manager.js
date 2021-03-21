@@ -27,12 +27,12 @@
         "typescript": "^3.9.3"
     },
     "scripts": {
-        "test": "npx mocha test",
+        "lint": "eslint **/*.{js,ts} --fix",
+        "test": "npm run lint && npx mocha",
         "start": "tsc -watch",
         "build": "tsc",
         "prepare": "npm run build",
-        "prepublishOnly": "npm run build",
-        "lint": "eslint **/*.{js,ts} --fix"
+        "prepublishOnly": "npm run build"
     },
     "keywords": [
         "javascript",
