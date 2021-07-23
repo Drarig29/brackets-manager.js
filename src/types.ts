@@ -11,6 +11,11 @@ export type OrderingMap = { [key in SeedOrdering]: <T>(array: T[], ...args: numb
 export type OmitId<T> = Omit<T, 'id'>;
 
 /**
+ * Defines a T which can be null.
+ */
+export type Nullable<T> = T | null;
+
+/**
  * An object which maps an ID to another ID.
  */
 export type IdMapping = { [id: number]: number };

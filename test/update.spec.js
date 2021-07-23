@@ -83,17 +83,17 @@ describe('Update matches', () => {
         });
 
         assert.strictEqual((await storage.select('match', 8)).opponent1.id, 0);
-        
+
         await manager.update.match({
             id: 0,
             opponent2: { result: 'win' },
         });
-        
+
         const after = await storage.select('match', 0);
         assert.strictEqual(after.status, Status.Completed);
         assert.strictEqual(after.opponent1.result, 'loss');
         assert.strictEqual(after.opponent2.result, 'win');
-        
+
         const nextMatch = await storage.select('match', 8);
         assert.strictEqual(nextMatch.status, Status.Waiting);
         assert.strictEqual(nextMatch.opponent1.id, 1);
@@ -701,6 +701,15 @@ describe('Seeding', () => {
             'Team E', 'Team F',
             'Team G', // Missing value.
         ]), 'The size of the seeding is incorrect.');
+    });
+
+    it('should throw if the seeding has duplicate participants', async () => {
+        await assert.isRejected(manager.update.seeding(0, [
+            'Team 1', 'Team 1', // Duplicate
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]), 'The seeding has a duplicate participant.');
     });
 });
 

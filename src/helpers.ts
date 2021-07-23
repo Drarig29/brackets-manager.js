@@ -14,7 +14,7 @@ import {
     Status,
 } from 'brackets-model';
 
-import { Database, Duel, FinalStandingsItem, IdMapping, OmitId, ParticipantSlot, Scores, Side } from './types';
+import { Database, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
 import { BracketType } from './update';
 
@@ -293,6 +293,19 @@ export function makePairs<T>(array: T[]): [T, T][] {
 export function ensureEvenSized<T>(array: T[]): void {
     if (array.length % 2 === 1)
         throw Error('Array size must be even.');
+}
+
+/**
+ * Ensures there are no duplicates in a list of elements.
+ * 
+ * @param array A list of elements.
+ */
+export function ensureNoDuplicates<T>(array: Nullable<T>[]): void {
+    const nonNull = array.filter((element): element is T => element !== null);
+    const unique = [...new Set(nonNull)];
+
+    if (unique.length < nonNull.length)
+        throw new Error('The seeding has a duplicate participant.');
 }
 
 /**

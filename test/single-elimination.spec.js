@@ -120,6 +120,18 @@ describe('Create single elimination stage', () => {
         assert.strictEqual((await storage.select('match')).length, 7);
         assert.strictEqual((await storage.select('match_game')).length, 7 * 3);
     });
+
+    it('should throw if the seeding has duplicate participants', async () => {
+        await assert.isRejected(manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', 'Team 1', // Duplicate
+                'Team 3', 'Team 4',
+            ],
+        }), 'The seeding has a duplicate participant.');
+    });
 });
 
 describe('Previous and next match update in single elimination stage', () => {

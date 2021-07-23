@@ -468,6 +468,7 @@ export class Create {
             size, // Always set the size.
         };
 
+        helpers.ensureNoDuplicates(this.stage.seeding);
         this.stage.seeding = helpers.fixSeeding(this.stage.seeding, size);
 
         if (this.stage.type !== 'round_robin' && this.stage.settings.balanceByes)
