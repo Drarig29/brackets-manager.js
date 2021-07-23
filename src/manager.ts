@@ -5,6 +5,7 @@ import { Update } from './update';
 import { Get } from './get';
 import { Reset } from './reset';
 import * as helpers from './helpers';
+import { Delete } from './delete';
 
 /**
  * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
@@ -15,6 +16,7 @@ export class BracketsManager {
     public update: Update;
     public get: Get;
     public reset: Reset;
+    public delete: Delete;
 
     /**
      * Creates an instance of BracketsManager, which will handle all the stuff from the library.
@@ -40,6 +42,7 @@ export class BracketsManager {
         this.update = new Update(this.storage);
         this.get = new Get(this.storage);
         this.reset = new Reset(this.storage);
+        this.delete = new Delete(this.storage);
     }
 
     /**

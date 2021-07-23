@@ -4,7 +4,7 @@ import * as helpers from './helpers';
 
 export class Get {
 
-    private storage: Storage;
+    private readonly storage: Storage;
 
     /**
      * Creates an instance of Get, which will handle retrieving information from the stage.
