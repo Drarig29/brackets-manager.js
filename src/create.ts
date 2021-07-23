@@ -685,7 +685,8 @@ export class Create {
         if (!existing)
             return this.storage.insert<Match>('match', match);
 
-        await this.storage.update<Match>('match', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(match) });
+        if (!await this.storage.update<Match>('match', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(match) }))
+            throw Error('Could not update the match.');
 
         return existing.id;
     }
@@ -708,7 +709,8 @@ export class Create {
         if (!existing)
             return this.storage.insert<MatchGame>('match_game', matchGame);
 
-        await this.storage.update<MatchGame>('match_game', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(matchGame) });
+        if (!await this.storage.update<MatchGame>('match_game', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(matchGame) }))
+            throw Error('Could not update the match game.');
 
         return existing.id;
     }
@@ -808,6 +810,7 @@ export class Create {
             seedOrdering: this.seedOrdering,
         };
 
-        await this.storage.update<Stage>('stage', stageId, stage);
+        if (!await this.storage.update<Stage>('stage', stageId, stage))
+            throw Error('Could not update the stage.');
     }
 }

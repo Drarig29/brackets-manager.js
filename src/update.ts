@@ -225,7 +225,8 @@ export class BaseUpdater {
      * @param match A match.
      */
     protected async applyMatchUpdate(match: Match): Promise<void> {
-        await this.storage.update<Match>('match', match.id, match);
+        if (!await this.storage.update<Match>('match', match.id, match))
+            throw Error('Could not update the match.');
 
         if (match.child_count === 0) return;
 
@@ -237,7 +238,8 @@ export class BaseUpdater {
         if (match.status <= Status.Ready || match.status === Status.Archived)
             update.status = match.status;
 
-        await this.storage.update<MatchGame>('match_game', { parent_id: match.id }, update);
+        if (!await this.storage.update<MatchGame>('match_game', { parent_id: match.id }, update))
+            throw Error('Could not update the match game.');
     }
 
     /**
@@ -821,7 +823,9 @@ export class Update extends BaseUpdater {
             throw Error('The match game is locked.');
 
         helpers.setMatchResults(stored, game);
-        await this.storage.update<MatchGame>('match_game', stored.id, stored);
+
+        if (!await this.storage.update<MatchGame>('match_game', stored.id, stored))
+            throw Error('Could not update the match game.');
 
         await this.updateParentMatch(stored.parent_id);
     }
@@ -935,7 +939,8 @@ export class Update extends BaseUpdater {
      * @param childCount The target child count.
      */
     private async updateStageMatchChildCount(stageId: number, childCount: number): Promise<void> {
-        await this.storage.update<Match>('match', { stage_id: stageId }, { child_count: childCount });
+        if (!await this.storage.update<Match>('match', { stage_id: stageId }, { child_count: childCount }))
+            throw Error('Could not update the match.');
 
         const matches = await this.storage.select<Match>('match', { stage_id: stageId });
         if (!matches) throw Error('This stage has no match.');
@@ -951,7 +956,8 @@ export class Update extends BaseUpdater {
      * @param childCount The target child count.
      */
     private async updateGroupMatchChildCount(groupId: number, childCount: number): Promise<void> {
-        await this.storage.update<Match>('match', { group_id: groupId }, { child_count: childCount });
+        if (!await this.storage.update<Match>('match', { group_id: groupId }, { child_count: childCount }))
+            throw Error('Could not update the match.');
 
         const matches = await this.storage.select<Match>('match', { group_id: groupId });
         if (!matches) throw Error('This group has no match.');
@@ -967,7 +973,8 @@ export class Update extends BaseUpdater {
      * @param childCount The target child count.
      */
     private async updateRoundMatchChildCount(roundId: number, childCount: number): Promise<void> {
-        await this.storage.update<Match>('match', { round_id: roundId }, { child_count: childCount });
+        if (!await this.storage.update<Match>('match', { round_id: roundId }, { child_count: childCount }))
+            throw Error('Could not update the match.');
 
         const matches = await this.storage.select<Match>('match', { round_id: roundId });
         if (!matches) throw Error('This round has no match.');
@@ -992,7 +999,8 @@ export class Update extends BaseUpdater {
             if (roundNumber === 1)
                 updated.opponent2 = helpers.findPosition(matches, positions.shift()!);
 
-            await this.storage.update<Match>('match', updated.id, updated);
+            if (!await this.storage.update<Match>('match', updated.id, updated))
+                throw Error('Could not update the match.');
         }
     }
 
@@ -1007,7 +1015,7 @@ export class Update extends BaseUpdater {
         let childCount = games ? games.length : 0;
 
         while (childCount < targetChildCount) {
-            await this.storage.insert<MatchGame>('match_game', {
+            const id = await this.storage.insert<MatchGame>('match_game', {
                 number: childCount + 1,
                 stage_id: match.stage_id,
                 parent_id: match.id,
@@ -1016,18 +1024,25 @@ export class Update extends BaseUpdater {
                 opponent2: { id: null },
             });
 
+            if (id === -1)
+                throw Error('Could not adjust the match games when inserting.');
+
             childCount++;
         }
 
         while (childCount > targetChildCount) {
-            await this.storage.delete<MatchGame>('match_game', {
+            const deleted = await this.storage.delete<MatchGame>('match_game', {
                 parent_id: match.id,
                 number: childCount,
             });
 
+            if (!deleted)
+                throw Error('Could not adjust the match games when deleting.');
+
             childCount--;
         }
 
-        await this.storage.update<Match>('match', match.id, { ...match, child_count: targetChildCount });
+        if (!await this.storage.update<Match>('match', match.id, { ...match, child_count: targetChildCount }))
+            throw Error('Could not update the match.');
     }
 }
