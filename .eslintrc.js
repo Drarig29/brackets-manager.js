@@ -13,8 +13,9 @@ module.exports = {
     'curly': ['error', 'multi-or-nest'],
     'brace-style': ['error', '1tbs'],
     'quotes': ['error', 'single'],
-    'semi': 'error',
     'eqeqeq': 'error',
+    'semi': 'off',
+    '@typescript-eslint/semi': ['error'],
 
     'comma-dangle': ['error', {
       'arrays': 'always-multiline',
@@ -30,8 +31,9 @@ module.exports = {
     'jsdoc/require-returns-type': 0,
     'jsdoc/no-multi-asterisks': 0, // https://github.com/gajus/eslint-plugin-jsdoc/issues/773
 
-    '@typescript-eslint/no-var-requires': 'off',
+    '@typescript-eslint/no-var-requires': 'off', // For mocha tests
     '@typescript-eslint/explicit-function-return-type': ['error'],
+    '@typescript-eslint/no-empty-function': 0,
 
     // I use them rarely but they are understandable and commented. They simplify the code.
     '@typescript-eslint/no-non-null-assertion': 0,
