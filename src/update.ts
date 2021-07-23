@@ -45,7 +45,9 @@ export class BaseUpdater {
             type: stage.type,
             settings: stage.settings,
             seeding: seeding || undefined,
-        }, true);
+        });
+
+        create.setExisting(stageId);
 
         const method = Update.getSeedingOrdering(stage.type, create);
         const slots = await create.getSlots();

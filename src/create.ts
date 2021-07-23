@@ -20,21 +20,21 @@ export class Create {
     private storage: Storage;
     private stage: InputStage;
     private readonly seedOrdering: SeedOrdering[];
-    private readonly updateSeeding: boolean;
+    private updateMode: boolean;
+    private currentStageId!: number;
 
     /**
      * Creates an instance of Create, which will handle the creation of the stage.
      *
      * @param storage The implementation of Storage.
      * @param stage The stage to create.
-     * @param updateSeeding Whether the seeding of the stage is being updated.
      */
-    constructor(storage: Storage, stage: InputStage, updateSeeding?: boolean) {
+    constructor(storage: Storage, stage: InputStage) {
         this.storage = storage;
         this.stage = stage;
         this.stage.settings = this.stage.settings || {};
         this.seedOrdering = this.stage.settings.seedOrdering || [];
-        this.updateSeeding = updateSeeding || false;
+        this.updateMode = false;
 
         if (!this.stage.name)
             throw Error('You must provide a name for the stage.');
@@ -78,6 +78,16 @@ export class Create {
             throw Error('Something went wrong when creating the stage.');
 
         await this.ensureSeedOrdering(stageId);
+    }
+
+    /**
+     * Enables the update mode.
+     * 
+     * @param stageId ID of the stage.
+     */
+    public setExisting(stageId: number): void {
+        this.updateMode = true;
+        this.currentStageId = stageId;
     }
 
     /**
@@ -345,7 +355,7 @@ export class Create {
 
         let existing: Match | null = null;
 
-        if (this.updateSeeding) {
+        if (this.updateMode) {
             existing = await this.storage.selectFirst<Match>('match', {
                 round_id: roundId,
                 number: matchNumber,
@@ -506,8 +516,8 @@ export class Create {
      */
     private async getStageNumber(): Promise<number> {
         const stages = await this.storage.select<Stage>('stage', { tournament_id: this.stage.tournamentId });
-        const stageCount = stages ? stages.length : 0;
-        return this.updateSeeding ? stageCount : stageCount + 1;
+        const stageCount = stages?.length || 0;
+        return stageCount + 1;
     }
 
     /**
@@ -620,12 +630,8 @@ export class Create {
     private async insertStage(stage: OmitId<Stage>): Promise<number> {
         let existing: Stage | null = null;
 
-        if (this.updateSeeding) {
-            existing = await this.storage.selectFirst<Stage>('stage', {
-                tournament_id: stage.tournament_id,
-                number: stage.number,
-            });
-        }
+        if (this.updateMode)
+            existing = await this.storage.select<Stage>('stage', this.currentStageId);
 
         if (!existing)
             return this.storage.insert<Stage>('stage', stage);
@@ -641,7 +647,7 @@ export class Create {
     private async insertGroup(group: OmitId<Group>): Promise<number> {
         let existing: Group | null = null;
 
-        if (this.updateSeeding) {
+        if (this.updateMode) {
             existing = await this.storage.selectFirst<Group>('group', {
                 stage_id: group.stage_id,
                 number: group.number,
@@ -662,7 +668,7 @@ export class Create {
     private async insertRound(round: OmitId<Round>): Promise<number> {
         let existing: Round | null = null;
 
-        if (this.updateSeeding) {
+        if (this.updateMode) {
             existing = await this.storage.selectFirst<Round>('round', {
                 group_id: round.group_id,
                 number: round.number,
@@ -699,7 +705,7 @@ export class Create {
     private async insertMatchGame(matchGame: OmitId<MatchGame>): Promise<number> {
         let existing: MatchGame | null = null;
 
-        if (this.updateSeeding) {
+        if (this.updateMode) {
             existing = await this.storage.selectFirst<MatchGame>('match_game', {
                 parent_id: matchGame.parent_id,
                 number: matchGame.number,
