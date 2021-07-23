@@ -28,6 +28,7 @@ module.exports = {
     'jsdoc/require-param-type': 0,
     'jsdoc/require-returns': 0,
     'jsdoc/require-returns-type': 0,
+    'jsdoc/no-multi-asterisks': 0, // https://github.com/gajus/eslint-plugin-jsdoc/issues/773
 
     '@typescript-eslint/no-var-requires': 'off',
     '@typescript-eslint/explicit-function-return-type': ['error'],
