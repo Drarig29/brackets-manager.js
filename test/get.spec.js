@@ -221,6 +221,49 @@ describe('Get seeding', () => {
         assert.strictEqual(seeding[1].position, 2);
     });
 
+    it('should get the seeding of a round-robin stage with BYEs', async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            settings: {
+                groupCount: 2,
+                size: 8,
+            },
+            seeding: [
+                'Team 1', null, null, null,
+                null, null, null, null,
+            ],
+        });
+
+        const seeding = await manager.get.seeding(0);
+        assert.strictEqual(seeding.length, 8);
+    });
+
+    it('should get the seeding of a round-robin stage with BYEs after update', async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            settings: {
+                groupCount: 2,
+                size: 8,
+            },
+        });
+
+        await manager.update.seeding(0, [
+            'Team 1', null, null, null,
+            null, null, null, null,
+        ]);
+
+        const seeding = await manager.get.seeding(0);
+        assert.strictEqual(seeding.length, 8);
+    });
+
     it('should get the seeding of a single elimination stage', async () => {
         storage.reset();
 
@@ -248,13 +291,22 @@ describe('Get seeding', () => {
                 'Team 1', null, 'Team 3', 'Team 4',
                 'Team 5', null, null, 'Team 8',
             ],
+            settings: {
+                seedOrdering: ['inner_outer'],
+            },
         });
 
         const seeding = await manager.get.seeding(0);
         assert.strictEqual(seeding.length, 8);
-        assert.strictEqual(seeding[0].position, 1);
-        assert.strictEqual(seeding[1], null);
-        assert.strictEqual(seeding[2].position, 3);
-        assert.strictEqual(seeding[5], null);
+        assert.deepStrictEqual(seeding, [
+            { id: 0, position: 1 },
+            null,
+            { id: 1, position: 3 },
+            { id: 2, position: 4 },
+            { id: 3, position: 5 },
+            null,
+            null,
+            { id: 4, position: 8 },
+        ]);
     });
 });

@@ -75,9 +75,9 @@ export class Get {
         if (!stage) throw Error('Stage not found.');
 
         if (stage.type === 'round_robin')
-            return this.roundRobinSeeding(stageId);
+            return this.roundRobinSeeding(stage);
 
-        return this.eliminationSeeding(stageId);
+        return this.eliminationSeeding(stage);
     }
 
     /**
@@ -102,25 +102,37 @@ export class Get {
     /**
      * Returns the seeding of a round-robin stage.
      *
-     * @param stageId ID of the stage.
+     * @param stage The stage.
      */
-    private async roundRobinSeeding(stageId: number): Promise<ParticipantSlot[]> {
-        const matches = await this.storage.select<Match>('match', { stage_id: stageId });
+    private async roundRobinSeeding(stage: Stage): Promise<ParticipantSlot[]> {
+        if (stage.settings.size === undefined)
+            throw Error('The size of the seeding is undefined.');
+
+        const matches = await this.storage.select<Match>('match', { stage_id: stage.id });
         if (!matches) throw Error('Error getting matches.');
 
         const slots = helpers.matchesToSeeding(matches);
-        const seeding = helpers.uniqueBy(slots, item => item && item.position);
 
+        // BYE vs. BYE matches of a round-robin stage are removed
+        // when the stage is created. We need to add them back temporarily.
+        if (slots.length < stage.settings.size) {
+            const diff = stage.settings.size - slots.length;
+            for (let i = 0; i < diff; i++)
+                slots.push(null);
+        }
+
+        const unique = helpers.uniqueBy(slots, item => item && item.position);
+        const seeding = helpers.setArraySize(unique, stage.settings.size, null);
         return seeding;
     }
 
     /**
      * Returns the seeding of an elimination stage.
      *
-     * @param stageId ID of the stage.
+     * @param stage The stage.
      */
-    private async eliminationSeeding(stageId: number): Promise<ParticipantSlot[]> {
-        const round = await this.storage.selectFirst<Round>('round', { stage_id: stageId, number: 1 });
+    private async eliminationSeeding(stage: Stage): Promise<ParticipantSlot[]> {
+        const round = await this.storage.selectFirst<Round>('round', { stage_id: stage.id, number: 1 });
         if (!round) throw Error('Error getting the first round.');
 
         const matches = await this.storage.select<Match>('match', { round_id: round.id });

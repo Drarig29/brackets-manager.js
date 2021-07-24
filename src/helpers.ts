@@ -301,7 +301,7 @@ export function ensureEvenSized<T>(array: T[]): void {
  * @param array A list of elements.
  */
 export function ensureNoDuplicates<T>(array: Nullable<T>[]): void {
-    const nonNull = array.filter((element): element is T => element !== null);
+    const nonNull = getNonNull(array);
     const unique = [...new Set(nonNull)];
 
     if (unique.length < nonNull.length)
@@ -1132,6 +1132,16 @@ export function sortSeeding(slots: ParticipantSlot[]): ParticipantSlot[] {
 }
 
 /**
+ * Returns only the non null elements.
+ * 
+ * @param array The array to process.
+ */
+export function getNonNull<T>(array: Nullable<T>[]): T[] {
+    const nonNull = array.filter((element): element is T => element !== null);
+    return nonNull;
+}
+
+/**
  * Returns a list of objects which have unique values of a specific key.
  *
  * @param array The array to process.
@@ -1141,7 +1151,10 @@ export function uniqueBy<T>(array: T[], key: (obj: T) => unknown): T[] {
     const seen = new Set();
     return array.filter(item => {
         const value = key(item);
-        return seen.has(value) ? false : seen.add(value);
+        if (!value) return true;
+        if (seen.has(value)) return false;
+        seen.add(value);
+        return true;
     });
 }
 
