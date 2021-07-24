@@ -121,6 +121,37 @@ describe('Create single elimination stage', () => {
         assert.strictEqual((await storage.select('match_game')).length, 7 * 3);
     });
 
+    it('should create stages with a good number property', async () => {
+        await manager.create({
+            name: 'Stage 1',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: { size: 2 },
+        });
+
+        assert.strictEqual((await storage.select('stage', 0)).number, 1);
+
+        await manager.create({
+            name: 'Stage 2',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: { size: 2 },
+        });
+
+        assert.strictEqual((await storage.select('stage', 1)).number, 2);
+
+        await manager.delete.stage(0);
+
+        await manager.create({
+            name: 'Stage 3',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: { size: 2 },
+        });
+
+        assert.strictEqual((await storage.select('stage', 2)).number, 3);
+    });
+
     it('should throw if the seeding has duplicate participants', async () => {
         await assert.isRejected(manager.create({
             name: 'Example',

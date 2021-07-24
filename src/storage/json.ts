@@ -122,7 +122,8 @@ export class JsonDatabase implements CrudInterface {
      * @param arg A single value or an array of values.
      */
     public async insert<T>(table: Table, arg: T | T[]): Promise<number | boolean> {
-        let id = this.internal.getData(JsonDatabase.makePath(table)).length;
+        const existing: (T & { id: number })[] = this.internal.getData(JsonDatabase.makePath(table));
+        let id = Math.max(-1, ...existing.map(element => element.id)) + 1;
 
         if (!Array.isArray(arg)) {
             try {
@@ -177,8 +178,10 @@ export class JsonDatabase implements CrudInterface {
             if (arg === undefined)
                 return this.internal.getData(JsonDatabase.makePath(table)).map(clone);
 
-            if (typeof arg === 'number')
-                return clone(this.internal.getData(JsonDatabase.makeArrayIndexPath(table, arg)));
+            if (typeof arg === 'number') {
+                const index = this.internal.getIndex(JsonDatabase.makePath(table), arg);
+                return clone(this.internal.getData(JsonDatabase.makeArrayIndexPath(table, index)));
+            }
 
             const values = this.internal.filter<T>(JsonDatabase.makePath(table), this.makeFilter(arg)) || null;
             return values && values.map(clone);
@@ -215,7 +218,8 @@ export class JsonDatabase implements CrudInterface {
     public async update<T>(table: Table, arg: number | Partial<T>, value: T | Partial<T>): Promise<boolean> {
         if (typeof arg === 'number') {
             try {
-                this.internal.push(JsonDatabase.makeArrayIndexPath(table, arg), value);
+                const index = this.internal.getIndex(JsonDatabase.makePath(table), arg);
+                this.internal.push(JsonDatabase.makeArrayIndexPath(table, index), value);
                 return true;
             } catch (error) {
                 return false;

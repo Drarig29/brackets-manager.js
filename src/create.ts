@@ -517,8 +517,10 @@ export class Create {
      */
     private async getStageNumber(): Promise<number> {
         const stages = await this.storage.select<Stage>('stage', { tournament_id: this.stage.tournamentId });
-        const stageCount = stages?.length || 0;
-        return stageCount + 1;
+        if (!stages?.length) return 1;
+
+        const maxNumber = Math.max(...stages.map(stage => stage.number));
+        return maxNumber + 1;
     }
 
     /**
