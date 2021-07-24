@@ -198,3 +198,63 @@ describe('Get final standings', () => {
         ]);
     });
 });
+
+describe('Get seeding', () => {
+
+    it('should get the seeding of a round-robin stage', async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            settings: {
+                groupCount: 8,
+                size: 32,
+                seedOrdering: ['groups.seed_optimized'],
+            },
+        });
+
+        const seeding = await manager.get.seeding(0);
+        assert.strictEqual(seeding.length, 32);
+        assert.strictEqual(seeding[0].position, 1);
+        assert.strictEqual(seeding[1].position, 2);
+    });
+
+    it('should get the seeding of a single elimination stage', async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: { size: 16 },
+        });
+
+        const seeding = await manager.get.seeding(0);
+        assert.strictEqual(seeding.length, 16);
+        assert.strictEqual(seeding[0].position, 1);
+        assert.strictEqual(seeding[1].position, 2);
+    });
+
+    it('should get the seeding with BYEs', async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', null, 'Team 3', 'Team 4',
+                'Team 5', null, null, 'Team 8',
+            ],
+        });
+
+        const seeding = await manager.get.seeding(0);
+        assert.strictEqual(seeding.length, 8);
+        assert.strictEqual(seeding[0].position, 1);
+        assert.strictEqual(seeding[1], null);
+        assert.strictEqual(seeding[2].position, 3);
+        assert.strictEqual(seeding[5], null);
+    });
+});
