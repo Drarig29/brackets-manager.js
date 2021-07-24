@@ -517,9 +517,18 @@ export class Create {
      */
     private async getStageNumber(): Promise<number> {
         const stages = await this.storage.select<Stage>('stage', { tournament_id: this.stage.tournamentId });
-        if (!stages?.length) return 1;
+        const stageNumbers = stages?.map(stage => stage.number);
 
-        const maxNumber = Math.max(...stages.map(stage => stage.number));
+        if (this.stage.number !== undefined) {
+            if (stageNumbers?.includes(this.stage.number))
+                throw Error('The given stage number already exists.');
+
+            return this.stage.number;
+        }
+
+        if (!stageNumbers?.length) return 1;
+
+        const maxNumber = Math.max(...stageNumbers);
         return maxNumber + 1;
     }
 

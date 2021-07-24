@@ -121,7 +121,7 @@ describe('Create single elimination stage', () => {
         assert.strictEqual((await storage.select('match_game')).length, 7 * 3);
     });
 
-    it('should create stages with a good number property', async () => {
+    it('should determine the number property of created stages', async () => {
         await manager.create({
             name: 'Stage 1',
             tournamentId: 0,
@@ -150,6 +150,52 @@ describe('Create single elimination stage', () => {
         });
 
         assert.strictEqual((await storage.select('stage', 2)).number, 3);
+    });
+
+    it('should create a stage with the given number property', async () => {
+        await manager.create({
+            name: 'Stage 1',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: { size: 2 },
+        });
+
+        await manager.create({
+            name: 'Stage 2',
+            tournamentId: 0,
+            type: 'single_elimination',
+            settings: { size: 2 },
+        });
+
+        await manager.delete.stage(0);
+
+        await manager.create({
+            name: 'Stage 1 (new)',
+            tournamentId: 0,
+            type: 'single_elimination',
+            number: 1,
+            settings: { size: 2 },
+        });
+
+        assert.strictEqual((await storage.select('stage', 2)).number, 1);
+    });
+
+    it('should throw if the given number property already exists', async () => {
+        await manager.create({
+            name: 'Stage 1',
+            tournamentId: 0,
+            type: 'single_elimination',
+            number: 1,
+            settings: { size: 2 },
+        });
+
+        await assert.isRejected(manager.create({
+            name: 'Stage 1',
+            tournamentId: 0,
+            type: 'single_elimination',
+            number: 1, // Duplicate
+            settings: { size: 2 },
+        }), 'The given stage number already exists.');
     });
 
     it('should throw if the seeding has duplicate participants', async () => {
