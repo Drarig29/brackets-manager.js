@@ -16,6 +16,7 @@ module.exports = {
     'eqeqeq': 'error',
     'default-case': 'error',
     'semi': 'off',
+    'eol-last': ['error', 'always'],
     '@typescript-eslint/semi': ['error'],
 
     'comma-dangle': ['error', {
