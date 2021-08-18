@@ -1,19 +1,9 @@
 import { Group, Match, MatchGame, Participant, Round, Stage } from 'brackets-model';
-import { Database, FinalStandingsItem, ParticipantSlot, Storage } from './types';
+import { Database, FinalStandingsItem, ParticipantSlot } from './types';
+import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
 
-export class Get {
-
-    private readonly storage: Storage;
-
-    /**
-     * Creates an instance of Get, which will handle retrieving information from the stage.
-     *
-     * @param storage The implementation of Storage.
-     */
-    constructor(storage: Storage) {
-        this.storage = storage;
-    }
+export class Get extends BaseGetter {
 
     /**
      * Returns the data needed to display a stage.
@@ -59,10 +49,7 @@ export class Get {
         const matchGamesQueries = await Promise.all(parentMatches.map(match => this.storage.select<MatchGame>('match_game', { parent_id: match.id })));
         if (matchGamesQueries.some(game => game === null)) throw Error('Error getting match games.');
 
-        // Use a TS type guard to exclude null from the query results type.
-        const matchGames = matchGamesQueries.filter((queryResult): queryResult is MatchGame[] => queryResult !== null).flat();
-
-        return matchGames;
+        return helpers.getNonNull(matchGamesQueries).flat();
     }
 
     /**
@@ -96,6 +83,8 @@ export class Get {
                 return this.singleEliminationStandings(stageId);
             case 'double_elimination':
                 return this.doubleEliminationStandings(stageId);
+            default:
+                throw Error('Unknown stage type.');
         }
     }
 

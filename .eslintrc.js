@@ -14,7 +14,9 @@ module.exports = {
     'brace-style': ['error', '1tbs'],
     'quotes': ['error', 'single'],
     'eqeqeq': 'error',
+    'default-case': 'error',
     'semi': 'off',
+    'eol-last': ['error', 'always'],
     '@typescript-eslint/semi': ['error'],
 
     'comma-dangle': ['error', {
