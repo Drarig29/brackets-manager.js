@@ -9,7 +9,7 @@ export class Find extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    public async getUpperBracket(stageId: number): Promise<Group> {
+    public async upperBracket(stageId: number): Promise<Group> {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -29,7 +29,7 @@ export class Find extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    public async getLoserBracket(stageId: number): Promise<Group> {
+    public async loserBracket(stageId: number): Promise<Group> {
         const stage = await this.storage.select<Stage>('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -99,7 +99,7 @@ export class Find extends BaseGetter {
      * @param roundNumber Number of the round in its parent group.
      * @param matchNumber Number of the match in its parent round.
      */
-    public async findMatch(groupId: number, roundNumber: number, matchNumber: number): Promise<Match> {
+    public async match(groupId: number, roundNumber: number, matchNumber: number): Promise<Match> {
         return this.findMatch(groupId, roundNumber, matchNumber);
     }
 
@@ -108,7 +108,7 @@ export class Find extends BaseGetter {
      * 
      * @param game Values to change in a match game.
      */
-    protected async findMatchGame(game: Partial<MatchGame>): Promise<MatchGame> {
+    public async matchGame(game: Partial<MatchGame>): Promise<MatchGame> {
         return this.findMatchGame(game);
     }
 }
