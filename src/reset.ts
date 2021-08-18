@@ -24,7 +24,7 @@ export class Reset extends BaseUpdater {
         const group = await this.storage.select<Group>('group', stored.group_id);
         if (!group) throw Error('Group not found.');
 
-        const { roundNumber, roundCount } = await this.getRoundInfos(stored.group_id, stored.round_id);
+        const { roundNumber, roundCount } = await this.getRoundPositionalInfo(stored.round_id);
         const matchLocation = helpers.getMatchLocation(stage.type, group.number);
         const nextMatches = await this.getNextMatches(stored, matchLocation, stage, roundNumber, roundCount);
 

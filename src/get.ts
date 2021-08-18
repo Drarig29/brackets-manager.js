@@ -1,19 +1,9 @@
 import { Group, Match, MatchGame, Participant, Round, Stage } from 'brackets-model';
-import { Database, FinalStandingsItem, ParticipantSlot, Storage } from './types';
+import { Database, FinalStandingsItem, ParticipantSlot } from './types';
+import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
 
-export class Get {
-
-    private readonly storage: Storage;
-
-    /**
-     * Creates an instance of Get, which will handle retrieving information from the stage.
-     *
-     * @param storage The implementation of Storage.
-     */
-    constructor(storage: Storage) {
-        this.storage = storage;
-    }
+export class Get extends BaseGetter {
 
     /**
      * Returns the data needed to display a stage.

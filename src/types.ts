@@ -55,9 +55,9 @@ export type ChildCountLevel = 'stage' | 'group' | 'round' | 'match';
 export type BracketKind = 'single_bracket' | 'winner_bracket' | 'loser_bracket' | 'final_group';
 
 /**
- * Numeric information about a round.
+ * Positional information about a round.
  */
-export type RoundInformation = {
+export type RoundPositionalInfo = {
     roundNumber: number,
     roundCount: number,
 };

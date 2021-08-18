@@ -1,4 +1,4 @@
-import { Group, Match, MatchGame, Seeding, SeedOrdering, Stage, StageType, Status } from 'brackets-model';
+import { Group, Match, MatchGame, Seeding, Stage, Status } from 'brackets-model';
 import { BracketKind, ParticipantSlot, Side } from '../types';
 import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
@@ -31,7 +31,7 @@ export class BaseUpdater extends BaseGetter {
 
         create.setExisting(stageId);
 
-        const method = BaseUpdater.getSeedingOrdering(stage.type, create);
+        const method = BaseGetter.getSeedingOrdering(stage.type, create);
         const slots = await create.getSlots();
 
         const matches = await this.getSeedingMatches(stage.id, stage.type);
@@ -90,30 +90,6 @@ export class BaseUpdater extends BaseGetter {
     }
 
     /**
-     * Returns the good seeding ordering based on the stage's type.
-     *
-     * @param stageType The type of the stage.
-     * @param create A reference to a Create instance.
-     */
-    protected static getSeedingOrdering(stageType: StageType, create: Create): SeedOrdering {
-        return stageType === 'round_robin' ? create.getRoundRobinOrdering() : create.getStandardBracketFirstRoundOrdering();
-    }
-
-    /**
-     * Returns the matches which contain the seeding of a stage based on its type.
-     *
-     * @param stageId ID of the stage.
-     * @param stageType The type of the stage.
-     */
-    protected async getSeedingMatches(stageId: number, stageType: StageType): Promise<Match[] | null> {
-        if (stageType === 'round_robin')
-            return this.storage.select<Match>('match', { stage_id: stageId });
-
-        const firstRound = await this.getUpperBracketFirstRound(stageId);
-        return this.storage.select<Match>('match', { round_id: firstRound.id });
-    }
-
-    /**
      * Updates the matches related (previous and next) to a match.
      *
      * @param match A match.
@@ -121,7 +97,7 @@ export class BaseUpdater extends BaseGetter {
      * @param updateNext Whether to update the next matches.
      */
     protected async updateRelatedMatches(match: Match, updatePrevious: boolean, updateNext: boolean): Promise<void> {
-        const { roundNumber, roundCount } = await this.getRoundInfos(match.group_id, match.round_id);
+        const { roundNumber, roundCount } = await this.getRoundPositionalInfo(match.round_id);
 
         const stage = await this.storage.select<Stage>('stage', match.stage_id);
         if (!stage) throw Error('Stage not found.');
