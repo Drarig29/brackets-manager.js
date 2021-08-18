@@ -1,8 +1,8 @@
 import { Storage } from '../types';
 import { Group, Match, MatchGame, Round, SeedOrdering, Stage, StageType } from 'brackets-model';
 import { BracketKind, RoundPositionalInfo } from '../types';
-import * as helpers from '../helpers';
 import { Create } from '../create';
+import * as helpers from '../helpers';
 
 export class BaseGetter {
 

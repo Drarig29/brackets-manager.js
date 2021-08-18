@@ -49,10 +49,7 @@ export class Get extends BaseGetter {
         const matchGamesQueries = await Promise.all(parentMatches.map(match => this.storage.select<MatchGame>('match_game', { parent_id: match.id })));
         if (matchGamesQueries.some(game => game === null)) throw Error('Error getting match games.');
 
-        // Use a TS type guard to exclude null from the query results type.
-        const matchGames = matchGamesQueries.filter((queryResult): queryResult is MatchGame[] => queryResult !== null).flat();
-
-        return matchGames;
+        return helpers.getNonNull(matchGamesQueries).flat();
     }
 
     /**

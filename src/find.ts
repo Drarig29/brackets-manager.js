@@ -1,5 +1,6 @@
-import { Group, Match, MatchGame, Stage } from 'brackets-model';
+import { Group, Match, MatchGame, Round, Stage } from 'brackets-model';
 import { BaseGetter } from './base/getter';
+import * as helpers from './helpers';
 
 export class Find extends BaseGetter {
 
@@ -42,6 +43,51 @@ export class Find extends BaseGetter {
             default:
                 throw Error('Unknown stage type.');
         }
+    }
+
+    /**
+     * Returns the matches leading to the given match.
+     * 
+     * @param matchId ID of the target match.
+     */
+    public async previousMatches(matchId: number): Promise<Match[]> {
+        const match = await this.storage.select<Match>('match', matchId);
+        if (!match) throw Error('Match not found.');
+
+        const stage = await this.storage.select<Stage>('stage', match.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        const group = await this.storage.select<Group>('group', match.group_id);
+        if (!group) throw Error('Group not found.');
+
+        const round = await this.storage.select<Round>('round', match.round_id);
+        if (!round) throw Error('Round not found.');
+
+        const matchLocation = helpers.getMatchLocation(stage.type, group.number);
+
+        return this.getPreviousMatches(match, matchLocation, stage, round.number);
+    }
+
+    /**
+     * Returns the matches following the given match.
+     * 
+     * @param matchId ID of the target match.
+     */
+    public async nextMatches(matchId: number): Promise<Match[]> {
+        const match = await this.storage.select<Match>('match', matchId);
+        if (!match) throw Error('Match not found.');
+
+        const stage = await this.storage.select<Stage>('stage', match.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        const group = await this.storage.select<Group>('group', match.group_id);
+        if (!group) throw Error('Group not found.');
+
+        const { roundNumber, roundCount } = await this.getRoundPositionalInfo(match.round_id);
+        const matchLocation = helpers.getMatchLocation(stage.type, group.number);
+
+        const nextMatches = await this.getNextMatches(match, matchLocation, stage, roundNumber, roundCount);
+        return helpers.getNonNull(nextMatches);
     }
 
     /**

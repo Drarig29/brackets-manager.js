@@ -1128,6 +1128,7 @@ export function sortSeeding(slots: ParticipantSlot[]): ParticipantSlot[] {
  * @param array The array to process.
  */
 export function getNonNull<T>(array: Nullable<T>[]): T[] {
+    // Use a TS type guard to exclude null from the resulting type.
     const nonNull = array.filter((element): element is T => element !== null);
     return nonNull;
 }
