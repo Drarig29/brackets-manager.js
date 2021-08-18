@@ -1,11 +1,12 @@
 import { CrudInterface, Database, Storage, Table } from './types';
 import { Group, InputStage, Match, MatchGame, Participant, Round, Stage } from 'brackets-model';
 import { create } from './create';
-import { Update } from './update';
 import { Get } from './get';
+import { Update } from './update';
+import { Delete } from './delete';
+import { Find } from './find';
 import { Reset } from './reset';
 import * as helpers from './helpers';
-import { Delete } from './delete';
 
 /**
  * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
@@ -13,10 +14,12 @@ import { Delete } from './delete';
 export class BracketsManager {
 
     public storage: Storage;
-    public update: Update;
+
     public get: Get;
-    public reset: Reset;
+    public update: Update;
     public delete: Delete;
+    public find: Find;
+    public reset: Reset;
 
     /**
      * Creates an instance of BracketsManager, which will handle all the stuff from the library.
@@ -39,10 +42,11 @@ export class BracketsManager {
         };
 
         this.storage = storage;
-        this.update = new Update(this.storage);
         this.get = new Get(this.storage);
-        this.reset = new Reset(this.storage);
+        this.update = new Update(this.storage);
         this.delete = new Delete(this.storage);
+        this.find = new Find(this.storage);
+        this.reset = new Reset(this.storage);
     }
 
     /**
