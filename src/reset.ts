@@ -1,5 +1,5 @@
 import { Group, Match, MatchGame, Stage, Status } from 'brackets-model';
-import { BaseUpdater } from './update';
+import { BaseUpdater } from './base/updater';
 import * as helpers from './helpers';
 
 export class Reset extends BaseUpdater {

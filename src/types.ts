@@ -41,6 +41,36 @@ export type Side = 'opponent1' | 'opponent2';
 export type Scores = { opponent1: number, opponent2: number };
 
 /**
+ * The possible levels of data to which we can update the child games count.
+ */
+export type ChildCountLevel = 'stage' | 'group' | 'round' | 'match';
+
+/**
+ * All the possible kinds of bracket (group level) in an elimination stage.
+ * 
+ * - `single_bracket` for single elimination.
+ * - `winner_bracket` and `loser_bracket` for double elimination.
+ * - `final_group` for both single and double elimination.
+ */
+export type BracketKind = 'single_bracket' | 'winner_bracket' | 'loser_bracket' | 'final_group';
+
+/**
+ * Numeric information about a round.
+ */
+export type RoundInformation = {
+    roundNumber: number,
+    roundCount: number,
+};
+
+/**
+ * The result of an array which was split by parity.
+ */
+export interface ParitySplit<T> {
+    even: T[],
+    odd: T[],
+}
+
+/**
  * Format of the data in a database.
  */
 export interface Database {
