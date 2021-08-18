@@ -215,6 +215,8 @@ export class BaseGetter {
                 return this.getNextMatchesLB(match, stage.type, roundNumber, roundCount);
             case 'final_group':
                 return this.getNextMatchesFinal(match, roundNumber, roundCount);
+            default:
+                throw Error('Unknown bracket kind.');
         }
     }
 
@@ -419,7 +421,7 @@ export class BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    private async getUpperBracket(stageId: number): Promise<Group> {
+    protected async getUpperBracket(stageId: number): Promise<Group> {
         const winnerBracket = await this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 1 });
         if (!winnerBracket) throw Error('Winner bracket not found.');
         return winnerBracket;
@@ -430,7 +432,7 @@ export class BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    private async getLoserBracket(stageId: number): Promise<Group | null> {
+    protected async getLoserBracket(stageId: number): Promise<Group | null> {
         return this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 2 });
     }
 

@@ -105,6 +105,8 @@ export class Update extends BaseUpdater {
                 if (!match) throw Error('Match not found.');
                 await this.adjustMatchChildGames(match, childCount);
                 break;
+            default:
+                throw Error('Unknown child count level.');
         }
     }
 

@@ -86,6 +86,8 @@ export class Get extends BaseGetter {
                 return this.singleEliminationStandings(stageId);
             case 'double_elimination':
                 return this.doubleEliminationStandings(stageId);
+            default:
+                throw Error('Unknown stage type.');
         }
     }
 
