@@ -192,7 +192,7 @@ export class BaseGetter {
 
         return [
             await this.findMatch(winnerBracketId, roundNumberWB, matchNumber),
-            await this.findMatch(match.group_id, roundNumber - 1, matchNumber),
+            await this.findMatch(match.group_id, roundNumber - 1, match.number),
         ];
     }
 
