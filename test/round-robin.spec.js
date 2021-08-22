@@ -176,6 +176,19 @@ describe('Create a round-robin stage', () => {
             type: 'round_robin',
         }), 'You must specify a group count for round-robin stages.');
     });
+
+    it('should throw if the group count is not strictly positive', async () => {
+        await assert.isRejected(manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            settings: {
+                groupCount: 0,
+                size: 4,
+                seedOrdering: ['groups.seed_optimized'],
+            },
+        }), 'You must provide a strictly positive group count.');
+    });
 });
 
 // Example taken from here:

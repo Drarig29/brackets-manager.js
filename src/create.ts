@@ -574,8 +574,11 @@ export class Create {
      * Gets the duels in groups for a round-robin stage.
      */
     private async getRoundRobinGroups(): Promise<ParticipantSlot[][]> {
-        if (this.stage.settings?.groupCount === undefined)
+        if (this.stage.settings?.groupCount === undefined || !Number.isInteger(this.stage.settings.groupCount))
             throw Error('You must specify a group count for round-robin stages.');
+
+        if (this.stage.settings.groupCount <= 0)
+            throw Error('You must provide a strictly positive group count.');
 
         if (this.stage.settings?.manualOrdering) {
             if (this.stage.settings?.manualOrdering.length !== this.stage.settings?.groupCount)
