@@ -15,7 +15,7 @@ export class Find extends BaseGetter {
 
         switch (stage.type) {
             case 'round_robin':
-                throw Error('Round robin stages do not have an upper bracket.');
+                throw Error('Round-robin stages do not have an upper bracket.');
             case 'single_elimination':
             case 'double_elimination':
                 return this.getUpperBracket(stageId);
@@ -35,7 +35,7 @@ export class Find extends BaseGetter {
 
         switch (stage.type) {
             case 'round_robin':
-                throw Error('Round robin stages do not have a loser bracket.');
+                throw Error('Round-robin stages do not have a loser bracket.');
             case 'single_elimination':
                 throw Error('Single elimination stages do not have a loser bracket.');
             case 'double_elimination':
