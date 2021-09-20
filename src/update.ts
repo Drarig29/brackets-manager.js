@@ -1,4 +1,4 @@
-import { Group, Match, MatchGame, Round, Seeding, SeedOrdering, Stage, Status } from 'brackets-model';
+import { Match, MatchGame, Round, Seeding, SeedOrdering, Status } from 'brackets-model';
 import { ordering } from './ordering';
 import { BaseUpdater } from './base/updater';
 import { ChildCountLevel } from './types';
@@ -17,7 +17,7 @@ export class Update extends BaseUpdater {
         if (match.id === undefined)
             throw Error('No match id given.');
 
-        const stored = await this.storage.select<Match>('match', match.id);
+        const stored = await this.storage.select('match', match.id);
         if (!stored) throw Error('Match not found.');
 
         await this.updateMatch(stored, match);
@@ -38,7 +38,7 @@ export class Update extends BaseUpdater {
 
         helpers.setMatchResults(stored, game);
 
-        if (!await this.storage.update<MatchGame>('match_game', stored.id, stored))
+        if (!await this.storage.update('match_game', stored.id, stored))
             throw Error('Could not update the match game.');
 
         await this.updateParentMatch(stored.parent_id);
@@ -51,7 +51,7 @@ export class Update extends BaseUpdater {
      * @param seedOrdering A list of ordering methods.
      */
     public async ordering(stageId: number, seedOrdering: SeedOrdering[]): Promise<void> {
-        const stage = await this.storage.select<Stage>('stage', stageId);
+        const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
         helpers.ensureNotRoundRobin(stage);
@@ -71,10 +71,10 @@ export class Update extends BaseUpdater {
      * @param method Seed ordering method.
      */
     public async roundOrdering(roundId: number, method: SeedOrdering): Promise<void> {
-        const round = await this.storage.select<Round>('round', roundId);
+        const round = await this.storage.select('round', roundId);
         if (!round) throw Error('This round does not exist.');
 
-        const stage = await this.storage.select<Stage>('stage', round.stage_id);
+        const stage = await this.storage.select('stage', round.stage_id);
         if (!stage) throw Error('Stage not found.');
 
         helpers.ensureNotRoundRobin(stage);
@@ -101,7 +101,7 @@ export class Update extends BaseUpdater {
                 await this.updateRoundMatchChildCount(id, childCount);
                 break;
             case 'match':
-                const match = await this.storage.select<Match>('match', id);
+                const match = await this.storage.select('match', id);
                 if (!match) throw Error('Match not found.');
                 await this.adjustMatchChildGames(match, childCount);
                 break;
@@ -127,17 +127,17 @@ export class Update extends BaseUpdater {
      * @param method The new ordering method.
      */
     private async updateRoundOrdering(round: Round, method: SeedOrdering): Promise<void> {
-        const matches = await this.storage.select<Match>('match', { round_id: round.id });
+        const matches = await this.storage.select('match', { round_id: round.id });
         if (!matches) throw Error('This round has no match.');
 
         if (matches.some(match => match.status > Status.Ready))
             throw Error('At least one match has started or is completed.');
 
-        const stage = await this.storage.select<Stage>('stage', round.stage_id);
+        const stage = await this.storage.select('stage', round.stage_id);
         if (!stage) throw Error('Stage not found.');
         if (stage.settings.size === undefined) throw Error('Undefined stage size.');
 
-        const group = await this.storage.select<Group>('group', round.group_id);
+        const group = await this.storage.select('group', round.group_id);
         if (!group) throw Error('Group not found.');
 
         const inLoserBracket = helpers.isLoserBracket(stage.type, group.number);
@@ -155,10 +155,10 @@ export class Update extends BaseUpdater {
      * @param childCount The target child count.
      */
     private async updateStageMatchChildCount(stageId: number, childCount: number): Promise<void> {
-        if (!await this.storage.update<Match>('match', { stage_id: stageId }, { child_count: childCount }))
+        if (!await this.storage.update('match', { stage_id: stageId }, { child_count: childCount }))
             throw Error('Could not update the match.');
 
-        const matches = await this.storage.select<Match>('match', { stage_id: stageId });
+        const matches = await this.storage.select('match', { stage_id: stageId });
         if (!matches) throw Error('This stage has no match.');
 
         for (const match of matches)
@@ -172,10 +172,10 @@ export class Update extends BaseUpdater {
      * @param childCount The target child count.
      */
     private async updateGroupMatchChildCount(groupId: number, childCount: number): Promise<void> {
-        if (!await this.storage.update<Match>('match', { group_id: groupId }, { child_count: childCount }))
+        if (!await this.storage.update('match', { group_id: groupId }, { child_count: childCount }))
             throw Error('Could not update the match.');
 
-        const matches = await this.storage.select<Match>('match', { group_id: groupId });
+        const matches = await this.storage.select('match', { group_id: groupId });
         if (!matches) throw Error('This group has no match.');
 
         for (const match of matches)
@@ -189,10 +189,10 @@ export class Update extends BaseUpdater {
      * @param childCount The target child count.
      */
     private async updateRoundMatchChildCount(roundId: number, childCount: number): Promise<void> {
-        if (!await this.storage.update<Match>('match', { round_id: roundId }, { child_count: childCount }))
+        if (!await this.storage.update('match', { round_id: roundId }, { child_count: childCount }))
             throw Error('Could not update the match.');
 
-        const matches = await this.storage.select<Match>('match', { round_id: roundId });
+        const matches = await this.storage.select('match', { round_id: roundId });
         if (!matches) throw Error('This round has no match.');
 
         for (const match of matches)
@@ -215,7 +215,7 @@ export class Update extends BaseUpdater {
             if (roundNumber === 1)
                 updated.opponent2 = helpers.findPosition(matches, positions.shift()!);
 
-            if (!await this.storage.update<Match>('match', updated.id, updated))
+            if (!await this.storage.update('match', updated.id, updated))
                 throw Error('Could not update the match.');
         }
     }
@@ -227,11 +227,11 @@ export class Update extends BaseUpdater {
      * @param targetChildCount The target child count.
      */
     private async adjustMatchChildGames(match: Match, targetChildCount: number): Promise<void> {
-        const games = await this.storage.select<MatchGame>('match_game', { parent_id: match.id });
+        const games = await this.storage.select('match_game', { parent_id: match.id });
         let childCount = games ? games.length : 0;
 
         while (childCount < targetChildCount) {
-            const id = await this.storage.insert<MatchGame>('match_game', {
+            const id = await this.storage.insert('match_game', {
                 number: childCount + 1,
                 stage_id: match.stage_id,
                 parent_id: match.id,
@@ -247,7 +247,7 @@ export class Update extends BaseUpdater {
         }
 
         while (childCount > targetChildCount) {
-            const deleted = await this.storage.delete<MatchGame>('match_game', {
+            const deleted = await this.storage.delete('match_game', {
                 parent_id: match.id,
                 number: childCount,
             });
@@ -258,7 +258,7 @@ export class Update extends BaseUpdater {
             childCount--;
         }
 
-        if (!await this.storage.update<Match>('match', match.id, { ...match, child_count: targetChildCount }))
+        if (!await this.storage.update('match', match.id, { ...match, child_count: targetChildCount }))
             throw Error('Could not update the match.');
     }
 }

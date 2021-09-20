@@ -1,4 +1,4 @@
-import { Group, Match, MatchGame, Seeding, Stage, Status } from 'brackets-model';
+import { Match, MatchGame, Seeding, Stage, Status } from 'brackets-model';
 import { BracketKind, ParticipantSlot, Side } from '../types';
 import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
@@ -15,7 +15,7 @@ export class BaseUpdater extends BaseGetter {
      * @param seeding A new seeding or null to reset the existing seeding.
      */
     protected async updateSeeding(stageId: number, seeding: Seeding | null): Promise<void> {
-        const stage = await this.storage.select<Stage>('stage', stageId);
+        const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
         if (seeding && seeding.length !== stage.settings.size)
@@ -50,16 +50,16 @@ export class BaseUpdater extends BaseGetter {
      * @param parentId ID of the parent match.
      */
     protected async updateParentMatch(parentId: number): Promise<void> {
-        const storedParent = await this.storage.select<Match>('match', parentId);
+        const storedParent = await this.storage.select('match', parentId);
         if (!storedParent) throw Error('Parent not found.');
 
-        const games = await this.storage.select<MatchGame>('match_game', { parent_id: parentId });
+        const games = await this.storage.select('match_game', { parent_id: parentId });
         if (!games) throw Error('No match games.');
 
         const parentScores = helpers.getChildGamesResults(games);
         const parent = helpers.getParentMatchResults(storedParent, parentScores);
 
-        const stage = await this.storage.select<Stage>('stage', storedParent.stage_id);
+        const stage = await this.storage.select('stage', storedParent.stage_id);
         if (!stage) throw Error('Stage not found.');
 
         const inRoundRobin = helpers.isRoundRobin(stage);
@@ -99,10 +99,10 @@ export class BaseUpdater extends BaseGetter {
     protected async updateRelatedMatches(match: Match, updatePrevious: boolean, updateNext: boolean): Promise<void> {
         const { roundNumber, roundCount } = await this.getRoundPositionalInfo(match.round_id);
 
-        const stage = await this.storage.select<Stage>('stage', match.stage_id);
+        const stage = await this.storage.select('stage', match.stage_id);
         if (!stage) throw Error('Stage not found.');
 
-        const group = await this.storage.select<Group>('group', match.group_id);
+        const group = await this.storage.select('group', match.group_id);
         if (!group) throw Error('Group not found.');
 
         const matchLocation = helpers.getMatchLocation(stage.type, group.number);
@@ -128,7 +128,7 @@ export class BaseUpdater extends BaseGetter {
         // Don't update related matches if it's a simple score update.
         if (!statusChanged && !resultChanged) return;
 
-        const stage = await this.storage.select<Stage>('stage', stored.stage_id);
+        const stage = await this.storage.select('stage', stored.stage_id);
         if (!stage) throw Error('Stage not found.');
 
         if (!helpers.isRoundRobin(stage))
@@ -141,7 +141,7 @@ export class BaseUpdater extends BaseGetter {
      * @param match A match.
      */
     protected async applyMatchUpdate(match: Match): Promise<void> {
-        if (!await this.storage.update<Match>('match', match.id, match))
+        if (!await this.storage.update('match', match.id, match))
             throw Error('Could not update the match.');
 
         if (match.child_count === 0) return;
@@ -154,7 +154,7 @@ export class BaseUpdater extends BaseGetter {
         if (match.status <= Status.Ready || match.status === Status.Archived)
             update.status = match.status;
 
-        if (!await this.storage.update<MatchGame>('match_game', { parent_id: match.id }, update))
+        if (!await this.storage.update('match_game', { parent_id: match.id }, update))
             throw Error('Could not update the match game.');
     }
 

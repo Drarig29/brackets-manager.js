@@ -356,7 +356,7 @@ export class Create {
         let existing: Match | null = null;
 
         if (this.updateMode) {
-            existing = await this.storage.selectFirst<Match>('match', {
+            existing = await this.storage.selectFirst('match', {
                 round_id: roundId,
                 number: matchNumber,
             });
@@ -493,7 +493,7 @@ export class Create {
             throw Error('Error registering the participants.');
 
         // Get participants back with IDs.
-        const added = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
+        const added = await this.storage.select('participant', { tournament_id: this.stage.tournamentId });
         if (!added) throw Error('Error getting registered participant.');
 
         return helpers.mapParticipantsNamesToDatabase(seeding, added, positions);
@@ -506,7 +506,7 @@ export class Create {
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
     private async getSlotsUsingIds(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {
-        const participants = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
+        const participants = await this.storage.select('participant', { tournament_id: this.stage.tournamentId });
         if (!participants) throw Error('No available participants.');
 
         return helpers.mapParticipantsIdsToDatabase(seeding, participants, positions);
@@ -516,7 +516,7 @@ export class Create {
      * Gets the current stage number based on existing stages.
      */
     private async getStageNumber(): Promise<number> {
-        const stages = await this.storage.select<Stage>('stage', { tournament_id: this.stage.tournamentId });
+        const stages = await this.storage.select('stage', { tournament_id: this.stage.tournamentId });
         const stageNumbers = stages?.map(stage => stage.number);
 
         if (this.stage.number !== undefined) {
@@ -646,10 +646,10 @@ export class Create {
         let existing: Stage | null = null;
 
         if (this.updateMode)
-            existing = await this.storage.select<Stage>('stage', this.currentStageId);
+            existing = await this.storage.select('stage', this.currentStageId);
 
         if (!existing)
-            return this.storage.insert<Stage>('stage', stage);
+            return this.storage.insert('stage', stage);
 
         return existing.id;
     }
@@ -663,14 +663,14 @@ export class Create {
         let existing: Group | null = null;
 
         if (this.updateMode) {
-            existing = await this.storage.selectFirst<Group>('group', {
+            existing = await this.storage.selectFirst('group', {
                 stage_id: group.stage_id,
                 number: group.number,
             });
         }
 
         if (!existing)
-            return this.storage.insert<Group>('group', group);
+            return this.storage.insert('group', group);
 
         return existing.id;
     }
@@ -684,14 +684,14 @@ export class Create {
         let existing: Round | null = null;
 
         if (this.updateMode) {
-            existing = await this.storage.selectFirst<Round>('round', {
+            existing = await this.storage.selectFirst('round', {
                 group_id: round.group_id,
                 number: round.number,
             });
         }
 
         if (!existing)
-            return this.storage.insert<Round>('round', round);
+            return this.storage.insert('round', round);
 
         return existing.id;
     }
@@ -704,9 +704,9 @@ export class Create {
      */
     private async insertMatch(match: OmitId<Match>, existing: Match | null): Promise<number> {
         if (!existing)
-            return this.storage.insert<Match>('match', match);
+            return this.storage.insert('match', match);
 
-        if (!await this.storage.update<Match>('match', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(match) }))
+        if (!await this.storage.update('match', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(match) }))
             throw Error('Could not update the match.');
 
         return existing.id;
@@ -721,16 +721,16 @@ export class Create {
         let existing: MatchGame | null = null;
 
         if (this.updateMode) {
-            existing = await this.storage.selectFirst<MatchGame>('match_game', {
+            existing = await this.storage.selectFirst('match_game', {
                 parent_id: matchGame.parent_id,
                 number: matchGame.number,
             });
         }
 
         if (!existing)
-            return this.storage.insert<MatchGame>('match_game', matchGame);
+            return this.storage.insert('match_game', matchGame);
 
-        if (!await this.storage.update<MatchGame>('match_game', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(matchGame) }))
+        if (!await this.storage.update('match_game', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(matchGame) }))
             throw Error('Could not update the match game.');
 
         return existing.id;
@@ -742,18 +742,18 @@ export class Create {
      * @param participants The list of participants to process.
      */
     private async registerParticipants(participants: OmitId<Participant>[]): Promise<boolean> {
-        const existing = await this.storage.select<Participant>('participant', { tournament_id: this.stage.tournamentId });
+        const existing = await this.storage.select('participant', { tournament_id: this.stage.tournamentId });
 
         // Insert all if nothing.
         if (!existing || existing.length === 0)
-            return this.storage.insert<Participant>('participant', participants);
+            return this.storage.insert('participant', participants);
 
         // Insert only missing otherwise.
         for (const participant of participants) {
             if (existing.some(value => value.name === participant.name))
                 continue;
 
-            const result = await this.storage.insert<Participant>('participant', participant);
+            const result = await this.storage.insert('participant', participant);
             if (result === -1) return false;
         }
 
@@ -823,7 +823,7 @@ export class Create {
     private async ensureSeedOrdering(stageId: number): Promise<void> {
         if (this.stage.settings?.seedOrdering?.length === this.seedOrdering.length) return;
 
-        const stage = await this.storage.select<Stage>('stage', stageId);
+        const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
         stage.settings = {
@@ -831,7 +831,7 @@ export class Create {
             seedOrdering: this.seedOrdering,
         };
 
-        if (!await this.storage.update<Stage>('stage', stageId, stage))
+        if (!await this.storage.update('stage', stageId, stage))
             throw Error('Could not update the stage.');
     }
 }

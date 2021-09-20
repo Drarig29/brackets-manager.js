@@ -1,4 +1,4 @@
-import { Group, Match, MatchGame, Round, Stage } from 'brackets-model';
+import { Group, Match, MatchGame } from 'brackets-model';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
 
@@ -10,7 +10,7 @@ export class Find extends BaseGetter {
      * @param stageId ID of the stage.
      */
     public async upperBracket(stageId: number): Promise<Group> {
-        const stage = await this.storage.select<Stage>('stage', stageId);
+        const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
         switch (stage.type) {
@@ -30,7 +30,7 @@ export class Find extends BaseGetter {
      * @param stageId ID of the stage.
      */
     public async loserBracket(stageId: number): Promise<Group> {
-        const stage = await this.storage.select<Stage>('stage', stageId);
+        const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
         switch (stage.type) {
@@ -53,16 +53,16 @@ export class Find extends BaseGetter {
      * @param matchId ID of the target match.
      */
     public async previousMatches(matchId: number): Promise<Match[]> {
-        const match = await this.storage.select<Match>('match', matchId);
+        const match = await this.storage.select('match', matchId);
         if (!match) throw Error('Match not found.');
 
-        const stage = await this.storage.select<Stage>('stage', match.stage_id);
+        const stage = await this.storage.select('stage', match.stage_id);
         if (!stage) throw Error('Stage not found.');
 
-        const group = await this.storage.select<Group>('group', match.group_id);
+        const group = await this.storage.select('group', match.group_id);
         if (!group) throw Error('Group not found.');
 
-        const round = await this.storage.select<Round>('round', match.round_id);
+        const round = await this.storage.select('round', match.round_id);
         if (!round) throw Error('Round not found.');
 
         const matchLocation = helpers.getMatchLocation(stage.type, group.number);
@@ -76,13 +76,13 @@ export class Find extends BaseGetter {
      * @param matchId ID of the target match.
      */
     public async nextMatches(matchId: number): Promise<Match[]> {
-        const match = await this.storage.select<Match>('match', matchId);
+        const match = await this.storage.select('match', matchId);
         if (!match) throw Error('Match not found.');
 
-        const stage = await this.storage.select<Stage>('stage', match.stage_id);
+        const stage = await this.storage.select('stage', match.stage_id);
         if (!stage) throw Error('Stage not found.');
 
-        const group = await this.storage.select<Group>('group', match.group_id);
+        const group = await this.storage.select('group', match.group_id);
         if (!group) throw Error('Group not found.');
 
         const { roundNumber, roundCount } = await this.getRoundPositionalInfo(match.round_id);

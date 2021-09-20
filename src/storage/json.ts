@@ -3,9 +3,7 @@ import { CrudInterface, Table } from '../types';
 
 const clone = require('rfdc')();
 
-type StringIndexedObject = {
-    [key: string]: unknown;
-};
+type StringIndexedObject = Record<string, unknown>;
 
 type Filter<T> = (obj: T) => boolean;
 

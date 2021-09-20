@@ -1,4 +1,3 @@
-import { Group, Match, MatchGame, Round, Stage } from 'brackets-model';
 import { Storage } from './types';
 
 export class Delete {
@@ -22,19 +21,19 @@ export class Delete {
     public async stage(stageId: number): Promise<void> {
         // The order is important because the abstract storage possibly has foreign checks.
 
-        if (!await this.storage.delete<MatchGame>('match_game', { stage_id: stageId }))
+        if (!await this.storage.delete('match_game', { stage_id: stageId }))
             throw Error('Could not delete match games.');
 
-        if (!await this.storage.delete<Match>('match', { stage_id: stageId }))
+        if (!await this.storage.delete('match', { stage_id: stageId }))
             throw Error('Could not delete matches.');
 
-        if (!await this.storage.delete<Round>('round', { stage_id: stageId }))
+        if (!await this.storage.delete('round', { stage_id: stageId }))
             throw Error('Could not delete rounds.');
 
-        if (!await this.storage.delete<Group>('group', { stage_id: stageId }))
+        if (!await this.storage.delete('group', { stage_id: stageId }))
             throw Error('Could not delete groups.');
 
-        if (!await this.storage.delete<Stage>('stage', { id: stageId }))
+        if (!await this.storage.delete('stage', { id: stageId }))
             throw Error('Could not delete stages.');
     }
 }

@@ -47,7 +47,7 @@ export class BaseGetter {
      */
     private async getOrderedRoundsDoubleElimination(stageId: number): Promise<Round[]> {
         // Getting all rounds instead of cherry-picking them is the least expensive.
-        const rounds = await this.storage.select<Round>('round', { stage_id: stageId });
+        const rounds = await this.storage.select('round', { stage_id: stageId });
         if (!rounds) throw Error('Error getting rounds.');
 
         const loserBracket = await this.getLoserBracket(stageId);
@@ -67,10 +67,10 @@ export class BaseGetter {
      * @param roundId ID of the round.
      */
     protected async getRoundPositionalInfo(roundId: number): Promise<RoundPositionalInfo> {
-        const round = await this.storage.select<Round>('round', roundId);
+        const round = await this.storage.select('round', roundId);
         if (!round) throw Error('Round not found.');
 
-        const rounds = await this.storage.select<Round>('round', { group_id: round.group_id });
+        const rounds = await this.storage.select('round', { group_id: round.group_id });
         if (!rounds) throw Error('Error getting rounds.');
 
         return {
@@ -113,7 +113,7 @@ export class BaseGetter {
         const upperBracket = await this.getUpperBracket(match.stage_id);
         const lastRound = await this.getLastRound(upperBracket.id);
 
-        const upperBracketFinalMatch = await this.storage.selectFirst<Match>('match', {
+        const upperBracketFinalMatch = await this.storage.selectFirst('match', {
             round_id: lastRound.id,
             number: 1,
         });
@@ -374,10 +374,10 @@ export class BaseGetter {
      */
     protected async getSeedingMatches(stageId: number, stageType: StageType): Promise<Match[] | null> {
         if (stageType === 'round_robin')
-            return this.storage.select<Match>('match', { stage_id: stageId });
+            return this.storage.select('match', { stage_id: stageId });
 
         const firstRound = await this.getUpperBracketFirstRound(stageId);
-        return this.storage.select<Match>('match', { round_id: firstRound.id });
+        return this.storage.select('match', { round_id: firstRound.id });
     }
 
     /**
@@ -387,7 +387,7 @@ export class BaseGetter {
      */
     private async getUpperBracketFirstRound(stageId: number): Promise<Round> {
         // Considering the database is ordered, this round will always be the first round of the upper bracket.
-        const firstRound = await this.storage.selectFirst<Round>('round', { stage_id: stageId, number: 1 });
+        const firstRound = await this.storage.selectFirst('round', { stage_id: stageId, number: 1 });
         if (!firstRound) throw Error('Round not found.');
         return firstRound;
     }
@@ -398,7 +398,7 @@ export class BaseGetter {
      * @param groupId ID of the group.
      */
     private async getLastRound(groupId: number): Promise<Round> {
-        const round = await this.storage.selectLast<Round>('round', { group_id: groupId });
+        const round = await this.storage.selectLast('round', { group_id: groupId });
         if (!round) throw Error('Error getting rounds.');
         return round;
     }
@@ -411,7 +411,7 @@ export class BaseGetter {
      */
     private async getFinalGroupId(stageId: number, stageType: StageType): Promise<number | null> {
         const groupNumber = stageType === 'single_elimination' ? 2 /* Consolation final */ : 3 /* Grand final */;
-        const finalGroup = await this.storage.selectFirst<Group>('group', { stage_id: stageId, number: groupNumber });
+        const finalGroup = await this.storage.selectFirst('group', { stage_id: stageId, number: groupNumber });
         if (!finalGroup) return null;
         return finalGroup.id;
     }
@@ -422,7 +422,7 @@ export class BaseGetter {
      * @param stageId ID of the stage.
      */
     protected async getUpperBracket(stageId: number): Promise<Group> {
-        const winnerBracket = await this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 1 });
+        const winnerBracket = await this.storage.selectFirst('group', { stage_id: stageId, number: 1 });
         if (!winnerBracket) throw Error('Winner bracket not found.');
         return winnerBracket;
     }
@@ -433,7 +433,7 @@ export class BaseGetter {
      * @param stageId ID of the stage.
      */
     protected async getLoserBracket(stageId: number): Promise<Group | null> {
-        return this.storage.selectFirst<Group>('group', { stage_id: stageId, number: 2 });
+        return this.storage.selectFirst('group', { stage_id: stageId, number: 2 });
     }
 
     /**
@@ -472,14 +472,14 @@ export class BaseGetter {
      * @param matchNumber Number of the match in its parent round.
      */
     protected async findMatch(groupId: number, roundNumber: number, matchNumber: number): Promise<Match> {
-        const round = await this.storage.selectFirst<Round>('round', {
+        const round = await this.storage.selectFirst('round', {
             group_id: groupId,
             number: roundNumber,
         });
 
         if (!round) throw Error('Round not found.');
 
-        const match = await this.storage.selectFirst<Match>('match', {
+        const match = await this.storage.selectFirst('match', {
             round_id: round.id,
             number: matchNumber,
         });
@@ -496,13 +496,13 @@ export class BaseGetter {
      */
     protected async findMatchGame(game: Partial<MatchGame>): Promise<MatchGame> {
         if (game.id !== undefined) {
-            const stored = await this.storage.select<MatchGame>('match_game', game.id);
+            const stored = await this.storage.select('match_game', game.id);
             if (!stored) throw Error('Match game not found.');
             return stored;
         }
 
         if (game.parent_id !== undefined && game.number) {
-            const stored = await this.storage.selectFirst<MatchGame>('match_game', {
+            const stored = await this.storage.selectFirst('match_game', {
                 parent_id: game.parent_id,
                 number: game.number,
             });
