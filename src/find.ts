@@ -39,7 +39,9 @@ export class Find extends BaseGetter {
             case 'single_elimination':
                 throw Error('Single elimination stages do not have a loser bracket.');
             case 'double_elimination':
-                this.getLoserBracket(stageId);
+                const group = await this.getLoserBracket(stageId);
+                if (!group) throw Error('Loser bracket not found.');
+                return group;
             default:
                 throw Error('Unknown stage type.');
         }
