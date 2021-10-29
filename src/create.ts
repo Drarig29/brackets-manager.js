@@ -351,9 +351,8 @@ export class Create {
         if (this.stage.type === 'round_robin' && opponent1 === null && opponent2 === null)
             return;
 
-        const status = helpers.getMatchByeStatus(opponents);
-
         let existing: Match | null = null;
+        let status = helpers.getMatchStatus(opponents);
 
         if (this.updateMode) {
             existing = await this.storage.selectFirst('match', {
@@ -363,6 +362,13 @@ export class Create {
 
             const currentChildCount = existing?.child_count;
             childCount = currentChildCount === undefined ? childCount : currentChildCount;
+
+            if (existing) {
+                // Keep the most advanced status when updating a match.
+                const existingStatus = helpers.getMatchStatus(existing);
+                if (existingStatus > status)
+                    status = existingStatus;
+            }
         }
 
         const parentId = await this.insertMatch({
@@ -706,7 +712,8 @@ export class Create {
         if (!existing)
             return this.storage.insert('match', match);
 
-        if (!await this.storage.update('match', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(match) }))
+        const updated = helpers.getUpdatedMatchResults(match, existing) as Match;
+        if (!await this.storage.update('match', existing.id, updated))
             throw Error('Could not update the match.');
 
         return existing.id;
@@ -730,7 +737,8 @@ export class Create {
         if (!existing)
             return this.storage.insert('match_game', matchGame);
 
-        if (!await this.storage.update('match_game', existing.id, { ...existing, ...helpers.getUpdatedMatchResults(matchGame) }))
+        const updated = helpers.getUpdatedMatchResults(matchGame, existing) as MatchGame;
+        if (!await this.storage.update('match_game', existing.id, updated))
             throw Error('Could not update the match game.');
 
         return existing.id;
