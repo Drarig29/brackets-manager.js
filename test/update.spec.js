@@ -665,6 +665,52 @@ describe('Seeding', () => {
         assert.strictEqual((await storage.select('participant')).length, 8 + 6);
     });
 
+    it('should update the seeding and keep completed matches completed', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { score: 1, result: 'win' },
+            opponent2: { score: 0 },
+        });
+
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2', // Keep this pair.
+            'Team 4', 'Team 3',
+            'Team 6', 'Team 5',
+            'Team 8', 'Team 7',
+        ]);
+
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
+    });
+
+    it('should throw if a match is completed and would have to be changed', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { score: 1, result: 'win' },
+            opponent2: { score: 0 },
+        });
+
+        await assert.isRejected(manager.update.seeding(0, [
+            'Team 2', 'Team 1', // Change this pair.
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]), 'A match is locked.');
+    });
+
     it('should throw if a match is locked and would have to be changed', async () => {
         await manager.update.seeding(0, [
             'Team 1', 'Team 2',
