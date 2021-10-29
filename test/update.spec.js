@@ -686,7 +686,9 @@ describe('Seeding', () => {
             'Team 8', 'Team 7',
         ]);
 
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
+        const match = await storage.select('match', 0);
+        assert.strictEqual(match.opponent1.result, 'win');
+        assert.strictEqual(match.status, Status.Completed);
     });
 
     it('should throw if a match is completed and would have to be changed', async () => {

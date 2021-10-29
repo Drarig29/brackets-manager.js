@@ -592,18 +592,6 @@ export function isMatchParticipantLocked(match: MatchResults): boolean {
 }
 
 /**
- * Returns the status of a match based on the presence of the opponents.
- *
- * @param opponents The opponents of a match.
- */
-export function getMatchByeStatus(opponents: Duel): Status {
-    return getMatchStatus({
-        opponent1: opponents[0],
-        opponent2: opponents[1],
-    });
-}
-
-/**
  * Indicates whether a match has at least one BYE or not.
  * 
  * @param match Partial match results.
@@ -613,11 +601,30 @@ export function hasBye(match: Partial<MatchResults>): boolean {
 }
 
 /**
+ * Returns the status of a match based on the opponents of a match.
+ * 
+ * @param opponents The opponents of a match.
+ */
+export function getMatchStatus(opponents: Duel): Status;
+
+/**
  * Returns the status of a match based on the results of a match.
  *
  * @param match Partial match results.
  */
-export function getMatchStatus(match: Partial<MatchResults>): Status {
+export function getMatchStatus(match: Partial<MatchResults>): Status;
+
+/**
+ * Returns the status of a match based on information about it.
+ * 
+ * @param arg The opponents or partial results of the match.
+ */
+export function getMatchStatus(arg: Duel | Partial<MatchResults>): Status {
+    const match = Array.isArray(arg) ? {
+        opponent1: arg[0],
+        opponent2: arg[1],
+    } : arg;
+
     if (hasBye(match)) // At least one BYE.
         return Status.Locked;
 
@@ -1250,12 +1257,14 @@ export function getParentMatchResults(storedParent: Match, scores: Scores): Part
  * Gets the values which need to be updated in a match when it's updated on insertion.
  *
  * @param match The up to date match.
+ * @param existing The base match.
  */
-export function getUpdatedMatchResults(match: MatchResults): MatchResults {
+export function getUpdatedMatchResults<T extends MatchResults>(match: T, existing: T): T {
     return {
-        status: match.status,
-        opponent1: match.opponent1,
-        opponent2: match.opponent2,
+        ...existing,
+        ...match,
+        opponent1: { ...existing.opponent1, ...match.opponent1 },
+        opponent2: { ...existing.opponent2, ...match.opponent2 },
     };
 }
 
