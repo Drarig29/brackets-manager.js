@@ -4,7 +4,7 @@ chai.use(require('chai-as-promised'));
 
 const assert = chai.assert;
 const { BracketsManager } = require('../dist');
-const { JsonDatabase } = require('./json');
+const { JsonDatabase } = require('brackets-json-db');
 
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);

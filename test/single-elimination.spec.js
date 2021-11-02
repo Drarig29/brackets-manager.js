@@ -1,7 +1,7 @@
 const assert = require('chai').assert;
 const { Status } = require('brackets-model');
 const { BracketsManager } = require('../dist');
-const { JsonDatabase } = require('./json');
+const { JsonDatabase } = require('brackets-json-db');
 
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
