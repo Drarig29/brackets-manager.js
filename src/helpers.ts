@@ -1453,7 +1453,7 @@ export function getNearestPowerOfTwo(input: number): number {
  * 
  * @param x The count of child games in the series.
  */
-function minScoreToWinBestOfX(x: number): number {
+export function minScoreToWinBestOfX(x: number): number {
     return (x + 1) / 2;
 }
 
