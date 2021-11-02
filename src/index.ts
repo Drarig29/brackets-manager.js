@@ -2,6 +2,7 @@ import { BracketsManager } from './manager';
 
 import {
     CrudInterface,
+    Database,
     Duel,
     OmitId,
     OrderingMap,
@@ -16,6 +17,7 @@ import {
 export {
     BracketsManager,
     CrudInterface,
+    Database,
     Duel,
     OmitId,
     OrderingMap,
