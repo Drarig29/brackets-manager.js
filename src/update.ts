@@ -141,7 +141,7 @@ export class Update extends BaseUpdater {
         if (!group) throw Error('Group not found.');
 
         const inLoserBracket = helpers.isLoserBracket(stage.type, group.number);
-        const roundCountLB = helpers.lowerBracketRoundCount(stage.settings.size);
+        const roundCountLB = helpers.getLowerBracketRoundCount(stage.settings.size);
         const seeds = helpers.getSeeds(inLoserBracket, round.number, roundCountLB, matches.length);
         const positions = ordering[method](seeds);
 

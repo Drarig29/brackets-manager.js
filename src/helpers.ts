@@ -1425,7 +1425,7 @@ export function getLoserOrdering(seedOrdering: SeedOrdering[], roundNumber: numb
  *
  * @param participantCount The number of participants in the stage.
  */
-export function lowerBracketRoundCount(participantCount: number): number {
+export function getLowerBracketRoundCount(participantCount: number): number {
     const roundPairCount = getRoundPairCount(participantCount);
     return roundPairCount * 2;
 }
