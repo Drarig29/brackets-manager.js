@@ -136,7 +136,7 @@ export class BaseUpdater extends BaseGetter {
     }
 
     /**
-     * Updates a match and its child games.
+     * Updates the opponents and status of a match and its child games.
      *
      * @param match A match.
      */
@@ -146,15 +146,17 @@ export class BaseUpdater extends BaseGetter {
 
         if (match.child_count === 0) return;
 
-        const update: Partial<MatchGame> = {
+        const updatedMatchGame: Partial<MatchGame> = {
             opponent1: helpers.toResult(match.opponent1),
             opponent2: helpers.toResult(match.opponent2),
         };
 
+        // Only sync the child games' status with their parent's status when changing the parent match participants
+        // (Locked, Waiting, Ready) or when archiving the parent match.
         if (match.status <= Status.Ready || match.status === Status.Archived)
-            update.status = match.status;
+            updatedMatchGame.status = match.status;
 
-        if (!await this.storage.update('match_game', { parent_id: match.id }, update))
+        if (!await this.storage.update('match_game', { parent_id: match.id }, updatedMatchGame))
             throw Error('Could not update the match game.');
     }
 
