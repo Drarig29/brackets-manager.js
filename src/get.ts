@@ -1,4 +1,4 @@
-import { Match, MatchGame, Participant, Stage } from 'brackets-model';
+import { Stage, Group, Round, Match, MatchGame, Participant } from 'brackets-model';
 import { Database, FinalStandingsItem, ParticipantSlot } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
@@ -11,29 +11,41 @@ export class Get extends BaseGetter {
      * @param stageId ID of the stage.
      */
     public async stageData(stageId: number): Promise<Database> {
-        const stage = await this.storage.select('stage', stageId);
-        if (!stage) throw Error('Stage not found.');
+        const stageData = await this.getStageSpecificData(stageId);
 
-        const groups = await this.storage.select('group', { stage_id: stageId });
-        if (!groups) throw Error('Error getting groups.');
-
-        const rounds = await this.storage.select('round', { stage_id: stageId });
-        if (!rounds) throw Error('Error getting rounds.');
-
-        const matches = await this.storage.select('match', { stage_id: stageId });
-        if (!matches) throw Error('Error getting matches.');
-
-        const participants = await this.storage.select('participant', { tournament_id: stage.tournament_id });
+        const participants = await this.storage.select('participant', { tournament_id: stageData.stage.tournament_id });
         if (!participants) throw Error('Error getting participants.');
 
-        const matchGames = await this.matchGames(matches);
+        return {
+            stage: [stageData.stage],
+            group: stageData.groups,
+            round: stageData.rounds,
+            match: stageData.matches,
+            match_game: stageData.matchGames,
+            participant: participants,
+        };
+    }
+
+    /**
+     * Returns the data needed to display a whole tournament with all its stages.
+     *
+     * @param tournamentId ID of the tournament.
+     */
+    public async tournamentData(tournamentId: number): Promise<Database> {
+        const stages = await this.storage.select('stage', { tournament_id: tournamentId });
+        if (!stages) throw Error('Error getting stages.');
+
+        const stagesData = await Promise.all(stages.map(stage => this.getStageSpecificData(stage.id)));
+
+        const participants = await this.storage.select('participant', { tournament_id: tournamentId });
+        if (!participants) throw Error('Error getting participants.');
 
         return {
-            stage: [stage],
-            group: groups,
-            round: rounds,
-            match: matches,
-            match_game: matchGames,
+            stage: stages,
+            group: stagesData.reduce((acc, data) => [...acc, ...data.groups], [] as Group[]),
+            round: stagesData.reduce((acc, data) => [...acc, ...data.rounds], [] as Round[]),
+            match: stagesData.reduce((acc, data) => [...acc, ...data.matches], [] as Match[]),
+            match_game: stagesData.reduce((acc, data) => [...acc, ...data.matchGames], [] as MatchGame[]),
             participant: participants,
         };
     }
@@ -206,5 +218,40 @@ export class Get extends BaseGetter {
         grouped.push(...losers.reverse());
 
         return helpers.makeFinalStandings(grouped);
+    }
+
+    /**
+     * Returns only the data specific to the given stage (without the participants).
+     * 
+     * @param stageId ID of the stage.
+     */
+    private async getStageSpecificData(stageId: number): Promise<{
+        stage: Stage;
+        groups: Group[];
+        rounds: Round[];
+        matches: Match[];
+        matchGames: MatchGame[];
+    }> {
+        const stage = await this.storage.select('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
+
+        const groups = await this.storage.select('group', { stage_id: stageId });
+        if (!groups) throw Error('Error getting groups.');
+
+        const rounds = await this.storage.select('round', { stage_id: stageId });
+        if (!rounds) throw Error('Error getting rounds.');
+
+        const matches = await this.storage.select('match', { stage_id: stageId });
+        if (!matches) throw Error('Error getting matches.');
+
+        const matchGames = await this.matchGames(matches);
+
+        return {
+            stage,
+            groups,
+            rounds,
+            matches,
+            matchGames,
+        };
     }
 }
