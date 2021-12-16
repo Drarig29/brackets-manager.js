@@ -29,7 +29,7 @@
         "lint": "eslint '**/*.{js,ts}' --fix",
         "test": "npm run lint && npx mocha",
         "db": "npx json-server --watch db.json",
-        "start": "tsc -watch",
+        "start": "tsc --watch",
         "build": "tsc",
         "prepare": "npm run build",
         "prepublishOnly": "npm run build"
