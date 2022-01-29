@@ -1010,6 +1010,15 @@ export function setResults(stored: MatchResults, match: Partial<MatchResults>, c
  * @param match Input of the update.
  */
 export function setForfeits(stored: MatchResults, match: Partial<MatchResults>): void {
+    if (match.opponent1?.forfeit === true && match.opponent2?.forfeit === true) {
+        if (stored.opponent1) stored.opponent1.forfeit = true;
+        if (stored.opponent2) stored.opponent2.forfeit = true;
+        
+        // Don't set any result (win/draw/loss) with a double forfeit 
+        // so that it doesn't count any point in the ranking.
+        return;
+    }
+
     if (match.opponent1?.forfeit === true) {
         if (stored.opponent1) stored.opponent1.forfeit = true;
 
