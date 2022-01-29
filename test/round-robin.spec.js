@@ -4,6 +4,7 @@ chai.use(require('chai-as-promised'));
 const assert = chai.assert;
 const { BracketsManager } = require('../dist');
 const { JsonDatabase } = require('brackets-json-db');
+const { Status } = require('brackets-model');
 
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
@@ -206,6 +207,21 @@ describe('Update scores in a round-robin stage', () => {
             ],
             settings: { groupCount: 1 },
         });
+    });
+
+    it('should set two forfeits for the match', async() => {
+        await manager.update.match({
+            id: 0,
+            opponent1: { forfeit: true },
+            opponent2: { forfeit: true },
+        });
+
+        const after = await storage.select('match', 0);
+        assert.strictEqual(after.status, Status.Completed);
+        assert.strictEqual(after.opponent1.forfeit, true);
+        assert.strictEqual(after.opponent2.forfeit, true);
+        assert.strictEqual(after.opponent1.result, undefined);
+        assert.strictEqual(after.opponent2.result, undefined);
     });
 
     describe('Test with example use-case', () => {
