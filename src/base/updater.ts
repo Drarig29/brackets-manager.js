@@ -48,8 +48,9 @@ export class BaseUpdater extends BaseGetter {
      * Updates a parent match based on its child games.
      * 
      * @param parentId ID of the parent match.
+     * @param inRoundRobin Indicates whether the parent match is in a round-robin stage.
      */
-    protected async updateParentMatch(parentId: number): Promise<void> {
+    protected async updateParentMatch(parentId: number, inRoundRobin: boolean): Promise<void> {
         const storedParent = await this.storage.select('match', parentId);
         if (!storedParent) throw Error('Parent not found.');
 
@@ -59,10 +60,6 @@ export class BaseUpdater extends BaseGetter {
         const parentScores = helpers.getChildGamesResults(games);
         const parent = helpers.getParentMatchResults(storedParent, parentScores);
 
-        const stage = await this.storage.select('stage', storedParent.stage_id);
-        if (!stage) throw Error('Stage not found.');
-
-        const inRoundRobin = helpers.isRoundRobin(stage);
         helpers.setParentMatchCompleted(parent, storedParent.child_count, inRoundRobin);
 
         await this.updateMatch(storedParent, parent, true);
@@ -122,17 +119,42 @@ export class BaseUpdater extends BaseGetter {
         if (!force && helpers.isMatchUpdateLocked(stored))
             throw Error('The match is locked.');
 
-        const { statusChanged, resultChanged } = helpers.setMatchResults(stored, match);
+        const stage = await this.storage.select('stage', stored.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        const inRoundRobin = helpers.isRoundRobin(stage);
+
+        const { statusChanged, resultChanged } = helpers.setMatchResults(stored, match, inRoundRobin);
         await this.applyMatchUpdate(stored);
 
         // Don't update related matches if it's a simple score update.
         if (!statusChanged && !resultChanged) return;
 
+        if (!helpers.isRoundRobin(stage))
+            await this.updateRelatedMatches(stored, statusChanged, resultChanged);
+    }
+
+    /**
+     * Updates a match game based on a partial match game.
+     * 
+     * @param stored A reference to what will be updated in the storage.
+     * @param game Input of the update.
+     */
+    protected async updateMatchGame(stored: MatchGame, game: Partial<MatchGame>): Promise<void> {
+        if (helpers.isMatchUpdateLocked(stored))
+            throw Error('The match game is locked.');
+
         const stage = await this.storage.select('stage', stored.stage_id);
         if (!stage) throw Error('Stage not found.');
 
-        if (!helpers.isRoundRobin(stage))
-            await this.updateRelatedMatches(stored, statusChanged, resultChanged);
+        const inRoundRobin = helpers.isRoundRobin(stage);
+
+        helpers.setMatchResults(stored, game, inRoundRobin);
+
+        if (!await this.storage.update('match_game', stored.id, stored))
+            throw Error('Could not update the match game.');
+
+        await this.updateParentMatch(stored.parent_id, inRoundRobin);
     }
 
     /**
@@ -272,7 +294,7 @@ export class BaseUpdater extends BaseGetter {
      * @param match The current match.
      */
     protected async propagateByeWinners(match: Match): Promise<void> {
-        helpers.setMatchResults(match, match);
+        helpers.setMatchResults(match, match, false); // BYE propagation is only in non round-robin stages.
         await this.applyMatchUpdate(match);
 
         if (helpers.hasBye(match))

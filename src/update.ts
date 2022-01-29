@@ -33,15 +33,7 @@ export class Update extends BaseUpdater {
     public async matchGame(game: Partial<MatchGame>): Promise<void> {
         const stored = await this.findMatchGame(game);
 
-        if (helpers.isMatchUpdateLocked(stored))
-            throw Error('The match game is locked.');
-
-        helpers.setMatchResults(stored, game);
-
-        if (!await this.storage.update('match_game', stored.id, stored))
-            throw Error('Could not update the match game.');
-
-        await this.updateParentMatch(stored.parent_id);
+        await this.updateMatchGame(stored, game);
     }
 
     /**

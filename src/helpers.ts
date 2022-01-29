@@ -648,8 +648,9 @@ export function getMatchStatus(arg: Duel | Partial<MatchResults>): Status {
  *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
+ * @param inRoundRobin Indicates whether the match is in a round-robin stage.
  */
-export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>): {
+export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>, inRoundRobin: boolean): {
     statusChanged: boolean,
     resultChanged: boolean,
 } {
@@ -662,12 +663,12 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
 
     if (completed && currentlyCompleted) {
         // Ensure everything is good.
-        setCompleted(stored, match);
+        setCompleted(stored, match, inRoundRobin);
         return { statusChanged: false, resultChanged: true };
     }
 
     if (completed && !currentlyCompleted) {
-        setCompleted(stored, match);
+        setCompleted(stored, match, inRoundRobin);
         return { statusChanged: true, resultChanged: true };
     }
 
@@ -944,13 +945,14 @@ export function setScores(stored: MatchResults, match: Partial<MatchResults>): b
  *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
+ * @param inRoundRobin Indicates whether the match is in a round-robin stage.
  */
-export function setCompleted(stored: MatchResults, match: Partial<MatchResults>): void {
+export function setCompleted(stored: MatchResults, match: Partial<MatchResults>, inRoundRobin: boolean): void {
     stored.status = Status.Completed;
 
-    setResults(stored, match, 'win', 'loss');
-    setResults(stored, match, 'loss', 'win');
-    setResults(stored, match, 'draw', 'draw');
+    setResults(stored, match, 'win', 'loss', inRoundRobin);
+    setResults(stored, match, 'loss', 'win', inRoundRobin);
+    setResults(stored, match, 'draw', 'draw', inRoundRobin);
 
     if (stored.opponent1 && !stored.opponent2)
         stored.opponent1.result = 'win'; // Win against opponent 2 BYE.
@@ -970,8 +972,9 @@ export function setCompleted(stored: MatchResults, match: Partial<MatchResults>)
  * @param match Input of the update.
  * @param check A result to check in each opponent.
  * @param change A result to set in each other opponent if `check` is correct.
+ * @param inRoundRobin Indicates whether the match is in a round-robin stage.
  */
-export function setResults(stored: MatchResults, match: Partial<MatchResults>, check: Result, change: Result): void {
+export function setResults(stored: MatchResults, match: Partial<MatchResults>, check: Result, change: Result, inRoundRobin: boolean): void {
     if (match.opponent1 && match.opponent2) {
         if (match.opponent1.result === 'win' && match.opponent2.result === 'win')
             throw Error('There are two winners.');
@@ -979,7 +982,7 @@ export function setResults(stored: MatchResults, match: Partial<MatchResults>, c
         if (match.opponent1.result === 'loss' && match.opponent2.result === 'loss')
             throw Error('There are two losers.');
 
-        if (match.opponent1.forfeit === true && match.opponent2.forfeit === true)
+        if (!inRoundRobin && match.opponent1.forfeit === true && match.opponent2.forfeit === true)
             throw Error('There are two forfeits.');
     }
 

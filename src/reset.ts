@@ -47,12 +47,17 @@ export class Reset extends BaseUpdater {
         const stored = await this.storage.select('match_game', gameId);
         if (!stored) throw Error('Match game not found.');
 
+        const stage = await this.storage.select('stage', stored.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        const inRoundRobin = helpers.isRoundRobin(stage);
+
         helpers.resetMatchResults(stored);
 
         if (!await this.storage.update('match_game', stored.id, stored))
             throw Error('Could not update the match game.');
 
-        await this.updateParentMatch(stored.parent_id);
+        await this.updateParentMatch(stored.parent_id, inRoundRobin);
     }
 
     /**
