@@ -239,6 +239,14 @@ describe('Update matches', () => {
             opponent2: { result: 'loss' },
         }), 'There are two losers.');
     });
+
+    it('should throw if two forfeits', async() => {
+        await assert.isRejected(manager.update.match({
+            id: 3,
+            opponent1: { forfeit: true },
+            opponent2: { forfeit: true },
+        }), 'There are two forfeits.');
+    });
 });
 
 describe('Give opponent IDs when updating', () => {
