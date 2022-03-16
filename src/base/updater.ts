@@ -18,9 +18,6 @@ export class BaseUpdater extends BaseGetter {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
-        if (seeding && seeding.length !== stage.settings.size)
-            throw Error('The size of the seeding is incorrect.');
-
         const create = new Create(this.storage, {
             name: stage.name,
             tournamentId: stage.tournament_id,

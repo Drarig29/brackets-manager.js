@@ -240,7 +240,7 @@ describe('Update matches', () => {
         }), 'There are two losers.');
     });
 
-    it('should throw if two forfeits', async() => {
+    it('should throw if two forfeits', async () => {
         await assert.isRejected(manager.update.match({
             id: 3,
             opponent1: { forfeit: true },
@@ -612,6 +612,17 @@ describe('Seeding', () => {
         assert.strictEqual((await storage.select('match', 3)).opponent2.id, null);
     });
 
+    it('should handle incomplete seeding during seeding update', async () => {
+        await manager.update.seeding(0, ['Team 1', 'Team 2']);
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('match', 0)).opponent2.id, 1);
+
+        // Same here, see comments above.
+        assert.strictEqual((await storage.select('match', 1)).opponent1.id, null);
+        assert.strictEqual((await storage.select('match', 1)).opponent2.id, null);
+    });
+
     it('should reset the seeding of a stage', async () => {
         await manager.update.seeding(0, [
             'Team 1', 'Team 2',
@@ -759,22 +770,6 @@ describe('Seeding', () => {
             'WILL', 'THROW',    // Match 2.
             'Team G', 'Team H', // Match 3.
         ]), 'A match is locked.');
-    });
-
-    it('should throw if the new seeding doesn\'t have the correct size', async () => {
-        await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
-        ]);
-
-        await assert.isRejected(manager.update.seeding(0, [
-            'Team A', 'Team B',
-            'Team C', 'Team D',
-            'Team E', 'Team F',
-            'Team G', // Missing value.
-        ]), 'The size of the seeding is incorrect.');
     });
 
     it('should throw if the seeding has duplicate participants', async () => {
