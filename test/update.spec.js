@@ -595,6 +595,23 @@ describe('Seeding', () => {
         assert.strictEqual((await storage.select('participant')).length, 8);
     });
 
+    it('should update the seeding to remove participants', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            null, 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', null,
+        ]);
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
+
+        // In this context, a `null` value is not a BYE, but a TDB (to be determined)
+        // because we consider the tournament might have been started.
+        // If it's not and you prefer BYEs, just recreate the tournament.
+        assert.strictEqual((await storage.select('match', 1)).opponent1.id, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent2.id, null);
+    });
+
     it('should reset the seeding of a stage', async () => {
         await manager.update.seeding(0, [
             'Team 1', 'Team 2',
