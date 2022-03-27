@@ -172,7 +172,7 @@ export function balanceByes(seeding: Seeding, participantCount?: number): Seedin
 /**
  * Normalizes IDs in a database.
  * 
- * Every ID - and references to it - is remapped to consecutive IDs starting from 0.
+ * All IDs (and references to them) are remapped to consecutive IDs starting from 0.
  * 
  * @param data Data to normalize.
  */
@@ -1013,7 +1013,7 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
     if (match.opponent1?.forfeit === true && match.opponent2?.forfeit === true) {
         if (stored.opponent1) stored.opponent1.forfeit = true;
         if (stored.opponent2) stored.opponent2.forfeit = true;
-        
+
         // Don't set any result (win/draw/loss) with a double forfeit 
         // so that it doesn't count any point in the ranking.
         return;

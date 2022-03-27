@@ -791,7 +791,7 @@ describe('Import / export', () => {
             opponent2: { id: 6 },
         });
 
-        await manager.import(initialData);
+        await manager.import(initialData, true);
 
         const data = await manager.get.stageData(0);
 

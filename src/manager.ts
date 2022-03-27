@@ -62,9 +62,11 @@ export class BracketsManager {
      * Imports data in the database.
      *
      * @param data Data to import.
+     * @param normalizeIds Enable ID normalization: all IDs (and references to them) are remapped to consecutive IDs starting from 0.
      */
-    public async import(data: Database): Promise<void> {
-        data = helpers.normalizeIds(data);
+    public async import(data: Database, normalizeIds = false): Promise<void> {
+        if (normalizeIds)
+            data = helpers.normalizeIds(data);
 
         if (!await this.storage.delete('participant'))
             throw Error('Could not empty the participant table.');
