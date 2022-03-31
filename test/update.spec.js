@@ -247,6 +247,22 @@ describe('Update matches', () => {
             opponent2: { forfeit: true },
         }), 'There are two forfeits.');
     });
+
+    it('should throw if one forfeit then the other without resetting the match between', async () => {
+        await manager.update.match({
+            id: 2,
+            opponent1: { forfeit: true },
+        });
+
+        let after = await storage.select('match', 2);
+        assert.strictEqual(after.opponent1.forfeit, true);
+        assert.notExists(after.opponent2.forfeit);
+
+        manager.update.match({
+            id: 2,
+            opponent2: { forfeit: true },
+        });
+    });
 });
 
 describe('Give opponent IDs when updating', () => {
@@ -564,6 +580,21 @@ describe('Update match games', () => {
 
         await manager.reset.matchGameResults(0);
         assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
+    });
+
+    it('should reset the forfeit of a parent match', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+            settings: {
+                matchesChildCount: 3,
+            },
+        });
+
+        await manager.update.match({ id: 0, opponent1: { forfeit: true } });
+        await manager.reset.matchResults(0);
     });
 });
 
