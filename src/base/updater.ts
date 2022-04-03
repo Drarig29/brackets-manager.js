@@ -26,7 +26,7 @@ export class BaseUpdater extends BaseGetter {
             seeding: seeding || undefined,
         });
 
-        create.setExisting(stageId);
+        create.setExisting(stageId, false);
 
         const method = BaseGetter.getSeedingOrdering(stage.type, create);
         const slots = await create.getSlots();

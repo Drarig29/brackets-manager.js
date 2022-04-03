@@ -1114,7 +1114,7 @@ export function mapParticipantsToDatabase(prop: keyof Participant, seeding: Seed
  *
  * @param matches The input matches.
  */
-export function matchesToSeeding(matches: Match[]): ParticipantSlot[] {
+export function convertMatchesToSeeding(matches: Match[]): ParticipantSlot[] {
     const flattened = ([] as ParticipantSlot[]).concat(...matches.map(match => [match.opponent1, match.opponent2]));
     return sortSeeding(flattened);
 }
@@ -1270,13 +1270,19 @@ export function getParentMatchResults(storedParent: Match, scores: Scores): Part
  *
  * @param match The up to date match.
  * @param existing The base match.
+ * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding.
  */
-export function getUpdatedMatchResults<T extends MatchResults>(match: T, existing: T): T {
+export function getUpdatedMatchResults<T extends MatchResults>(match: T, existing: T, enableByes: boolean): T {
     return {
         ...existing,
         ...match,
-        opponent1: { ...existing.opponent1, ...match.opponent1 },
-        opponent2: { ...existing.opponent2, ...match.opponent2 },
+        ...(enableByes ? {
+            opponent1: match.opponent1 === null ? null : { ...existing.opponent1, ...match.opponent1 },
+            opponent2: match.opponent2 === null ? null : { ...existing.opponent2, ...match.opponent2 },
+        } : {
+            opponent1: match.opponent1 === null ? { id: null } : { ...existing.opponent1, ...match.opponent1 },
+            opponent2: match.opponent2 === null ? { id: null } : { ...existing.opponent2, ...match.opponent2 },
+        }),
     };
 }
 

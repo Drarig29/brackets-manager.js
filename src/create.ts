@@ -21,6 +21,7 @@ export class Create {
     private stage: InputStage;
     private readonly seedOrdering: SeedOrdering[];
     private updateMode: boolean;
+    private enableByesInUpdate: boolean;
     private currentStageId!: number;
 
     /**
@@ -35,6 +36,7 @@ export class Create {
         this.stage.settings = this.stage.settings || {};
         this.seedOrdering = this.stage.settings.seedOrdering || [];
         this.updateMode = false;
+        this.enableByesInUpdate = false;
 
         if (!this.stage.name)
             throw Error('You must provide a name for the stage.');
@@ -84,10 +86,12 @@ export class Create {
      * Enables the update mode.
      * 
      * @param stageId ID of the stage.
+     * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding.
      */
-    public setExisting(stageId: number): void {
+    public setExisting(stageId: number, enableByes: boolean): void {
         this.updateMode = true;
         this.currentStageId = stageId;
+        this.enableByesInUpdate = enableByes;
     }
 
     /**
@@ -712,7 +716,7 @@ export class Create {
         if (!existing)
             return this.storage.insert('match', match);
 
-        const updated = helpers.getUpdatedMatchResults(match, existing) as Match;
+        const updated = helpers.getUpdatedMatchResults(match, existing, this.enableByesInUpdate) as Match;
         if (!await this.storage.update('match', existing.id, updated))
             throw Error('Could not update the match.');
 
@@ -737,7 +741,7 @@ export class Create {
         if (!existing)
             return this.storage.insert('match_game', matchGame);
 
-        const updated = helpers.getUpdatedMatchResults(matchGame, existing) as MatchGame;
+        const updated = helpers.getUpdatedMatchResults(matchGame, existing, this.enableByesInUpdate) as MatchGame;
         if (!await this.storage.update('match_game', existing.id, updated))
             throw Error('Could not update the match game.');
 

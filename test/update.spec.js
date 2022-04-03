@@ -654,6 +654,38 @@ describe('Seeding', () => {
         assert.strictEqual((await storage.select('match', 1)).opponent2.id, null);
     });
 
+    it('should update BYE to TBD during seeding update', async () => {
+        storage.reset();
+
+        await manager.create({
+            name: 'With participants and BYEs',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: [
+                null, 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: {
+                seedOrdering: ['natural'],
+            },
+        });
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1, null);
+
+        await manager.update.seeding(0, [
+            null, 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
+        // To stay consistent with the fact that `update.seeding()` uses TBD and not BYE,
+        // the BYE should be updated to TDB here.
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, null);
+    });
+
     it('should reset the seeding of a stage', async () => {
         await manager.update.seeding(0, [
             'Team 1', 'Team 2',

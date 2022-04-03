@@ -112,7 +112,7 @@ export class Get extends BaseGetter {
         const matches = await this.storage.select('match', { stage_id: stage.id });
         if (!matches) throw Error('Error getting matches.');
 
-        const slots = helpers.matchesToSeeding(matches);
+        const slots = helpers.convertMatchesToSeeding(matches);
 
         // BYE vs. BYE matches of a round-robin stage are removed
         // when the stage is created. We need to add them back temporarily.
@@ -139,7 +139,7 @@ export class Get extends BaseGetter {
         const matches = await this.storage.select('match', { round_id: round.id });
         if (!matches) throw Error('Error getting matches.');
 
-        return helpers.matchesToSeeding(matches);
+        return helpers.convertMatchesToSeeding(matches);
     }
 
     /**
