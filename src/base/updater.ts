@@ -4,6 +4,7 @@ import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
 import { Create } from '../create';
 import { BaseGetter } from './getter';
+import { Get } from '../get';
 import * as helpers from '../helpers';
 
 export class BaseUpdater extends BaseGetter {
@@ -37,6 +38,32 @@ export class BaseUpdater extends BaseGetter {
 
         const ordered = ordering[method](slots);
         await BaseUpdater.assertCanUpdateSeeding(matches, ordered);
+
+        await create.run();
+    }
+
+    /**
+     * Confirms the current seeding of a stage.
+     *
+     * @param stageId ID of the stage.
+     */
+    protected async confirmCurrentSeeding(stageId: number): Promise<void> {
+        const stage = await this.storage.select('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
+
+        const get = new Get(this.storage);
+        const currentSeeding = await get.seeding(stageId);
+        const newSeeding = helpers.convertSlotsToSeeding(currentSeeding.map(helpers.convertTBDtoBYE));
+
+        const create = new Create(this.storage, {
+            name: stage.name,
+            tournamentId: stage.tournament_id,
+            type: stage.type,
+            settings: stage.settings,
+            seeding: newSeeding,
+        });
+
+        create.setExisting(stageId, true);
 
         await create.run();
     }

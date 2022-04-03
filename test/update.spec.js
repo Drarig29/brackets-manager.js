@@ -843,6 +843,37 @@ describe('Seeding', () => {
             'Team 7', 'Team 8',
         ]), 'The seeding has a duplicate participant.');
     });
+
+    it('should confirm the current seeding', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            null, 'Team 4',
+            'Team 5', null,
+            null, null,
+        ]);
+
+        assert.strictEqual((await storage.select('match', 1)).opponent1.id, null); // First, is a TBD.
+        assert.strictEqual((await storage.select('match', 2)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent1.id, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent2.id, null);
+
+        await manager.update.confirmSeeding(0);
+
+        assert.strictEqual((await storage.select('participant')).length, 4);
+        
+        assert.strictEqual((await storage.select('match', 1)).opponent1, null); // Should become a BYE.
+        assert.strictEqual((await storage.select('match', 2)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent1, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent2, null);
+
+        assert.strictEqual((await storage.select('match', 5)).opponent2, null); // A BYE should be propagated here.
+        
+        assert.strictEqual((await storage.select('match', 7)).opponent2, null); // All of these too (in loser bracket).
+        assert.strictEqual((await storage.select('match', 8)).opponent1, null);
+        assert.strictEqual((await storage.select('match', 8)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 9)).opponent1, null);
+        assert.strictEqual((await storage.select('match', 10)).opponent2, null);
+    });
 });
 
 describe('Match games status', () => {

@@ -353,6 +353,18 @@ export function ensureNotTied(scores: [number, number]): void {
 }
 
 /**
+ * Converts a TBD to a BYE.
+ * 
+ * @param slot The slot to convert.
+ */
+export function convertTBDtoBYE(slot: ParticipantSlot): ParticipantSlot {
+    if (slot === null) return null; // Already a BYE.
+    if (slot?.id === null) return null; // Is a TBD.
+
+    return slot; // Is a determined participant.
+}
+
+/**
  * Converts a participant slot to a result stored in storage.
  *
  * @param slot A participant slot.
@@ -1117,6 +1129,18 @@ export function mapParticipantsToDatabase(prop: keyof Participant, seeding: Seed
 export function convertMatchesToSeeding(matches: Match[]): ParticipantSlot[] {
     const flattened = ([] as ParticipantSlot[]).concat(...matches.map(match => [match.opponent1, match.opponent2]));
     return sortSeeding(flattened);
+}
+
+/**
+ * Converts a list of slots to an input seeding.
+ * 
+ * @param slots The slots to convert.
+ */
+export function convertSlotsToSeeding(slots: ParticipantSlot[]): Seeding {
+    return slots.map(slot => {
+        if (slot === null || slot.id === null) return null; // BYE or TBD.
+        return slot.id; // Let's return the ID instead of the name to be sure we keep the same reference.
+    });
 }
 
 /**
