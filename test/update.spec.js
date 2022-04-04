@@ -860,14 +860,14 @@ describe('Seeding', () => {
         await manager.update.confirmSeeding(0);
 
         assert.strictEqual((await storage.select('participant')).length, 4);
-        
+
         assert.strictEqual((await storage.select('match', 1)).opponent1, null); // Should become a BYE.
         assert.strictEqual((await storage.select('match', 2)).opponent2, null);
         assert.strictEqual((await storage.select('match', 3)).opponent1, null);
         assert.strictEqual((await storage.select('match', 3)).opponent2, null);
 
         assert.strictEqual((await storage.select('match', 5)).opponent2, null); // A BYE should be propagated here.
-        
+
         assert.strictEqual((await storage.select('match', 7)).opponent2, null); // All of these too (in loser bracket).
         assert.strictEqual((await storage.select('match', 8)).opponent1, null);
         assert.strictEqual((await storage.select('match', 8)).opponent2, null);
@@ -1038,5 +1038,67 @@ describe('Match games status', () => {
         assert.strictEqual(secondMatchGames[2].status, Status.Archived);
 
         assert.strictEqual((await storage.select('match', 1)).status, Status.Archived);
+    });
+
+    it('should work with unique match games when controlled via the parent', async () => {
+        await manager.create({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 1 },
+        });
+
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Locked);
+        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Locked);
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { score: 2, result: 'win' },
+            opponent2: { score: 1 },
+        });
+
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Waiting);
+        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Waiting);
+
+        await manager.update.match({
+            id: 1,
+            opponent1: { score: 1 },
+            opponent2: { score: 2, result: 'win' },
+        });
+
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
+        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Ready);
+    });
+
+    it('should work with unique match games when controlled via the child games', async () => {
+        await manager.create({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 1 },
+        });
+
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Locked);
+        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Locked);
+
+        await manager.update.matchGame({
+            id: 0,
+            opponent1: { score: 2, result: 'win' },
+            opponent2: { score: 1 },
+        });
+
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Waiting);
+        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Waiting);
+
+        await manager.update.matchGame({
+            id: 1,
+            opponent1: { score: 1 },
+            opponent2: { score: 2, result: 'win' },
+        });
+
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
+        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Ready);
     });
 });
