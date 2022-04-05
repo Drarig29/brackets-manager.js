@@ -63,6 +63,15 @@ describe('Create double elimination stage', () => {
         });
     });
 
+    it('should create a tournament with 256+ tournaments', async () => {
+        await manager.create({
+            name: 'Example with 256 participants',
+            tournamentId: 0,
+            type: 'double_elimination',
+            settings: { size: 256 },
+        });
+    });
+
     it('should create a tournament with a double grand final', async () => {
         await manager.create({
             name: 'Example with double grand final',

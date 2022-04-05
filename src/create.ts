@@ -629,7 +629,7 @@ export class Create {
      * @param participantCount Number of participants in the stage.
      */
     private getMajorOrdering(participantCount: number): SeedOrdering {
-        return this.getOrdering(1, 'elimination', defaultMinorOrdering[participantCount][0]);
+        return this.getOrdering(1, 'elimination', defaultMinorOrdering[participantCount]?.[0] || 'natural');
     }
 
     /**
@@ -644,7 +644,7 @@ export class Create {
         if (index === minorRoundCount - 1)
             return undefined;
 
-        return this.getOrdering(2 + index, 'elimination', defaultMinorOrdering[participantCount][1 + index]);
+        return this.getOrdering(2 + index, 'elimination', defaultMinorOrdering[participantCount]?.[1 + index] || 'natural');
     }
 
     /**
