@@ -3,10 +3,10 @@ chai.use(require('chai-as-promised'));
 
 const assert = chai.assert;
 const { BracketsManager } = require('../dist');
-const { JsonDatabase } = require('brackets-json-db');
+const { InMemoryDatabase } = require('brackets-memory-db');
 const { Status } = require('brackets-model');
 
-const storage = new JsonDatabase();
+const storage = new InMemoryDatabase();
 const manager = new BracketsManager(storage);
 
 describe('Create a round-robin stage', () => {
