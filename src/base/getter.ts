@@ -235,11 +235,10 @@ export class BaseGetter {
 
         const actualRoundNumber = stage.settings.skipFirstRound ? roundNumber + 1 : roundNumber;
         const roundNumberLB = actualRoundNumber > 1 ? (actualRoundNumber - 1) * 2 : 1;
-        const matchNumberLB = actualRoundNumber > 1 ? match.number : helpers.getDiagonalMatchNumber(match.number);
 
         const participantCount = stage.settings.size!;
         const method = helpers.getLoserOrdering(stage.settings.seedOrdering!, roundNumberLB);
-        const actualMatchNumberLB = helpers.findLoserMatchNumber(participantCount, roundNumberLB, matchNumberLB, method);
+        const actualMatchNumberLB = helpers.findLoserMatchNumber(participantCount, roundNumberLB, match.number, method);
 
         return [
             ...await this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount),

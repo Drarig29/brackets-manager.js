@@ -418,6 +418,60 @@ describe('Previous and next match update in double elimination stage', () => {
         assert.strictEqual((await storage.select('match', 8)).status, Status.Completed); // WB 2.1
         assert.strictEqual((await storage.select('match', 11)).status, Status.Archived); // WB 2.4
     });
+
+    it('should send the losers to the right LB matches in round 1', async () => {
+        await manager.create({
+            name: 'Example with inner_outer loser ordering',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: {
+                seedOrdering: ['inner_outer', 'inner_outer'],
+            },
+        });
+
+        assert.strictEqual((await storage.select('match', 7)).opponent1.position, 1);
+        assert.strictEqual((await storage.select('match', 7)).opponent2.position, 4);
+        assert.strictEqual((await storage.select('match', 8)).opponent1.position, 2);
+        assert.strictEqual((await storage.select('match', 8)).opponent2.position, 3);
+
+        // Match of position 1.
+        await manager.update.match({
+            id: 0,
+            opponent1: { result: 'win' }, // Loser id: 7.
+        });
+
+        assert.strictEqual((await storage.select('match', 7)).opponent1.id, 7);
+
+        // Match of position 2.
+        await manager.update.match({
+            id: 1,
+            opponent1: { result: 'win' }, // Loser id: 4.
+        });
+
+        assert.strictEqual((await storage.select('match', 8)).opponent1.id, 4);
+
+        // Match of position 3.
+        await manager.update.match({
+            id: 2,
+            opponent1: { result: 'win' }, // Loser id: 6.
+        });
+
+        assert.strictEqual((await storage.select('match', 8)).opponent2.id, 6);
+
+        // Match of position 4.
+        await manager.update.match({
+            id: 3,
+            opponent1: { result: 'win' }, // Loser id: 5.
+        });
+
+        assert.strictEqual((await storage.select('match', 7)).opponent2.id, 5);
+    });
 });
 
 describe('Skip first round', () => {

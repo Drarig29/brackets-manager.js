@@ -1431,11 +1431,16 @@ export function isDoubleEliminationNecessary(participantCount: number): boolean 
  * @param method The method used for the round.
  */
 export function findLoserMatchNumber(participantCount: number, roundNumber: number, matchNumber: number, method?: SeedOrdering): number {
-    const matchCount = getLoserRoundMatchCount(participantCount, roundNumber);
-    const matchNumbers = Array.from(Array(matchCount), (_, i) => i + 1);
-    const ordered = method ? ordering[method](matchNumbers) : matchNumbers;
-    const actualMatchNumberLB = ordered.indexOf(matchNumber) + 1;
-    return actualMatchNumberLB;
+    const loserCount = getLoserRoundLoserCount(participantCount, roundNumber);
+    const losers = Array.from(Array(loserCount), (_, i) => i + 1);
+    const ordered = method ? ordering[method](losers) : losers;
+    const matchNumberLB = ordered.indexOf(matchNumber) + 1;
+
+    // For LB round 1, the list of losers is spread over the matches 2 by 2.
+    if (roundNumber === 1)
+        return Math.ceil(matchNumberLB / 2);
+
+    return matchNumberLB;
 }
 
 /**
@@ -1449,6 +1454,22 @@ export function getLoserRoundMatchCount(participantCount: number, roundNumber: n
     const roundPairCount = getRoundPairCount(participantCount);
     const matchCount = Math.pow(2, roundPairCount - roundPairIndex - 1);
     return matchCount;
+}
+
+/**
+ * Returns the count of losers in a round of a loser bracket.
+ *
+ * @param participantCount The number of participants in a stage.
+ * @param roundNumber Number of the round.
+ */
+export function getLoserRoundLoserCount(participantCount: number, roundNumber: number): number {
+    const matchCount = getLoserRoundMatchCount(participantCount, roundNumber);
+
+    // Two per match for LB round 1 (losers coming from WB round 1).
+    if (roundNumber === 1)
+        return matchCount * 2;
+
+    return matchCount; // One per match for LB minor rounds.
 }
 
 /**
