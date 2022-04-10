@@ -156,7 +156,7 @@ export function balanceByes(seeding: Seeding, participantCount?: number): Seedin
     participantCount = participantCount || getNearestPowerOfTwo(seeding.length);
 
     if (seeding.length < participantCount / 2) {
-        const flat = seeding.map(v => [v, null]).flat();
+        const flat = seeding.flatMap(v => [v, null]);
         return setArraySize(flat, participantCount, null);
     }
 
