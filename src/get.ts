@@ -1,5 +1,5 @@
 import { Stage, Group, Round, Match, MatchGame, Participant } from 'brackets-model';
-import { Database, FinalStandingsItem, ParticipantSlot } from './types';
+import { Database, FinalStandingsItem, CustomParticipant,  ParticipantSlot } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
 
@@ -148,7 +148,7 @@ export class Get extends BaseGetter {
      * @param stageId ID of the stage.
      */
     private async singleEliminationStandings(stageId: number): Promise<FinalStandingsItem[]> {
-        const grouped: Participant[][] = [];
+        const grouped: (Participant | CustomParticipant)[][] = [];
 
         const { stage: stages, group: groups, match: matches, participant: participants } = await this.stageData(stageId);
 
@@ -183,9 +183,9 @@ export class Get extends BaseGetter {
      * @param stageId ID of the stage.
      */
     private async doubleEliminationStandings(stageId: number): Promise<FinalStandingsItem[]> {
-        const grouped: Participant[][] = [];
+        const grouped:(Participant| CustomParticipant)[][] = [];
 
-        const { stage: stages, group: groups, match: matches, participant: participants } = await this.stageData(stageId);
+        const { stage: stages, group: groups, match: matches, participant: participants  } = await this.stageData(stageId);
 
         const [stage] = stages;
         const [winnerBracket, loserBracket, finalGroup] = groups;
@@ -222,7 +222,7 @@ export class Get extends BaseGetter {
 
     /**
      * Returns only the data specific to the given stage (without the participants).
-     * 
+     *
      * @param stageId ID of the stage.
      */
     private async getStageSpecificData(stageId: number): Promise<{

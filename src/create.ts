@@ -1,6 +1,6 @@
 import { Group, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage } from 'brackets-model';
 import { defaultMinorOrdering, ordering } from './ordering';
-import { Duel, Storage, OmitId, ParticipantSlot, StandardBracketResults } from './types';
+import { Duel, Storage, OmitId,CustomParticipant,  ParticipantSlot, StandardBracketResults } from './types';
 import { BracketsManager } from '.';
 import * as helpers from './helpers';
 
@@ -84,7 +84,7 @@ export class Create {
 
     /**
      * Enables the update mode.
-     * 
+     *
      * @param stageId ID of the stage.
      * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding.
      */
@@ -753,7 +753,7 @@ export class Create {
      *
      * @param participants The list of participants to process.
      */
-    private async registerParticipants(participants: OmitId<Participant>[]): Promise<boolean> {
+    private async registerParticipants(participants: OmitId<Participant | CustomParticipant>[]): Promise<boolean> {
         const existing = await this.storage.select('participant', { tournament_id: this.stage.tournamentId });
 
         // Insert all if nothing.

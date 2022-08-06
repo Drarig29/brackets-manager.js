@@ -21,6 +21,10 @@ export type Nullable<T> = T | null;
 export type IdMapping = Record<number, number>;
 
 /**
+ * Custom participant model to allow extra fields.
+ */
+export type CustomParticipant = Participant & Record<string, unknown>;
+/**
  * Used by the library to handle placements. Is `null` if is a BYE. Has a `null` name if it's yet to be determined.
  */
 export type ParticipantSlot = { id: number | null, position?: number } | null;
@@ -47,7 +51,7 @@ export type ChildCountLevel = 'stage' | 'group' | 'round' | 'match';
 
 /**
  * All the possible kinds of bracket (group level) in an elimination stage.
- * 
+ *
  * - `single_bracket` for single elimination.
  * - `winner_bracket` and `loser_bracket` for double elimination.
  * - `final_group` for both single and double elimination.
@@ -86,7 +90,7 @@ export interface DataTypes {
     round: Round,
     match: Match,
     match_game: MatchGame,
-    participant: Participant,
+    participant: Participant | CustomParticipant,
 }
 
 /**
@@ -186,7 +190,7 @@ export interface CrudInterface {
 
     /**
      * Empties a table completely.
-     * 
+     *
      * @param table Where to delete everything.
      */
     delete<T extends Table>(table: T): Promise<boolean>
