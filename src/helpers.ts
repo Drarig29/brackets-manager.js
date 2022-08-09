@@ -14,7 +14,7 @@ import {
     Status,
 } from 'brackets-model';
 
-import { BracketKind, Database, CustomParticipant, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
+import { BracketKind, Database, CustomParticipant, CustomSeeding,  Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
 
 /**
@@ -150,7 +150,7 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
  * @param seeding The seeding of the stage.
  * @param participantCount The number of participants in the stage.
  */
-export function balanceByes(seeding: Seeding, participantCount?: number): Seeding {
+export function balanceByes(seeding: Seeding | CustomSeeding, participantCount?: number): Seeding {
     seeding = seeding.filter(v => v !== null);
 
     participantCount = participantCount || getNearestPowerOfTwo(seeding.length);
@@ -316,7 +316,7 @@ export function ensureEquallySized<T>(left: T[], right: T[]): void {
  * @param seeding The seeding of the stage.
  * @param participantCount The number of participants in the stage.
  */
-export function fixSeeding(seeding: Seeding, participantCount: number): Seeding {
+export function fixSeeding(seeding: Seeding | CustomSeeding, participantCount: number): Seeding | CustomSeeding {
     if (seeding.length > participantCount)
         throw Error('The seeding has more participants than the size of the stage.');
 
@@ -1051,7 +1051,7 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
  *
  * @param seeding The seeding.
  */
-export function isSeedingWithIds(seeding: Seeding): boolean {
+export function isSeedingWithIds(seeding: Seeding | CustomSeeding): boolean {
     return seeding.some((value: string | number | null) => typeof value === 'number');
 }
 
@@ -1061,7 +1061,7 @@ export function isSeedingWithIds(seeding: Seeding): boolean {
  * @param tournamentId ID of the tournament.
  * @param seeding The seeding.
  */
-export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding): OmitId<Participant | CustomParticipant>[] {
+export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding | CustomSeeding): OmitId<Participant | CustomParticipant>[] {
     const withoutByes = seeding.filter(name => name !== null) as string[];
 
     const participants = withoutByes.map<OmitId<Participant | CustomParticipant>>(name => ({
@@ -1079,7 +1079,7 @@ export function extractParticipantsFromSeeding(tournamentId: number, seeding: Se
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsNamesToDatabase(seeding: Seeding, database:(Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsNamesToDatabase(seeding: Seeding | CustomSeeding,  database:(Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('name', seeding, database, positions);
 }
 
@@ -1090,7 +1090,7 @@ export function mapParticipantsNamesToDatabase(seeding: Seeding, database:(Parti
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsIdsToDatabase(seeding: Seeding, database: (CustomParticipant | Participant)[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsIdsToDatabase(seeding: Seeding | CustomSeeding, database: (CustomParticipant | Participant)[], positions?: number[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('id', seeding, database, positions);
 }
 
@@ -1102,7 +1102,7 @@ export function mapParticipantsIdsToDatabase(seeding: Seeding, database: (Custom
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsToDatabase(prop: keyof (Participant |  CustomParticipant), seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsToDatabase(prop: keyof Participant, seeding: Seeding | CustomSeeding , database: Participant[], positions?: number[]): ParticipantSlot[] {
     const slots = seeding.map((slot, i) => {
         if (slot === null) return null; // BYE.
 
@@ -1136,7 +1136,7 @@ export function convertMatchesToSeeding(matches: Match[]): ParticipantSlot[] {
  *
  * @param slots The slots to convert.
  */
-export function convertSlotsToSeeding(slots: ParticipantSlot[]): Seeding {
+export function convertSlotsToSeeding(slots: ParticipantSlot[]): Seeding | CustomSeeding {
     return slots.map(slot => {
         if (slot === null || slot.id === null) return null; // BYE or TBD.
         return slot.id; // Let's return the ID instead of the name to be sure we keep the same reference.

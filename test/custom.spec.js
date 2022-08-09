@@ -9,25 +9,60 @@ const { JsonDatabase } = require('brackets-json-db');
 
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
-
-const example = {
+const createTournament = (tournamentType) => { //eslint-disable-line
+return  {
     name: 'Amateur',
     tournamentId: 0,
-    type: 'double_elimination',
+    type: tournamentType,
     seeding: [
         {id: 0, name: 'Team0', nationality: 'US' }, {id: 1, name: 'Team1', nationality: 'US' },
         {id: 2, name: 'Team2', nationality: 'US' }, {id: 3, name: 'Team3', nationality: 'US' },
         {id: 4, name: 'Team4', nationality: 'US' }, {id: 5, name: 'Team5', nationality: 'US' },
-        {id: 6, name: 'Team6', nationality: 'US' }, {id: 7, name: 'Team1', nationality: 'US' },
+        {id: 6, name: 'Team6', nationality: 'US' }, {id: 7, name: 'Team7', nationality: 'US' },
+        {id: 8, name: 'Team8', nationality: 'US' }, {id: 9, name: 'Team9', nationality: 'US' },
+        {id: 10, name: 'Team10', nationality: 'US' }, {id: 11, name: 'Team11', nationality: 'US' },
+        {id: 12, name: 'Team12', nationality: 'US' }, {id: 13, name: 'Team13', nationality: 'US' },
+        {id: 14, name: 'Team14', nationality: 'US' }, {id: 15, name: 'Team15', nationality: 'US' },
     ],
-    settings: { seedOrdering: ['natural'] },
+    settings: tournamentType === 'round_robin' ? { groupCount: 2 } : { seedOrdering: ['natural'] },
+};
 };
 
+
+describe('Create tournaments with custom seeding', async () => {
+    before(async () => {
+        storage.reset();
+    });
+
+    it('should create single elimintation with custom seeding', async() => {
+        await manager.create(createTournament('single_elimination'));
+        const stageData = await manager.get.stageData(0);
+       assert.strictEqual(stageData.participant[0].nationality, 'US');
+       assert.strictEqual(stageData.participant.length, 16);
+    });
+
+    it('should create double elimination with custom seeding', async() => {
+        await manager.create(createTournament('double_elimination'));
+        const stageData = await manager.get.stageData(0);
+
+        assert.strictEqual(stageData.participant[0].nationality, 'US');
+        assert.strictEqual(stageData.participant.length, 16);
+    });
+
+    it('should create round robin with custom seeding', async() => {
+
+        await manager.create(createTournament('round_robin'));
+        const stageData = await manager.get.stageData(0);
+
+        assert.strictEqual(stageData.participant[0].nationality, 'US');
+        assert.strictEqual(stageData.participant.length, 16);
+    });
+});
 describe('Update matches with custom participants', () => {
 
     before(async () => {
         storage.reset();
-        await manager.create(example);
+        await manager.create(createTournament('double_elimination'));
     });
 
     it('should start a match', async () => {
@@ -328,7 +363,7 @@ describe('Locked matches', () => {
 
     before(async () => {
         storage.reset();
-        await manager.create(example);
+        await manager.create(createTournament('double_elimination'));
     });
 
     it('should throw when the matches leading to the match have not been completed yet', async () => {

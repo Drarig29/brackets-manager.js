@@ -1,5 +1,5 @@
 import { Match, MatchGame, Seeding, Stage, Status } from 'brackets-model';
-import { BracketKind, ParticipantSlot, Side } from '../types';
+import { BracketKind, ParticipantSlot, CustomSeeding,  Side } from '../types';
 import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
 import { Create } from '../create';
@@ -15,7 +15,7 @@ export class BaseUpdater extends BaseGetter {
      * @param stageId ID of the stage.
      * @param seeding A new seeding or null to reset the existing seeding.
      */
-    protected async updateSeeding(stageId: number, seeding: Seeding | null): Promise<void> {
+    protected async updateSeeding(stageId: number, seeding: Seeding | CustomSeeding  | null): Promise<void> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -70,7 +70,7 @@ export class BaseUpdater extends BaseGetter {
 
     /**
      * Updates a parent match based on its child games.
-     * 
+     *
      * @param parentId ID of the parent match.
      * @param inRoundRobin Indicates whether the parent match is in a round-robin stage.
      */
@@ -134,7 +134,7 @@ export class BaseUpdater extends BaseGetter {
 
     /**
      * Updates a match based on a partial match.
-     * 
+     *
      * @param stored A reference to what will be updated in the storage.
      * @param match Input of the update.
      * @param force Whether to force update locked matches.
@@ -160,7 +160,7 @@ export class BaseUpdater extends BaseGetter {
 
     /**
      * Updates a match game based on a partial match game.
-     * 
+     *
      * @param stored A reference to what will be updated in the storage.
      * @param game Input of the update.
      */
@@ -314,7 +314,7 @@ export class BaseUpdater extends BaseGetter {
 
     /**
      * Propagates winner against BYEs in related matches.
-     * 
+     *
      * @param match The current match.
      */
     protected async propagateByeWinners(match: Match): Promise<void> {

@@ -1,6 +1,6 @@
 import { Group, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage } from 'brackets-model';
 import { defaultMinorOrdering, ordering } from './ordering';
-import { Duel, Storage, OmitId,CustomParticipant,  ParticipantSlot, StandardBracketResults } from './types';
+import { Duel, Storage, OmitId,CustomParticipant, CustomInputStage, CustomSeeding,  ParticipantSlot, StandardBracketResults } from './types';
 import { BracketsManager } from '.';
 import * as helpers from './helpers';
 
@@ -10,7 +10,7 @@ import * as helpers from './helpers';
  * @param this Instance of BracketsManager.
  * @param stage The stage to create.
  */
-export async function create(this: BracketsManager, stage: InputStage): Promise<void> {
+export async function create(this: BracketsManager, stage: InputStage | CustomInputStage): Promise<void> {
     const instance = new Create(this.storage, stage);
     await instance.run();
 }
@@ -18,7 +18,7 @@ export async function create(this: BracketsManager, stage: InputStage): Promise<
 export class Create {
 
     private storage: Storage;
-    private stage: InputStage;
+    private stage: InputStage | CustomInputStage ;
     private readonly seedOrdering: SeedOrdering[];
     private updateMode: boolean;
     private enableByesInUpdate: boolean;
@@ -30,7 +30,7 @@ export class Create {
      * @param storage The implementation of Storage.
      * @param stage The stage to create.
      */
-    constructor(storage: Storage, stage: InputStage) {
+   constructor(storage: Storage, stage: InputStage | CustomInputStage) {
         this.storage = storage;
         this.stage = stage;
         this.stage.settings = this.stage.settings || {};
@@ -496,7 +496,7 @@ export class Create {
      * @param seeding The seeding (names).
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    private async getSlotsUsingNames(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {
+    private async getSlotsUsingNames(seeding: Seeding | CustomSeeding, positions?: number[]): Promise<ParticipantSlot[]> {
         const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, seeding);
 
         if (!await this.registerParticipants(participants))
@@ -515,7 +515,7 @@ export class Create {
      * @param seeding The seeding (IDs).
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    private async getSlotsUsingIds(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {
+    private async getSlotsUsingIds(seeding: Seeding | CustomSeeding, positions?: number[]): Promise<ParticipantSlot[]> {
         const participants = await this.storage.select('participant', { tournament_id: this.stage.tournamentId });
         if (!participants) throw Error('No available participants.');
 
