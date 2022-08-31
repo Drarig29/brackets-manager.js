@@ -1,7 +1,7 @@
-import { Match, MatchGame, Round, Seeding, SeedOrdering, Status } from 'brackets-model';
+import { Match, MatchGame, Round, SeedOrdering, Status } from 'brackets-model';
 import { ordering } from './ordering';
 import { BaseUpdater } from './base/updater';
-import { ChildCountLevel } from './types';
+import { ChildCountLevel, CustomSeeding } from './types';
 import * as helpers from './helpers';
 
 export class Update extends BaseUpdater {
@@ -108,15 +108,15 @@ export class Update extends BaseUpdater {
      * @param stageId ID of the stage.
      * @param seeding The new seeding.
      */
-    public async seeding(stageId: number, seeding: Seeding): Promise<void> {
+    public async seeding(stageId: number, seeding: CustomSeeding): Promise<void> {
         await this.updateSeeding(stageId, seeding);
     }
 
     /**
      * Confirms the seeding of a stage.
-     * 
+     *
      * This will convert TBDs to BYEs and propagate them.
-     * 
+     *
      * @param stageId ID of the stage.
      */
     public async confirmSeeding(stageId: number): Promise<void> {

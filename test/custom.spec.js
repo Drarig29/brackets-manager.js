@@ -1,4 +1,3 @@
-
 const chai = require('chai');
 chai.use(require('chai-as-promised'));
 
@@ -9,39 +8,48 @@ const { JsonDatabase } = require('brackets-json-db');
 
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
-const createTournament = (tournamentType) => { //eslint-disable-line
-return  {
+//eslint-disable-next-line  @typescript-eslint/explicit-function-return-type
+const createTournament = (tournamentType) => ({
     name: 'Amateur',
     tournamentId: 0,
     type: tournamentType,
     seeding: [
-        {id: 0, name: 'Team0', nationality: 'US' }, {id: 1, name: 'Team1', nationality: 'US' },
-        {id: 2, name: 'Team2', nationality: 'US' }, {id: 3, name: 'Team3', nationality: 'US' },
-        {id: 4, name: 'Team4', nationality: 'US' }, {id: 5, name: 'Team5', nationality: 'US' },
-        {id: 6, name: 'Team6', nationality: 'US' }, {id: 7, name: 'Team7', nationality: 'US' },
-        {id: 8, name: 'Team8', nationality: 'US' }, {id: 9, name: 'Team9', nationality: 'US' },
-        {id: 10, name: 'Team10', nationality: 'US' }, {id: 11, name: 'Team11', nationality: 'US' },
-        {id: 12, name: 'Team12', nationality: 'US' }, {id: 13, name: 'Team13', nationality: 'US' },
-        {id: 14, name: 'Team14', nationality: 'US' }, {id: 15, name: 'Team15', nationality: 'US' },
+        { name: 'Team0', nationality: 'US' },
+        { name: 'Team1', nationality: 'US' },
+        { name: 'Team2', nationality: 'US' },
+        { name: 'Team3', nationality: 'US' },
+        { name: 'Team4', nationality: 'US' },
+        { name: 'Team5', nationality: 'US' },
+        { name: 'Team6', nationality: 'US' },
+        { name: 'Team7', nationality: 'US' },
+        { name: 'Team8', nationality: 'US' },
+        { name: 'Team9', nationality: 'US' },
+        { name: 'Team10', nationality: 'US' },
+        { name: 'Team11', nationality: 'US' },
+        { name: 'Team12', nationality: 'US' },
+        { name: 'Team13', nationality: 'US' },
+        { name: 'Team14', nationality: 'US' },
+        { name: 'Team15', nationality: 'US' },
     ],
-    settings: tournamentType === 'round_robin' ? { groupCount: 2 } : { seedOrdering: ['natural'] },
-};
-};
-
+    settings:
+        tournamentType === 'round_robin'
+            ? { groupCount: 2 }
+            : { seedOrdering: ['natural'] },
+});
 
 describe('Create tournaments with custom seeding', async () => {
-    before(async () => {
+    beforeEach(async () => {
         storage.reset();
     });
 
-    it('should create single elimintation with custom seeding', async() => {
+    it('should create single elimintation with custom seeding', async () => {
         await manager.create(createTournament('single_elimination'));
         const stageData = await manager.get.stageData(0);
-       assert.strictEqual(stageData.participant[0].nationality, 'US');
-       assert.strictEqual(stageData.participant.length, 16);
+        assert.strictEqual(stageData.participant[0].nationality, 'US');
+        assert.strictEqual(stageData.participant.length, 16);
     });
 
-    it('should create double elimination with custom seeding', async() => {
+    it('should create double elimination with custom seeding', async () => {
         await manager.create(createTournament('double_elimination'));
         const stageData = await manager.get.stageData(0);
 
@@ -49,8 +57,7 @@ describe('Create tournaments with custom seeding', async () => {
         assert.strictEqual(stageData.participant.length, 16);
     });
 
-    it('should create round robin with custom seeding', async() => {
-
+    it('should create round robin with custom seeding', async () => {
         await manager.create(createTournament('round_robin'));
         const stageData = await manager.get.stageData(0);
 
@@ -58,8 +65,7 @@ describe('Create tournaments with custom seeding', async () => {
         assert.strictEqual(stageData.participant.length, 16);
     });
 });
-describe('Update matches with custom participants', () => {
-
+describe('Update matches with custom seeding', () => {
     before(async () => {
         storage.reset();
         await manager.create(createTournament('double_elimination'));
@@ -138,14 +144,20 @@ describe('Update matches with custom participants', () => {
             opponent1: { result: 'win' },
         });
 
-        assert.strictEqual((await storage.select('match', 8)).status, Status.Waiting);
+        assert.strictEqual(
+            (await storage.select('match', 8)).status,
+            Status.Waiting,
+        );
 
         await manager.update.match({
             id: 1,
             opponent1: { result: 'win' },
         });
 
-        assert.strictEqual((await storage.select('match', 8)).status, Status.Ready);
+        assert.strictEqual(
+            (await storage.select('match', 8)).status,
+            Status.Ready,
+        );
     });
 
     it('should end the match by only setting a forfeit', async () => {
@@ -259,25 +271,34 @@ describe('Update matches with custom participants', () => {
     });
 
     it('should throw if two winners', async () => {
-        await assert.isRejected(manager.update.match({
-            id: 3,
-            opponent1: { result: 'win' },
-            opponent2: { result: 'win' },
-        }), 'There are two winners.');
+        await assert.isRejected(
+            manager.update.match({
+                id: 3,
+                opponent1: { result: 'win' },
+                opponent2: { result: 'win' },
+            }),
+            'There are two winners.',
+        );
 
-        await assert.isRejected(manager.update.match({
-            id: 3,
-            opponent1: { result: 'loss' },
-            opponent2: { result: 'loss' },
-        }), 'There are two losers.');
+        await assert.isRejected(
+            manager.update.match({
+                id: 3,
+                opponent1: { result: 'loss' },
+                opponent2: { result: 'loss' },
+            }),
+            'There are two losers.',
+        );
     });
 
     it('should throw if two forfeits', async () => {
-        await assert.isRejected(manager.update.match({
-            id: 3,
-            opponent1: { forfeit: true },
-            opponent2: { forfeit: true },
-        }), 'There are two forfeits.');
+        await assert.isRejected(
+            manager.update.match({
+                id: 3,
+                opponent1: { forfeit: true },
+                opponent2: { forfeit: true },
+            }),
+            'There are two forfeits.',
+        );
     });
 
     it('should throw if one forfeit then the other without resetting the match between', async () => {
@@ -297,8 +318,7 @@ describe('Update matches with custom participants', () => {
     });
 });
 
-describe('Give opponent IDs when updating', () => {
-
+describe('Give opponent IDs when updating with custom seeding', () => {
     beforeEach(async () => {
         storage.reset();
 
@@ -307,8 +327,10 @@ describe('Give opponent IDs when updating', () => {
             tournamentId: 0,
             type: 'double_elimination',
             seeding: [
-                'Team 1', 'Team 2',
-                'Team 3', 'Team 4',
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+                { name: 'Team 3', nationality: 'US' },
+                { name: 'Team 4', nationality: 'US' },
             ],
             settings: { seedOrdering: ['natural'] },
         });
@@ -349,18 +371,20 @@ describe('Give opponent IDs when updating', () => {
     });
 
     it('should throw when the given opponent ID does not exist in the match', async () => {
-        await assert.isRejected(manager.update.match({
-            id: 0,
-            opponent1: {
-                id: 2, // Belongs to match id 1.
-                score: 10,
-            },
-        }), /The given opponent[12] ID does not exist in this match./);
+        await assert.isRejected(
+            manager.update.match({
+                id: 0,
+                opponent1: {
+                    id: 2, // Belongs to match id 1.
+                    score: 10,
+                },
+            }),
+            /The given opponent[12] ID does not exist in this match./,
+        );
     });
 });
 
-describe('Locked matches', () => {
-
+describe('Locked matches with custom seeding', () => {
     before(async () => {
         storage.reset();
         await manager.create(createTournament('double_elimination'));
@@ -368,10 +392,22 @@ describe('Locked matches', () => {
 
     it('should throw when the matches leading to the match have not been completed yet', async () => {
         await assert.isFulfilled(manager.update.match({ id: 0 })); // No problem when no previous match.
-        await assert.isRejected(manager.update.match({ id: 8 }), 'The match is locked.'); // First match of WB Round 2.
-        await assert.isRejected(manager.update.match({ id: 15 }), 'The match is locked.'); // First match of LB Round 1.
-        await assert.isRejected(manager.update.match({ id: 19 }), 'The match is locked.'); // First match of LB Round 1.
-        await assert.isRejected(manager.update.match({ id: 23 }), 'The match is locked.'); // First match of LB Round 3.
+        await assert.isRejected(
+            manager.update.match({ id: 8 }),
+            'The match is locked.',
+        ); // First match of WB Round 2.
+        await assert.isRejected(
+            manager.update.match({ id: 15 }),
+            'The match is locked.',
+        ); // First match of LB Round 1.
+        await assert.isRejected(
+            manager.update.match({ id: 19 }),
+            'The match is locked.',
+        ); // First match of LB Round 1.
+        await assert.isRejected(
+            manager.update.match({ id: 23 }),
+            'The match is locked.',
+        ); // First match of LB Round 3.
     });
 
     it('should throw when one of participants already played next match', async () => {
@@ -379,12 +415,14 @@ describe('Locked matches', () => {
         await manager.update.match({ id: 1, opponent1: { result: 'win' } });
         await manager.update.match({ id: 8, opponent1: { result: 'win' } });
 
-        await assert.isRejected(manager.update.match({ id: 0 }), 'The match is locked.');
+        await assert.isRejected(
+            manager.update.match({ id: 0 }),
+            'The match is locked.',
+        );
     });
 });
 
-describe('Update match games', () => {
-
+describe('Update match games with custom seeding', () => {
     beforeEach(() => {
         storage.reset();
     });
@@ -401,45 +439,104 @@ describe('Update match games', () => {
         });
 
         await manager.update.matchChildCount('stage', 0, 2); // Set Bo2 for all the stage.
-        assert.strictEqual((await storage.select('match', 0)).status, (await storage.select('match_game', 0)).status);
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            (await storage.select('match_game', 0)).status,
+        );
 
-        await manager.update.seeding(0, ['Team 1', 'Team 2', 'Team 3', 'Team 4']);
-        assert.strictEqual((await storage.select('match', 0)).status, (await storage.select('match_game', 0)).status);
+        await manager.update.seeding(0, [
+            'Team 1',
+            'Team 2',
+            'Team 3',
+            'Team 4',
+        ]);
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            (await storage.select('match_game', 0)).status,
+        );
 
         // Semi 1
-        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
-        assert.strictEqual((await storage.select('match', 0)).opponent1.score, 2);
-        assert.strictEqual((await storage.select('match', 0)).opponent2.score, 0);
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            Status.Completed,
+        );
+        assert.strictEqual(
+            (await storage.select('match', 0)).opponent1.score,
+            2,
+        );
+        assert.strictEqual(
+            (await storage.select('match', 0)).opponent2.score,
+            0,
+        );
 
         let finalMatchStatus = (await storage.select('match', 2)).status;
         assert.strictEqual(finalMatchStatus, Status.Waiting);
-        assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
+        assert.strictEqual(
+            finalMatchStatus,
+            (await storage.select('match_game', 4)).status,
+        );
 
         // Semi 2
-        await manager.update.matchGame({ parent_id: 1, number: 1, opponent2: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 1, number: 2, opponent2: { result: 'win' } });
+        await manager.update.matchGame({
+            parent_id: 1,
+            number: 1,
+            opponent2: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 1,
+            number: 2,
+            opponent2: { result: 'win' },
+        });
 
         finalMatchStatus = (await storage.select('match', 2)).status;
         assert.strictEqual(finalMatchStatus, Status.Ready);
-        assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
+        assert.strictEqual(
+            finalMatchStatus,
+            (await storage.select('match_game', 4)).status,
+        );
 
         // Final
-        await manager.update.matchGame({ parent_id: 2, number: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 2, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({
+            parent_id: 2,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 2,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
 
         finalMatchStatus = (await storage.select('match', 2)).status;
         assert.strictEqual(finalMatchStatus, Status.Completed);
-        assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
+        assert.strictEqual(
+            finalMatchStatus,
+            (await storage.select('match_game', 4)).status,
+        );
 
         const semi1Status = (await storage.select('match', 0)).status;
         assert.strictEqual(semi1Status, Status.Archived);
-        assert.strictEqual(semi1Status, (await storage.select('match_game', 0)).status);
+        assert.strictEqual(
+            semi1Status,
+            (await storage.select('match_game', 0)).status,
+        );
 
         const semi2Status = (await storage.select('match', 1)).status;
         assert.strictEqual(semi2Status, Status.Archived);
-        assert.strictEqual(semi2Status, (await storage.select('match_game', 2)).status);
+        assert.strictEqual(
+            semi2Status,
+            (await storage.select('match_game', 2)).status,
+        );
     });
 
     it('should update parent score when match game is updated', async () => {
@@ -447,7 +544,12 @@ describe('Update match games', () => {
             name: 'With match games',
             tournamentId: 0,
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+                { name: 'Team 3', nationality: 'US' },
+                { name: 'Team 4', nationality: 'US' },
+            ],
             settings: {
                 matchesChildCount: 3, // Bo3.
             },
@@ -484,7 +586,10 @@ describe('Update match games', () => {
             },
         });
 
-        await assert.isRejected(manager.update.matchGame({ id: 0 }), 'The match game is locked.');
+        await assert.isRejected(
+            manager.update.matchGame({ id: 0 }),
+            'The match game is locked.',
+        );
 
         storage.reset();
 
@@ -499,7 +604,10 @@ describe('Update match games', () => {
         });
 
         await manager.update.matchChildCount('round', 0, 3); // Example with all Bo3 after creation time.
-        await assert.isRejected(manager.update.matchGame({ id: 0 }), 'The match game is locked.');
+        await assert.isRejected(
+            manager.update.matchGame({ id: 0 }),
+            'The match game is locked.',
+        );
     });
 
     it('should throw if trying to update a child game of a locked match', async () => {
@@ -507,18 +615,39 @@ describe('Update match games', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+                { name: 'Team 3', nationality: 'US' },
+                { name: 'Team 4', nationality: 'US' },
+            ],
             settings: {
                 seedOrdering: ['natural'],
                 matchesChildCount: 3, // Bo3
             },
         });
 
-        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
 
-        await manager.update.matchGame({ parent_id: 1, number: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({
+            parent_id: 1,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 1,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
 
         // Starting the next match will lock previous matches and their match games.
         await manager.update.matchGame({
@@ -528,10 +657,38 @@ describe('Update match games', () => {
             opponent2: { score: 0 },
         });
 
-        await assert.isRejected(manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'loss' } }), 'The match game is locked.');
-        await assert.isRejected(manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'loss' } }), 'The match game is locked.');
-        await assert.isRejected(manager.update.matchGame({ parent_id: 1, number: 1, opponent1: { result: 'loss' } }), 'The match game is locked.');
-        await assert.isRejected(manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'loss' } }), 'The match game is locked.');
+        await assert.isRejected(
+            manager.update.matchGame({
+                parent_id: 0,
+                number: 1,
+                opponent1: { result: 'loss' },
+            }),
+            'The match game is locked.',
+        );
+        await assert.isRejected(
+            manager.update.matchGame({
+                parent_id: 0,
+                number: 2,
+                opponent1: { result: 'loss' },
+            }),
+            'The match game is locked.',
+        );
+        await assert.isRejected(
+            manager.update.matchGame({
+                parent_id: 1,
+                number: 1,
+                opponent1: { result: 'loss' },
+            }),
+            'The match game is locked.',
+        );
+        await assert.isRejected(
+            manager.update.matchGame({
+                parent_id: 1,
+                number: 2,
+                opponent1: { result: 'loss' },
+            }),
+            'The match game is locked.',
+        );
     });
 
     it('should propagate the winner of the parent match in the next match', async () => {
@@ -539,7 +696,12 @@ describe('Update match games', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+                { name: 'Team 3', nationality: 'US' },
+                { name: 'Team 4', nationality: 'US' },
+            ],
             settings: { seedOrdering: ['natural'] },
         });
 
@@ -560,7 +722,12 @@ describe('Update match games', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+                { name: 'Team 3', nationality: 'US' },
+                { name: 'Team 4', nationality: 'US' },
+            ],
             settings: {
                 matchesChildCount: 3,
             },
@@ -578,7 +745,10 @@ describe('Update match games', () => {
             opponent1: { result: 'win' },
         });
 
-        assert.strictEqual((await storage.select('match', 0)).opponent1.score, 2);
+        assert.strictEqual(
+            (await storage.select('match', 0)).opponent1.score,
+            2,
+        );
     });
 
     it('should throw if trying to reset the results of a parent match', async () => {
@@ -586,13 +756,19 @@ describe('Update match games', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2'],
+            seeding: [
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+            ],
             settings: {
                 matchesChildCount: 3,
             },
         });
 
-        await assert.isRejected(manager.reset.matchResults(0), 'The parent match is controlled by its child games and its result cannot be reset.');
+        await assert.isRejected(
+            manager.reset.matchResults(0),
+            'The parent match is controlled by its child games and its result cannot be reset.',
+        );
     });
 
     it('should reset the results of a parent match when a child game\'s results are reset', async () => {
@@ -600,7 +776,10 @@ describe('Update match games', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2'],
+            seeding: [
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+            ],
             settings: {
                 matchesChildCount: 3,
             },
@@ -608,10 +787,16 @@ describe('Update match games', () => {
 
         await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
         await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            Status.Completed,
+        );
 
         await manager.reset.matchGameResults(0);
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            Status.Running,
+        );
     });
 
     it('should reset the forfeit of a parent match', async () => {
@@ -619,7 +804,10 @@ describe('Update match games', () => {
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2'],
+            seeding: [
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+            ],
             settings: {
                 matchesChildCount: 3,
             },
@@ -630,8 +818,7 @@ describe('Update match games', () => {
     });
 });
 
-describe('Seeding', () => {
-
+describe('Seeding with custom seeding', () => {
     beforeEach(async () => {
         storage.reset();
 
@@ -646,24 +833,32 @@ describe('Seeding', () => {
         });
     });
 
-    it('should update the seeding in a stage without any participant', async () => {
+    it('should update the custom seeding in a stage without any participant', async () => {
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+            { name: 'Team3', nationality: 'US' },
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            { name: 'Team6', nationality: 'US' },
+            { name: 'Team7', nationality: 'US' },
+            { name: 'Team8', nationality: 'US' },
         ]);
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
         assert.strictEqual((await storage.select('participant')).length, 8);
     });
 
-    it('should update the seeding to remove participants', async () => {
+    it('should update the custom seeding to remove participants', async () => {
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            null, 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', null,
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+            null,
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            { name: 'Team6', nationality: 'US' },
+            { name: 'Team7', nationality: 'US' },
+            null,
         ]);
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
@@ -671,19 +866,33 @@ describe('Seeding', () => {
         // In this context, a `null` value is not a BYE, but a TDB (to be determined)
         // because we consider the tournament might have been started.
         // If it's not and you prefer BYEs, just recreate the tournament.
-        assert.strictEqual((await storage.select('match', 1)).opponent1.id, null);
-        assert.strictEqual((await storage.select('match', 3)).opponent2.id, null);
+        assert.strictEqual(
+            (await storage.select('match', 1)).opponent1.id,
+            null,
+        );
+        assert.strictEqual(
+            (await storage.select('match', 3)).opponent2.id,
+            null,
+        );
     });
 
     it('should handle incomplete seeding during seeding update', async () => {
-        await manager.update.seeding(0, ['Team 1', 'Team 2']);
-
+        await manager.update.seeding(0, [
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+        ]);
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
         assert.strictEqual((await storage.select('match', 0)).opponent2.id, 1);
 
         // Same here, see comments above.
-        assert.strictEqual((await storage.select('match', 1)).opponent1.id, null);
-        assert.strictEqual((await storage.select('match', 1)).opponent2.id, null);
+        assert.strictEqual(
+            (await storage.select('match', 1)).opponent1.id,
+            null,
+        );
+        assert.strictEqual(
+            (await storage.select('match', 1)).opponent2.id,
+            null,
+        );
     });
 
     it('should update BYE to TBD during seeding update', async () => {
@@ -694,10 +903,14 @@ describe('Seeding', () => {
             tournamentId: 0,
             type: 'double_elimination',
             seeding: [
-                null, 'Team 2',
-                'Team 3', 'Team 4',
-                'Team 5', 'Team 6',
-                'Team 7', 'Team 8',
+                null,
+                { name: 'Team2', nationality: 'US' },
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+                { name: 'Team5', nationality: 'US' },
+                { name: 'Team6', nationality: 'US' },
+                { name: 'Team7', nationality: 'US' },
+                { name: 'Team8', nationality: 'US' },
             ],
             settings: {
                 seedOrdering: ['natural'],
@@ -707,44 +920,66 @@ describe('Seeding', () => {
         assert.strictEqual((await storage.select('match', 0)).opponent1, null);
 
         await manager.update.seeding(0, [
-            null, 'Team 2',
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
+            null,
+            { name: 'Team2', nationality: 'US' },
+            { name: 'Team3', nationality: 'US' },
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            { name: 'Team6', nationality: 'US' },
+            { name: 'Team7', nationality: 'US' },
+            { name: 'Team8', nationality: 'US' },
         ]);
 
         // To stay consistent with the fact that `update.seeding()` uses TBD and not BYE,
         // the BYE should be updated to TDB here.
-        assert.strictEqual((await storage.select('match', 0)).opponent1.id, null);
+        assert.strictEqual(
+            (await storage.select('match', 0)).opponent1.id,
+            null,
+        );
     });
 
     it('should reset the seeding of a stage', async () => {
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+            { name: 'Team3', nationality: 'US' },
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            { name: 'Team6', nationality: 'US' },
+            { name: 'Team7', nationality: 'US' },
+            { name: 'Team8', nationality: 'US' },
         ]);
 
         await manager.reset.seeding(0);
 
-        assert.strictEqual((await storage.select('match', 0)).opponent1.id, null);
+        assert.strictEqual(
+            (await storage.select('match', 0)).opponent1.id,
+            null,
+        );
         assert.strictEqual((await storage.select('participant')).length, 8); // Participants aren't removed.
     });
 
     it('should update the seeding in a stage with participants already', async () => {
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+            { name: 'Team3', nationality: 'US' },
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            { name: 'Team6', nationality: 'US' },
+            { name: 'Team7', nationality: 'US' },
+            { name: 'Team8', nationality: 'US' },
         ]);
 
         await manager.update.seeding(0, [
-            'Team A', 'Team B',
-            'Team C', 'Team D',
-            'Team E', 'Team F',
-            'Team G', 'Team H',
+            { name: 'Team A', nationality: 'US' },
+            { name: 'Team B', nationality: 'US' },
+            { name: 'Team C', nationality: 'US' },
+            { name: 'Team D', nationality: 'US' },
+            { name: 'Team E', nationality: 'US' },
+            { name: 'Team F', nationality: 'US' },
+            { name: 'Team G', nationality: 'US' },
+            { name: 'Team H', nationality: 'US' },
         ]);
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, 8);
@@ -753,17 +988,25 @@ describe('Seeding', () => {
 
     it('should update the seeding in a stage by registering only one missing participant', async () => {
         await manager.update.seeding(0, [
-            'Team A', 'Team B',
-            'Team C', 'Team D',
-            'Team E', 'Team F',
-            'Team G', 'Team H',
+            { name: 'Team A', nationality: 'US' },
+            { name: 'Team B', nationality: 'US' },
+            { name: 'Team C', nationality: 'US' },
+            { name: 'Team D', nationality: 'US' },
+            { name: 'Team E', nationality: 'US' },
+            { name: 'Team F', nationality: 'US' },
+            { name: 'Team G', nationality: 'US' },
+            { name: 'Team H', nationality: 'US' },
         ]);
 
         await manager.update.seeding(0, [
-            'Team A', 'Team B', // Match 0.
-            'Team C', 'Team D', // Match 1.
-            'Team E', 'Team F', // Match 2.
-            'Team G', 'Team Z', // Match 3.
+            { name: 'Team A', nationality: 'US' },
+            { name: 'Team B', nationality: 'US' },
+            { name: 'Team C', nationality: 'US' },
+            { name: 'Team D', nationality: 'US' },
+            { name: 'Team E', nationality: 'US' },
+            { name: 'Team F', nationality: 'US' },
+            { name: 'Team G', nationality: 'US' },
+            { name: 'Team Z', nationality: 'US' },
         ]);
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
@@ -773,10 +1016,14 @@ describe('Seeding', () => {
 
     it('should update the seeding in a stage on non-locked matches', async () => {
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
+            { name: 'Team 1', nationality: 'US' },
+            { name: 'Team 2', nationality: 'US' },
+            { name: 'Team 3', nationality: 'US' },
+            { name: 'Team 4', nationality: 'US' },
+            { name: 'Team 5', nationality: 'US' },
+            { name: 'Team 6', nationality: 'US' },
+            { name: 'Team 7', nationality: 'US' },
+            { name: 'Team 8', nationality: 'US' },
         ]);
 
         await manager.update.match({
@@ -786,10 +1033,14 @@ describe('Seeding', () => {
         });
 
         await manager.update.seeding(0, [
-            'Team A', 'Team B', // Match 0.
-            'Team C', 'Team D', // Match 1.
-            'Team 5', 'Team 6', // Match 2. NO CHANGE.
-            'Team G', 'Team H', // Match 3.
+            { name: 'Team A', nationality: 'US' }, // Match 0.
+            { name: 'Team B', nationality: 'US' },
+            { name: 'Team C', nationality: 'US' }, // Match 1.
+            { name: 'Team D', nationality: 'US' },
+            { name: 'Team 5', nationality: 'US' }, // Match 2. NO CHANGE.
+            { name: 'Team 6', nationality: 'US' },
+            { name: 'Team G', nationality: 'US' }, // Match 3.
+            { name: 'Team H', nationality: 'US' },
         ]);
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, 8); // New id.
@@ -799,10 +1050,14 @@ describe('Seeding', () => {
 
     it('should update the seeding and keep completed matches completed', async () => {
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+            { name: 'Team3', nationality: 'US' },
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            { name: 'Team6', nationality: 'US' },
+            { name: 'Team7', nationality: 'US' },
+            { name: 'Team8', nationality: 'US' },
         ]);
 
         await manager.update.match({
@@ -812,10 +1067,14 @@ describe('Seeding', () => {
         });
 
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2', // Keep this pair.
-            'Team 4', 'Team 3',
-            'Team 6', 'Team 5',
-            'Team 8', 'Team 7',
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team3', nationality: 'US' },
+            { name: 'Team6', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            { name: 'Team8', nationality: 'US' },
+            { name: 'Team7', nationality: 'US' },
         ]);
 
         const match = await storage.select('match', 0);
@@ -825,10 +1084,14 @@ describe('Seeding', () => {
 
     it('should throw if a match is completed and would have to be changed', async () => {
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+            { name: 'Team3', nationality: 'US' },
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            { name: 'Team6', nationality: 'US' },
+            { name: 'Team7', nationality: 'US' },
+            { name: 'Team8', nationality: 'US' },
         ]);
 
         await manager.update.match({
@@ -837,20 +1100,31 @@ describe('Seeding', () => {
             opponent2: { score: 0 },
         });
 
-        await assert.isRejected(manager.update.seeding(0, [
-            'Team 2', 'Team 1', // Change this pair.
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
-        ]), 'A match is locked.');
+        await assert.isRejected(
+            manager.update.seeding(0, [
+                { name: 'Team2', nationality: 'US' },
+                { name: 'Team1', nationality: 'US' },
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+                { name: 'Team5', nationality: 'US' },
+                { name: 'Team6', nationality: 'US' },
+                { name: 'Team7', nationality: 'US' },
+                { name: 'Team8', nationality: 'US' },
+            ]),
+            'A match is locked.',
+        );
     });
 
     it('should throw if a match is locked and would have to be changed', async () => {
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+            { name: 'Team3', nationality: 'US' },
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            { name: 'Team6', nationality: 'US' },
+            { name: 'Team7', nationality: 'US' },
+            { name: 'Team8', nationality: 'US' },
         ]);
 
         await manager.update.match({
@@ -859,35 +1133,65 @@ describe('Seeding', () => {
             opponent2: { score: 0 },
         });
 
-        await assert.isRejected(manager.update.seeding(0, [
-            'Team A', 'Team B', // Match 0.
-            'Team C', 'Team D', // Match 1.
-            'WILL', 'THROW',    // Match 2.
-            'Team G', 'Team H', // Match 3.
-        ]), 'A match is locked.');
+        await assert.isRejected(
+            manager.update.seeding(0, [
+                { name: 'Team A', nationality: 'US' },
+                { name: 'Team B', nationality: 'US' },
+                { name: 'Team C', nationality: 'US' },
+                { name: 'Team D', nationality: 'US' },
+                { name: 'WILL', nationality: 'US' },
+                { name: 'THROW', nationality: 'US' },
+                { name: 'Team G', nationality: 'US' },
+                { name: 'Team H', nationality: 'US' },
+            ]),
+            'A match is locked.',
+        );
     });
 
     it('should throw if the seeding has duplicate participants', async () => {
-        await assert.isRejected(manager.update.seeding(0, [
-            'Team 1', 'Team 1', // Duplicate
-            'Team 3', 'Team 4',
-            'Team 5', 'Team 6',
-            'Team 7', 'Team 8',
-        ]), 'The seeding has a duplicate participant.');
+        await assert.isRejected(
+            manager.update.seeding(0, [
+                { name: 'Team1', nationality: 'US' },
+                { name: 'Team1', nationality: 'US' }, // Duplicate
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+                { name: 'Team5', nationality: 'US' },
+                { name: 'Team6', nationality: 'US' },
+                { name: 'Team7', nationality: 'US' },
+                { name: 'Team8', nationality: 'US' },
+            ]),
+            'The seeding has a duplicate participant.',
+        );
     });
 
     it('should confirm the current seeding', async () => {
         await manager.update.seeding(0, [
-            'Team 1', 'Team 2',
-            null, 'Team 4',
-            'Team 5', null,
-            null, null,
+            { name: 'Team1', nationality: 'US' },
+            { name: 'Team2', nationality: 'US' },
+            null,
+            { name: 'Team4', nationality: 'US' },
+            { name: 'Team5', nationality: 'US' },
+            null,
+            null,
+            null,
         ]);
 
-        assert.strictEqual((await storage.select('match', 1)).opponent1.id, null); // First, is a TBD.
-        assert.strictEqual((await storage.select('match', 2)).opponent2.id, null);
-        assert.strictEqual((await storage.select('match', 3)).opponent1.id, null);
-        assert.strictEqual((await storage.select('match', 3)).opponent2.id, null);
+        assert.strictEqual(
+            (await storage.select('match', 1)).opponent1.id,
+            null,
+        ); // First, is a TBD.
+        assert.strictEqual(
+            (await storage.select('match', 2)).opponent2.id,
+            null,
+        );
+        assert.strictEqual(
+            (await storage.select('match', 3)).opponent1.id,
+            null,
+        );
+        assert.strictEqual(
+            (await storage.select('match', 3)).opponent2.id,
+            null,
+        );
 
         await manager.update.confirmSeeding(0);
 
@@ -908,8 +1212,7 @@ describe('Seeding', () => {
     });
 });
 
-describe('Match games status', () => {
-
+describe('Match games status with custom seeding', () => {
     beforeEach(() => {
         storage.reset();
     });
@@ -919,7 +1222,12 @@ describe('Match games status', () => {
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team1', nationality: 'US' },
+                { name: 'Team2', nationality: 'US' },
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+            ],
             settings: { matchesChildCount: 3 },
         });
 
@@ -934,12 +1242,25 @@ describe('Match games status', () => {
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team1', nationality: 'US' },
+                { name: 'Team2', nationality: 'US' },
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+            ],
             settings: { matchesChildCount: 3 },
         });
 
-        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
 
         const games = await storage.select('match_game', { parent_id: 2 });
         assert.strictEqual(games[0].status, Status.Waiting);
@@ -952,15 +1273,36 @@ describe('Match games status', () => {
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team1', nationality: 'US' },
+                { name: 'Team2', nationality: 'US' },
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+            ],
             settings: { matchesChildCount: 3 },
         });
 
-        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
 
-        await manager.update.matchGame({ parent_id: 1, number: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({
+            parent_id: 1,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 1,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
 
         const games = await storage.select('match_game', { parent_id: 2 });
         assert.strictEqual(games[0].status, Status.Ready);
@@ -973,7 +1315,12 @@ describe('Match games status', () => {
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+                { name: 'Team 3', nationality: 'US' },
+                { name: 'Team 4', nationality: 'US' },
+            ],
             settings: { matchesChildCount: 3 },
         });
 
@@ -990,7 +1337,10 @@ describe('Match games status', () => {
         assert.strictEqual(games[2].status, Status.Ready);
 
         assert.strictEqual(games[1].status, Status.Running);
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            Status.Running,
+        );
     });
 
     it('should set the child game to Completed without changing the siblings or the parent match status', async () => {
@@ -998,7 +1348,12 @@ describe('Match games status', () => {
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team 1', nationality: 'US' },
+                { name: 'Team 2', nationality: 'US' },
+                { name: 'Team 3', nationality: 'US' },
+                { name: 'Team 4', nationality: 'US' },
+            ],
             settings: { matchesChildCount: 3 },
         });
 
@@ -1009,7 +1364,10 @@ describe('Match games status', () => {
         // Siblings and parent match are left untouched.
         assert.strictEqual(games[0].status, Status.Ready);
         assert.strictEqual(games[2].status, Status.Ready);
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            Status.Running,
+        );
 
         assert.strictEqual(games[1].status, Status.Completed);
     });
@@ -1019,20 +1377,37 @@ describe('Match games status', () => {
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team1', nationality: 'US' },
+                { name: 'Team2', nationality: 'US' },
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+            ],
             settings: { matchesChildCount: 3 },
         });
 
         await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
         await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            Status.Completed,
+        );
 
         // Left untouched, can be played if we want.
-        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
+        assert.strictEqual(
+            (await storage.select('match_game', 2)).status,
+            Status.Ready,
+        );
 
         await manager.update.matchGame({ id: 2, opponent1: { result: 'win' } });
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
-        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Completed);
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            Status.Completed,
+        );
+        assert.strictEqual(
+            (await storage.select('match_game', 2)).status,
+            Status.Completed,
+        );
     });
 
     it('should archive previous matches and their games when next match is started', async () => {
@@ -1040,15 +1415,36 @@ describe('Match games status', () => {
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team1', nationality: 'US' },
+                { name: 'Team2', nationality: 'US' },
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+            ],
             settings: { matchesChildCount: 3 },
         });
 
-        await manager.update.matchGame({ parent_id: 0, number: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 0, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 0,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
 
-        await manager.update.matchGame({ parent_id: 1, number: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ parent_id: 1, number: 2, opponent1: { result: 'win' } });
+        await manager.update.matchGame({
+            parent_id: 1,
+            number: 1,
+            opponent1: { result: 'win' },
+        });
+        await manager.update.matchGame({
+            parent_id: 1,
+            number: 2,
+            opponent1: { result: 'win' },
+        });
 
         await manager.update.matchGame({
             parent_id: 2,
@@ -1057,19 +1453,29 @@ describe('Match games status', () => {
             opponent2: { score: 0 },
         });
 
-        const firstMatchGames = await storage.select('match_game', { parent_id: 0 });
+        const firstMatchGames = await storage.select('match_game', {
+            parent_id: 0,
+        });
         assert.strictEqual(firstMatchGames[0].status, Status.Archived);
         assert.strictEqual(firstMatchGames[1].status, Status.Archived);
         assert.strictEqual(firstMatchGames[2].status, Status.Archived);
 
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Archived);
+        assert.strictEqual(
+            (await storage.select('match', 0)).status,
+            Status.Archived,
+        );
 
-        const secondMatchGames = await storage.select('match_game', { parent_id: 1 });
+        const secondMatchGames = await storage.select('match_game', {
+            parent_id: 1,
+        });
         assert.strictEqual(secondMatchGames[0].status, Status.Archived);
         assert.strictEqual(secondMatchGames[1].status, Status.Archived);
         assert.strictEqual(secondMatchGames[2].status, Status.Archived);
 
-        assert.strictEqual((await storage.select('match', 1)).status, Status.Archived);
+        assert.strictEqual(
+            (await storage.select('match', 1)).status,
+            Status.Archived,
+        );
     });
 
     it('should work with unique match games when controlled via the parent', async () => {
@@ -1077,12 +1483,23 @@ describe('Match games status', () => {
             tournamentId: 0,
             name: 'Example',
             type: 'double_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team1', nationality: 'US' },
+                { name: 'Team2', nationality: 'US' },
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+            ],
             settings: { matchesChildCount: 1 },
         });
 
-        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Locked);
-        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Locked);
+        assert.strictEqual(
+            (await storage.select('match_game', 2)).status,
+            Status.Locked,
+        );
+        assert.strictEqual(
+            (await storage.select('match_game', 3)).status,
+            Status.Locked,
+        );
 
         await manager.update.match({
             id: 0,
@@ -1090,8 +1507,14 @@ describe('Match games status', () => {
             opponent2: { score: 1 },
         });
 
-        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Waiting);
-        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Waiting);
+        assert.strictEqual(
+            (await storage.select('match_game', 2)).status,
+            Status.Waiting,
+        );
+        assert.strictEqual(
+            (await storage.select('match_game', 3)).status,
+            Status.Waiting,
+        );
 
         await manager.update.match({
             id: 1,
@@ -1099,8 +1522,14 @@ describe('Match games status', () => {
             opponent2: { score: 2, result: 'win' },
         });
 
-        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
-        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Ready);
+        assert.strictEqual(
+            (await storage.select('match_game', 2)).status,
+            Status.Ready,
+        );
+        assert.strictEqual(
+            (await storage.select('match_game', 3)).status,
+            Status.Ready,
+        );
     });
 
     it('should work with unique match games when controlled via the child games', async () => {
@@ -1108,12 +1537,23 @@ describe('Match games status', () => {
             tournamentId: 0,
             name: 'Example',
             type: 'double_elimination',
-            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            seeding: [
+                { name: 'Team1', nationality: 'US' },
+                { name: 'Team2', nationality: 'US' },
+                { name: 'Team3', nationality: 'US' },
+                { name: 'Team4', nationality: 'US' },
+            ],
             settings: { matchesChildCount: 1 },
         });
 
-        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Locked);
-        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Locked);
+        assert.strictEqual(
+            (await storage.select('match_game', 2)).status,
+            Status.Locked,
+        );
+        assert.strictEqual(
+            (await storage.select('match_game', 3)).status,
+            Status.Locked,
+        );
 
         await manager.update.matchGame({
             id: 0,
@@ -1121,8 +1561,14 @@ describe('Match games status', () => {
             opponent2: { score: 1 },
         });
 
-        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Waiting);
-        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Waiting);
+        assert.strictEqual(
+            (await storage.select('match_game', 2)).status,
+            Status.Waiting,
+        );
+        assert.strictEqual(
+            (await storage.select('match_game', 3)).status,
+            Status.Waiting,
+        );
 
         await manager.update.matchGame({
             id: 1,
@@ -1130,7 +1576,13 @@ describe('Match games status', () => {
             opponent2: { score: 2, result: 'win' },
         });
 
-        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
-        assert.strictEqual((await storage.select('match_game', 3)).status, Status.Ready);
+        assert.strictEqual(
+            (await storage.select('match_game', 2)).status,
+            Status.Ready,
+        );
+        assert.strictEqual(
+            (await storage.select('match_game', 3)).status,
+            Status.Ready,
+        );
     });
 });

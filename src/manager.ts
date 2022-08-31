@@ -1,5 +1,4 @@
 import { CrudInterface, Database, DataTypes, CustomInputStage, Storage, Table } from './types';
-import { InputStage } from 'brackets-model';
 import { create } from './create';
 import { Get } from './get';
 import { Update } from './update';
@@ -54,7 +53,7 @@ export class BracketsManager {
      *
      * @param stage A stage to create.
      */
-    public async create(stage: InputStage | CustomInputStage): Promise<void> {
+    public async create(stage: CustomInputStage): Promise<void> {
         await create.call(this, stage);
     }
 
