@@ -171,9 +171,9 @@ export function balanceByes(seeding: CustomSeeding, participantCount?: number): 
 
 /**
  * Normalizes IDs in a database.
- *
+ * 
  * All IDs (and references to them) are remapped to consecutive IDs starting from 0.
- *
+ * 
  * @param data Data to normalize.
  */
 export function normalizeIds(data: Database): Database {
@@ -228,7 +228,7 @@ export function normalizeIds(data: Database): Database {
 
 /**
  * Makes a mapping between old IDs and new normalized IDs.
- *
+ * 
  * @param elements A list of elements with IDs.
  */
 export function makeNormalizedIdMapping(elements: { id: number }[]): IdMapping {
@@ -242,7 +242,7 @@ export function makeNormalizedIdMapping(elements: { id: number }[]): IdMapping {
 
 /**
  * Apply a normalizing mapping to a participant.
- *
+ * 
  * @param participant The participant.
  * @param mapping The mapping of IDs.
  */
@@ -288,7 +288,7 @@ export function ensureEvenSized<T>(array: T[]): void {
 
 /**
  * Ensures there are no duplicates in a list of elements.
- *
+ * 
  * @param array A list of elements.
  */
 export function ensureNoDuplicates<T>(array: Nullable<T>[]): void {
@@ -361,7 +361,7 @@ export function ensureNotTied(scores: [number, number]): void {
 
 /**
  * Converts a TBD to a BYE.
- *
+ * 
  * @param slot The slot to convert.
  */
 export function convertTBDtoBYE(slot: ParticipantSlot): ParticipantSlot {
@@ -544,7 +544,7 @@ export function isMatchCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed because of a forfeit.
- *
+ * 
  * @param match Partial match results.
  */
 export function isMatchForfeitCompleted(match: Partial<MatchResults>): boolean {
@@ -553,7 +553,7 @@ export function isMatchForfeitCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed because of a either a draw or a win.
- *
+ * 
  * @param match Partial match results.
  */
 export function isMatchResultCompleted(match: Partial<MatchResults>): boolean {
@@ -562,7 +562,7 @@ export function isMatchResultCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed because of a draw.
- *
+ * 
  * @param match Partial match results.
  */
 export function isMatchDrawCompleted(match: Partial<MatchResults>): boolean {
@@ -571,7 +571,7 @@ export function isMatchDrawCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed because of a win.
- *
+ * 
  * @param match Partial match results.
  */
 export function isMatchWinCompleted(match: Partial<MatchResults>): boolean {
@@ -581,9 +581,9 @@ export function isMatchWinCompleted(match: Partial<MatchResults>): boolean {
 
 /**
  * Checks if a match is completed because of at least one BYE.
- *
+ * 
  * A match "BYE vs. TBD" isn't considered completed yet.
- *
+ * 
  * @param match Partial match results.
  */
 export function isMatchByeCompleted(match: Partial<MatchResults>): boolean {
@@ -612,7 +612,7 @@ export function isMatchParticipantLocked(match: MatchResults): boolean {
 
 /**
  * Indicates whether a match has at least one BYE or not.
- *
+ * 
  * @param match Partial match results.
  */
 export function hasBye(match: Partial<MatchResults>): boolean {
@@ -621,7 +621,7 @@ export function hasBye(match: Partial<MatchResults>): boolean {
 
 /**
  * Returns the status of a match based on the opponents of a match.
- *
+ * 
  * @param opponents The opponents of a match.
  */
 export function getMatchStatus(opponents: Duel): Status;
@@ -635,7 +635,7 @@ export function getMatchStatus(match: Partial<MatchResults>): Status;
 
 /**
  * Returns the status of a match based on information about it.
- *
+ * 
  * @param arg The opponents or partial results of the match.
  */
 export function getMatchStatus(arg: Duel | Partial<MatchResults>): Status {
@@ -745,7 +745,7 @@ export function getOriginPosition(match: Match, side: Side): number {
 
 /**
  * Returns every loser in a list of matches.
- *
+ * 
  * @param participants The list of participants.
  * @param matches A list of matches to get losers of.
  */
@@ -774,7 +774,7 @@ export function getLosers(participants: (Participant | CustomParticipant)[], mat
 
 /**
  * Makes final standings based on participants grouped by ranking.
- *
+ * 
  * @param grouped A list of participants grouped by ranking.
  */
 export function makeFinalStandings(grouped: (Participant | CustomParticipant)[][]): FinalStandingsItem[] {
@@ -798,7 +798,7 @@ export function makeFinalStandings(grouped: (Participant | CustomParticipant)[][
 
 /**
  * Returns the decisive match of a Grand Final.
- *
+ * 
  * @param type The type of Grand Final.
  * @param matches The matches in the Grand Final.
  */
@@ -820,7 +820,7 @@ export function getGrandFinalDecisiveMatch(type: GrandFinalType, matches: Match[
 
 /**
  * Finds a participant in a list.
- *
+ * 
  * @param participants The list of participants.
  * @param slot The slot of the participant to find.
  */
@@ -862,7 +862,7 @@ export function getNextSideLoserBracket(matchNumber: number, nextMatch: Match, r
     if (roundNumber > 1)
         return 'opponent1';
 
-    // The nextSide comes from the WB round 1.
+    // The nextSide comes from the WB round 1. 
     if (nextMatch.opponent1?.position === matchNumber)
         return 'opponent1';
 
@@ -905,7 +905,7 @@ export function resetNextOpponent(nextMatch: Match, nextSide: Side): void {
 
 /**
  * Inverts opponents if requested by the input.
- *
+ * 
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  */
@@ -928,7 +928,7 @@ export function handleOpponentsInversion(stored: MatchResults, match: Partial<Ma
 
 /**
  * Inverts `opponent1` and `opponent2` in a match.
- *
+ * 
  * @param match A match to update.
  */
 export function invertOpponents(match: Partial<MatchResults>): void {
@@ -1033,7 +1033,7 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
         if (stored.opponent1) stored.opponent1.forfeit = true;
         if (stored.opponent2) stored.opponent2.forfeit = true;
 
-        // Don't set any result (win/draw/loss) with a double forfeit
+        // Don't set any result (win/draw/loss) with a double forfeit 
         // so that it doesn't count any point in the ranking.
         return;
     }
@@ -1176,7 +1176,7 @@ export function convertMatchesToSeeding(matches: Match[]): ParticipantSlot[] {
 
 /**
  * Converts a list of slots to an input seeding.
- *
+ * 
  * @param slots The slots to convert.
  */
 export function convertSlotsToSeeding(slots: ParticipantSlot[]): CustomSeeding {
@@ -1210,7 +1210,7 @@ export function sortSeeding(slots: ParticipantSlot[]): ParticipantSlot[] {
 
 /**
  * Returns only the non null elements.
- *
+ * 
  * @param array The array to process.
  */
 export function getNonNull<T>(array: Nullable<T>[]): T[] {
@@ -1556,7 +1556,7 @@ export function getNearestPowerOfTwo(input: number): number {
 
 /**
  * Returns the minimum score a participant must have to win a Best Of X series match.
- *
+ * 
  * @param x The count of child games in the series.
  */
 export function minScoreToWinBestOfX(x: number): number {

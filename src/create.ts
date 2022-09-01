@@ -61,6 +61,7 @@ export class Create {
      */
     public async run(): Promise<void> {
         let stageId = -1;
+
         switch (this.stage.type) {
             case 'round_robin':
                 stageId = await this.roundRobin();
@@ -83,7 +84,7 @@ export class Create {
 
     /**
      * Enables the update mode.
-     *
+     * 
      * @param stageId ID of the stage.
      * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding.
      */

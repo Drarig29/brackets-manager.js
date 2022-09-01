@@ -114,9 +114,9 @@ export class Update extends BaseUpdater {
 
     /**
      * Confirms the seeding of a stage.
-     *
+     * 
      * This will convert TBDs to BYEs and propagate them.
-     *
+     * 
      * @param stageId ID of the stage.
      */
     public async confirmSeeding(stageId: number): Promise<void> {

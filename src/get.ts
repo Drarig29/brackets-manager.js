@@ -222,7 +222,7 @@ export class Get extends BaseGetter {
 
     /**
      * Returns only the data specific to the given stage (without the participants).
-     *
+     * 
      * @param stageId ID of the stage.
      */
     private async getStageSpecificData(stageId: number): Promise<{

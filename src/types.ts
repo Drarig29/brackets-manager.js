@@ -55,7 +55,7 @@ export type ChildCountLevel = 'stage' | 'group' | 'round' | 'match';
 
 /**
  * All the possible kinds of bracket (group level) in an elimination stage.
- *
+ * 
  * - `single_bracket` for single elimination.
  * - `winner_bracket` and `loser_bracket` for double elimination.
  * - `final_group` for both single and double elimination.
@@ -194,7 +194,7 @@ export interface CrudInterface {
 
     /**
      * Empties a table completely.
-     *
+     * 
      * @param table Where to delete everything.
      */
     delete<T extends Table>(table: T): Promise<boolean>
