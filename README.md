@@ -55,7 +55,7 @@ As you can see, the [manager](https://drarig29.github.io/brackets-docs/reference
   - [`find`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Find.html) module: [`manager.find.match()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Find.html#match), [`manager.find.nextMatches()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Find.html#nextMatches), ...
   - [`storage`](https://drarig29.github.io/brackets-docs/reference/manager/interfaces/Storage.html) module: this gives you access to the abstract storage interface. Use it as a last resort.
 
-You can navigate the API documentation here: [BracketsManager class documentation](https://drarig29.github.io/brackets-docs/reference/manager/classes/BracketsManager.html)
+You can navigate the API documentation here: [`BracketsManager` class documentation](https://drarig29.github.io/brackets-docs/reference/manager/classes/BracketsManager.html)
 
 # Credits
 
