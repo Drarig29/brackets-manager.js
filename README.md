@@ -12,35 +12,50 @@ It contains all the logic needed to manage tournaments.
 
 - [BYE](https://en.wikipedia.org/wiki/Bye_%28sports%29) supported: only during creation (for seeding and balancing).
 - Forfeit supported: only during updates.
-- Match  supported (locked, waiting, ready, running, completed, archived).
-
-## Round-robin
-
-- Each participant plays each opponent once.
-- No limitation nor restriction in numbers.
-
-## Single elimination
-
-- Number of participants : 8, 16, 32, etc. (powers of two)
-- Optional Consolation Final : matches semi-final losers.
-- Handles up to 4 first places.
-
-## Double elimination
-
-- Twice the number of matches.
-- Contains a Winner Bracket (WB), and a Loser Bracket (LB).
-- Number of participants : 8, 16, 32, etc. (powers of two)
-- Optional Grand Final : matches the WB winner against the LB winner.
-  - Can be simple or double.
-- Handles up to 3 first places.
+- Match supported (locked, waiting, ready, running, completed, archived).
 
 # Interface
 
 - This library doesn't come with a GUI to create and update tournaments.
 - You can use [brackets-viewer.js](https://github.com/Drarig29/brackets-viewer.js) to display the current state of a stage.
-- It is designed to be used with any storage.
-- An example of JSON storage is given to run tests. You can use it out of the box.
-- It uses asynchronous calls to a storage interface to be able to handle asynchronous SQL requests (for example).
+- It is designed to be used with any type of storage (JSON, in-memory, SQL, Redis, and more).
+- Some storage implementations are already available (see the [documentation](https://drarig29.github.io/brackets-docs/user-guide/storage/)).
+
+# Getting Started
+
+For more information, see the [documentation](https://drarig29.github.io/brackets-docs/getting-started/).
+
+```js
+const { JsonDatabase } = require('brackets-json-db');
+const { BracketsManager } = require('brackets-manager');
+
+const storage = new JsonDatabase();
+const manager = new BracketsManager(storage);
+
+await manager.create({
+  name: 'My tournament',
+  tournamentId: 0,
+  type: 'double_elimination',
+  seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+  settings: { grandFinal: 'double' },
+});
+
+await manager.update.match({
+  id: 0, // First match of winner bracket (round 1)
+  opponent1: { score: 16, result: 'win' },
+  opponent2: { score: 12 },
+});
+```
+
+As you can see, the manager is composed of some submodules, which themselves have methods:
+  - `get`
+  - `update`
+  - `reset`
+  - `delete`
+  - `find`
+  - `storage`
+
+You can navigate the API documentation here: [BracketsManager class documentation](https://drarig29.github.io/brackets-docs/reference/manager/classes/BracketsManager.html)
 
 # Credits
 
