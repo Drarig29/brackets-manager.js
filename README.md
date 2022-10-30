@@ -47,13 +47,13 @@ await manager.update.match({
 });
 ```
 
-As you can see, the manager is composed of some submodules, which themselves have methods:
-  - `get`
-  - `update`
-  - `reset`
-  - `delete`
-  - `find`
-  - `storage`
+As you can see, the [manager](https://drarig29.github.io/brackets-docs/reference/manager/classes/BracketsManager.html) is composed of some submodules, which themselves have methods:
+  - [`get`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Get.html) module: [`manager.get.seeding()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Get.html#seeding), [`manager.get.finalStandings()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Get.html#finalStandings), ...
+  - [`update`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Update.html) module: [`manager.update.match()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Update.html#match), [`manager.update.confirmSeeding()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Update.html#confirmSeeding), ...
+  - [`reset`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Reset.html) module: [`manager.reset.seeding()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Reset.html#seeding), [`manager.reset.matchGame()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Reset.html#matchResults), ...
+  - [`delete`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Delete.html) module: [`manager.delete.stage()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Delete.html#stage)
+  - [`find`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Find.html) module: [`manager.find.match()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Find.html#match), [`manager.find.nextMatches()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Find.html#nextMatches), ...
+  - [`storage`](https://drarig29.github.io/brackets-docs/reference/manager/interfaces/Storage.html) module: this gives you access to the abstract storage interface. Use it as a last resort.
 
 You can navigate the API documentation here: [BracketsManager class documentation](https://drarig29.github.io/brackets-docs/reference/manager/classes/BracketsManager.html)
 
