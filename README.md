@@ -1,12 +1,12 @@
 # brackets-manager.js
 
-A simple library to manage tournament brackets (round-robin, single elimination, double elimination).
-
-It contains all the logic needed to manage tournaments.
-
 [![npm](https://img.shields.io/npm/v/brackets-manager.svg)](https://www.npmjs.com/package/brackets-manager)
 [![Downloads](https://img.shields.io/npm/dt/brackets-manager.svg)](https://www.npmjs.com/package/brackets-manager)
 [![Package Quality](https://packagequality.com/shield/brackets-manager.svg)](https://packagequality.com/#?package=brackets-manager)
+
+A simple library to manage tournament brackets (round-robin, single elimination, double elimination).
+
+It contains all the logic needed to manage tournaments.
 
 # Features
 
