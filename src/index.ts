@@ -1,4 +1,5 @@
 import { BracketsManager } from './manager';
+import * as helpers from './helpers';
 
 import {
     CrudInterface,
@@ -14,34 +15,6 @@ import {
     Table,
 } from './types';
 
-import {
-    getWinner,
-    getLoser,
-    getMatchResult,
-    isMatchStarted,
-    isMatchCompleted,
-    isMatchForfeitCompleted,
-    isMatchResultCompleted,
-    isMatchDrawCompleted,
-    isMatchWinCompleted,
-    isMatchByeCompleted,
-    isMatchUpdateLocked,
-    isMatchParticipantLocked,
-    hasBye,
-    getUpperBracketRoundCount,
-    getRoundPairCount,
-    getLoserRoundMatchCount,
-    getLoserRoundLoserCount,
-    getLowerBracketRoundCount,
-    getNearestPowerOfTwo,
-    minScoreToWinBestOfX,
-    isRoundRobin,
-    isWinnerBracket,
-    isLoserBracket,
-    isFinalGroup,
-    getMatchLocation,
-} from './helpers';
-
 export {
     BracketsManager,
     CrudInterface,
@@ -55,32 +28,5 @@ export {
     StandardBracketResults,
     Storage,
     Table,
-};
-
-export const helpers = {
-    getWinner,
-    getLoser,
-    getMatchResult,
-    isMatchStarted,
-    isMatchCompleted,
-    isMatchForfeitCompleted,
-    isMatchResultCompleted,
-    isMatchDrawCompleted,
-    isMatchWinCompleted,
-    isMatchByeCompleted,
-    isMatchUpdateLocked,
-    isMatchParticipantLocked,
-    hasBye,
-    getUpperBracketRoundCount,
-    getRoundPairCount,
-    getLoserRoundMatchCount,
-    getLoserRoundLoserCount,
-    getLowerBracketRoundCount,
-    getNearestPowerOfTwo,
-    minScoreToWinBestOfX,
-    isRoundRobin,
-    isWinnerBracket,
-    isLoserBracket,
-    isFinalGroup,
-    getMatchLocation,
+    helpers,
 };
