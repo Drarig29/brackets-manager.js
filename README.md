@@ -57,6 +57,12 @@ As you can see, the [manager](https://drarig29.github.io/brackets-docs/reference
 
 You can navigate the API documentation here: [`BracketsManager` class documentation](https://drarig29.github.io/brackets-docs/reference/manager/classes/BracketsManager.html)
 
+You also have access to all of the helpers defined by the library (see [list of helpers here](https://drarig29.github.io/brackets-docs/reference/manager/modules/helpers.html)):
+
+```js
+const { helpers } = require('brackets-manager');
+```
+
 # Credits
 
 This library has been created to be used by the [Nantarena](https://nantarena.net/).
