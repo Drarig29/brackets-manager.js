@@ -294,14 +294,10 @@ export function ensureEvenSized<T>(array: T[]): void {
  */
 export function ensureNoDuplicates<T>(array: Nullable<T>[]): void {
     const nonNull = getNonNull(array);
-    const unique = isCustomSeeding(nonNull)
-        ? nonNull.filter((customSeed, index) => {
-            const customSeedValue = JSON.stringify(customSeed);
-            return index === nonNull.findIndex(obj => {
-                return JSON.stringify(obj) === customSeedValue;
-            });
-        })
-        : [...new Set(nonNull)];
+    const unique = nonNull.filter((item, index) => {
+        const stringifiedItem = JSON.stringify(item);
+        return nonNull.findIndex(obj => JSON.stringify(obj) === stringifiedItem) === index;
+    });
 
     if (unique.length < nonNull.length)
         throw new Error('The seeding has a duplicate participant.');
@@ -1055,21 +1051,12 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
 }
 
 /**
- * Indicates if a seeding is filled with participants' names or IDs.
+ * Indicates if a seeding is filled with participants' IDs.
  *
  * @param seeding The seeding.
  */
 export function isSeedingWithIds(seeding: Seeding): boolean {
     return seeding.some(value => typeof value === 'number');
-}
-
-/**
- * Indicates if a seeding is a custom object.
- *
- * @param seeding The seeding.
- */
-export function isCustomSeeding<T>(seeding: T[]): boolean {
-    return seeding.some(value => typeof value === 'object' && !Array.isArray(value) && value !== null);
 }
 
 /**
