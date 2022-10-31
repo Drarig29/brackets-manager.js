@@ -1,4 +1,5 @@
 import { CrudInterface, Database, DataTypes, Storage, Table } from './types';
+import { InputStage } from 'brackets-model';
 import { create } from './create';
 import { Get } from './get';
 import { Update } from './update';
@@ -6,7 +7,6 @@ import { Delete } from './delete';
 import { Find } from './find';
 import { Reset } from './reset';
 import * as helpers from './helpers';
-import { InputStage } from 'brackets-model';
 
 /**
  * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
