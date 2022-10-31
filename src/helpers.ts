@@ -18,6 +18,25 @@ import { BracketKind, Database, Duel, FinalStandingsItem, IdMapping, Nullable, O
 import { ordering } from './ordering';
 
 /**
+ * Splits an array based on values of a given key of the objects of the array.
+ *
+ * @param array The array to split.
+ * @param key The key of T.
+ */
+export function splitBy<T>(array: T[], key: keyof T): T[][] {
+    const obj = Object();
+
+    for (const value of array) {
+        if (!obj[value[key]])
+            obj[value[key]] = [];
+
+        obj[value[key]].push(value);
+    }
+
+    return Object.values(obj);
+}
+
+/**
  * Splits an array in two parts: one with even indices and the other with odd indices.
  *
  * @param array The array to split.
@@ -1537,6 +1556,15 @@ export function isRoundRobin(stage: Stage): boolean {
 export function ensureNotRoundRobin(stage: Stage): void {
     const inRoundRobin = isRoundRobin(stage);
     if (inRoundRobin) throw Error('Impossible to update ordering in a round-robin stage.');
+}
+
+/**
+ * Checks if a round is completed based on its matches.
+ * 
+ * @param roundMatches Matches of the round.
+ */
+export function isRoundCompleted(roundMatches: Match[]): boolean {
+    return roundMatches.every(match => match.status >= Status.Completed);
 }
 
 /**
