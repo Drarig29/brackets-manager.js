@@ -1,7 +1,7 @@
-import { Match, MatchGame, Round, SeedOrdering, Status } from 'brackets-model';
+import { Match, MatchGame, Round, Seeding, SeedOrdering, Status } from 'brackets-model';
 import { ordering } from './ordering';
 import { BaseUpdater } from './base/updater';
-import { ChildCountLevel, CustomSeeding } from './types';
+import { ChildCountLevel } from './types';
 import * as helpers from './helpers';
 
 export class Update extends BaseUpdater {
@@ -108,7 +108,7 @@ export class Update extends BaseUpdater {
      * @param stageId ID of the stage.
      * @param seeding The new seeding.
      */
-    public async seeding(stageId: number, seeding: CustomSeeding): Promise<void> {
+    public async seeding(stageId: number, seeding: Seeding): Promise<void> {
         await this.updateSeeding(stageId, seeding);
     }
 

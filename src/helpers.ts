@@ -5,6 +5,7 @@ import {
     MatchResults,
     Participant,
     ParticipantResult,
+    CustomParticipant,
     Result,
     RoundRobinMode,
     Seeding,
@@ -14,7 +15,7 @@ import {
     Status,
 } from 'brackets-model';
 
-import { BracketKind, Database, CustomParticipant, CustomSeeding,  Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
+import { BracketKind, Database, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
 
 /**
@@ -150,7 +151,7 @@ export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
  * @param seeding The seeding of the stage.
  * @param participantCount The number of participants in the stage.
  */
-export function balanceByes(seeding: CustomSeeding, participantCount?: number): CustomSeeding {
+export function balanceByes(seeding: Seeding, participantCount?: number): Seeding {
     seeding = seeding.filter(v => v !== null);
 
     participantCount = participantCount || getNearestPowerOfTwo(seeding.length);
@@ -293,7 +294,7 @@ export function ensureEvenSized<T>(array: T[]): void {
  */
 export function ensureNoDuplicates<T>(array: Nullable<T>[]): void {
     const nonNull = getNonNull(array);
-    const unique = isCustomSeeding(nonNull) 
+    const unique = isCustomSeeding(nonNull)
         ? nonNull.filter((customSeed, index) => {
             const customSeedValue = JSON.stringify(customSeed);
             return index === nonNull.findIndex(obj => {
@@ -323,7 +324,7 @@ export function ensureEquallySized<T>(left: T[], right: T[]): void {
  * @param seeding The seeding of the stage.
  * @param participantCount The number of participants in the stage.
  */
-export function fixSeeding(seeding: CustomSeeding, participantCount: number): CustomSeeding {
+export function fixSeeding(seeding: Seeding, participantCount: number): Seeding {
     if (seeding.length > participantCount)
         throw Error('The seeding has more participants than the size of the stage.');
 
@@ -749,8 +750,8 @@ export function getOriginPosition(match: Match, side: Side): number {
  * @param participants The list of participants.
  * @param matches A list of matches to get losers of.
  */
-export function getLosers(participants: (Participant | CustomParticipant)[], matches: Match[]): (Participant| CustomParticipant)[][] {
-    const losers: (Participant| CustomParticipant)[][] = [];
+export function getLosers(participants: Participant[], matches: Match[]): Participant[][] {
+    const losers: Participant[][] = [];
 
     let currentRound: number | null = null;
     let roundIndex = -1;
@@ -777,7 +778,7 @@ export function getLosers(participants: (Participant | CustomParticipant)[], mat
  * 
  * @param grouped A list of participants grouped by ranking.
  */
-export function makeFinalStandings(grouped: (Participant | CustomParticipant)[][]): FinalStandingsItem[] {
+export function makeFinalStandings(grouped: Participant[][]): FinalStandingsItem[] {
     const standings: FinalStandingsItem[] = [];
 
     let rank = 1;
@@ -824,7 +825,7 @@ export function getGrandFinalDecisiveMatch(type: GrandFinalType, matches: Match[
  * @param participants The list of participants.
  * @param slot The slot of the participant to find.
  */
-export function findParticipant(participants: (Participant | CustomParticipant)[], slot: ParticipantSlot): Participant | CustomParticipant {
+export function findParticipant(participants: Participant[], slot: ParticipantSlot): Participant {
     const participant = participants.find(participant => participant.id === slot?.id);
     if (!participant) throw Error('Participant not found.');
     return participant;
@@ -1058,9 +1059,8 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
  *
  * @param seeding The seeding.
  */
-export function isSeedingWithIds(seeding: CustomSeeding ): boolean {
-
-    return seeding.some((value: string | number | CustomParticipant | null) => typeof value === 'number');
+export function isSeedingWithIds(seeding: Seeding): boolean {
+    return seeding.some(value => typeof value === 'number');
 }
 
 /**
@@ -1069,41 +1069,34 @@ export function isSeedingWithIds(seeding: CustomSeeding ): boolean {
  * @param seeding The seeding.
  */
 export function isCustomSeeding<T>(seeding: T[]): boolean {
-
-    return seeding.some((value) => typeof value === 'object' && !Array.isArray(value) && value !== null && !(value instanceof Date));
+    return seeding.some(value => typeof value === 'object' && !Array.isArray(value) && value !== null);
 }
 
 /**
- * Extracts participants from a seeding, without the byes.
+ * Extracts participants from a seeding, without the BYEs.
  *
  * @param tournamentId ID of the tournament.
- * @param seeding The seeding.
+ * @param seeding The seeding (no IDs).
  */
-export function extractParticipantsFromSeeding(tournamentId: number, seeding: CustomSeeding): OmitId<Participant | CustomParticipant>[] {
-    if(isCustomSeeding(seeding)){
+export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding): OmitId<Participant>[] {
+    const withoutByes = seeding.filter((name): name is /* number */ | string | CustomParticipant => name !== null);
 
-    const withoutByes = (seeding as CustomSeeding).filter(contestant => contestant !== null) as CustomParticipant[];
+    const participants = withoutByes.map<OmitId<Participant>>((item) => {
+        if (typeof item === 'string') {
+            return {
+                tournament_id: tournamentId,
+                name: item,
+            };
+        }
 
-    const participants = withoutByes.map<OmitId<CustomParticipant>>((customParticipant) =>({
-        ...customParticipant,
-        tournament_id: tournamentId,
-        name: customParticipant.name,
-    }));
+        return {
+            ...item,
+            tournament_id: tournamentId,
+            name: item.name,
+        };
+    });
 
     return participants;
-
-    } else {
-        const withoutByes = (seeding as Seeding).filter(name => name !== null) as string[];
-        const participants = withoutByes.map<OmitId<Participant>>((name) => ({
-            tournament_id: tournamentId,
-            name,
-        }));
-
-        return participants;
-    }
-
-
-
 }
 
 /**
@@ -1113,7 +1106,7 @@ export function extractParticipantsFromSeeding(tournamentId: number, seeding: Cu
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsNamesToDatabase(seeding: CustomSeeding,  database:(Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsNamesToDatabase(seeding: Seeding, database: (Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('name', seeding, database, positions);
 }
 
@@ -1124,7 +1117,7 @@ export function mapParticipantsNamesToDatabase(seeding: CustomSeeding,  database
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsIdsToDatabase(seeding: CustomSeeding, database: (Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsIdsToDatabase(seeding: Seeding, database: (Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('id', seeding, database, positions);
 }
 
@@ -1136,7 +1129,7 @@ export function mapParticipantsIdsToDatabase(seeding: CustomSeeding, database: (
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsToDatabase(prop: keyof CustomParticipant, seeding: CustomSeeding , database:(Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsToDatabase(prop: keyof CustomParticipant, seeding: Seeding, database: (Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
     const slots = seeding.map((slot, i) => {
         if (slot === null) return null; // BYE.
         if (typeof slot === 'string' || typeof slot === 'number') {
@@ -1147,8 +1140,8 @@ export function mapParticipantsToDatabase(prop: keyof CustomParticipant, seeding
             return { id: found.id, position: i + 1 };
 
         } else {
-            const found: CustomParticipant | undefined = (database as CustomParticipant[]).find( customParticipant => customParticipant[prop as keyof CustomParticipant] === slot[prop as keyof CustomParticipant] );
-            if(!found) throw Error(`Custom participant ${prop} not found in database.`);
+            const found: CustomParticipant | undefined = (database as CustomParticipant[]).find(customParticipant => customParticipant[prop as keyof CustomParticipant] === slot[prop as keyof CustomParticipant]);
+            if (!found) throw Error(`Custom participant ${prop} not found in database.`);
             return { id: found.id, position: i + 1 };
         }
 
@@ -1179,7 +1172,7 @@ export function convertMatchesToSeeding(matches: Match[]): ParticipantSlot[] {
  * 
  * @param slots The slots to convert.
  */
-export function convertSlotsToSeeding(slots: ParticipantSlot[]): CustomSeeding {
+export function convertSlotsToSeeding(slots: ParticipantSlot[]): Seeding {
     return slots.map(slot => {
         if (slot === null || slot.id === null) return null; // BYE or TBD.
         return slot.id; // Let's return the ID instead of the name to be sure we keep the same reference.

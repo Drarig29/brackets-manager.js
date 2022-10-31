@@ -1,4 +1,4 @@
-import { Group, Match, MatchGame, Participant, Round, SeedOrdering, Stage, InputStage } from 'brackets-model';
+import { Group, Match, MatchGame, Participant, Round, SeedOrdering, Stage } from 'brackets-model';
 
 /**
  * Type of an object implementing every ordering method.
@@ -20,14 +20,6 @@ export type Nullable<T> = T | null;
  */
 export type IdMapping = Record<number, number>;
 
-/**
- * Custom participant model to allow extra fields.
- */
-export type CustomParticipant = Participant & Record<string, unknown>;
-
-export type CustomSeeding =  (CustomParticipant | string | number | null)[];
-
-export type CustomInputStage = Omit<InputStage, 'seeding'> & { seeding?:  CustomSeeding };
 /**
  * Used by the library to handle placements. Is `null` if is a BYE. Has a `null` name if it's yet to be determined.
  */
@@ -94,7 +86,7 @@ export interface DataTypes {
     round: Round,
     match: Match,
     match_game: MatchGame,
-    participant: Participant | CustomParticipant,
+    participant: Participant,
 }
 
 /**

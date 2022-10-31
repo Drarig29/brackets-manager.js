@@ -1,4 +1,4 @@
-import { CrudInterface, Database, DataTypes, CustomInputStage, Storage, Table } from './types';
+import { CrudInterface, Database, DataTypes, Storage, Table } from './types';
 import { create } from './create';
 import { Get } from './get';
 import { Update } from './update';
@@ -6,6 +6,7 @@ import { Delete } from './delete';
 import { Find } from './find';
 import { Reset } from './reset';
 import * as helpers from './helpers';
+import { InputStage } from 'brackets-model';
 
 /**
  * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
@@ -53,7 +54,7 @@ export class BracketsManager {
      *
      * @param stage A stage to create.
      */
-    public async create(stage: CustomInputStage): Promise<void> {
+    public async create(stage: InputStage): Promise<void> {
         await create.call(this, stage);
     }
 

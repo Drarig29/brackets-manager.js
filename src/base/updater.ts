@@ -1,5 +1,5 @@
-import { Match, MatchGame, Stage, Status } from 'brackets-model';
-import { BracketKind, ParticipantSlot, CustomSeeding,  Side } from '../types';
+import { Match, MatchGame, Seeding, Stage, Status } from 'brackets-model';
+import { BracketKind, ParticipantSlot, Side } from '../types';
 import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
 import { Create } from '../create';
@@ -13,9 +13,9 @@ export class BaseUpdater extends BaseGetter {
      * Updates or resets the seeding of a stage.
      *
      * @param stageId ID of the stage.
-     * @param seeding A new seeding or null to reset the existing seeding.
+     * @param seeding A new seeding or `null` to reset the existing seeding.
      */
-    protected async updateSeeding(stageId: number, seeding: CustomSeeding | null): Promise<void> {
+    protected async updateSeeding(stageId: number, seeding: Seeding | null): Promise<void> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
