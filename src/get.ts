@@ -1,4 +1,4 @@
-import { Stage, Group, Round, Match, MatchGame, Participant } from 'brackets-model';
+import { Stage, Group, Round, Match, MatchGame, Participant, Status } from 'brackets-model';
 import { Database, FinalStandingsItem, ParticipantSlot } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
@@ -62,6 +62,60 @@ export class Get extends BaseGetter {
         if (matchGamesQueries.some(game => game === null)) throw Error('Error getting match games.');
 
         return helpers.getNonNull(matchGamesQueries).flat();
+    }
+
+    /**
+     * Returns the stage that is not completed yet, because of uncompleted matches.
+     * If all matches are completed in this tournament, there is no "current stage", so `null` is returned.
+     * 
+     * @param tournamentId ID of the tournament.
+     */
+    public async currentStage(tournamentId: number): Promise<Stage | null> {
+        const stages = await this.storage.select('stage', { tournament_id: tournamentId });
+        if (!stages) throw Error('Error getting stages.');
+
+        for (const stage of stages) {
+            const matches = await this.storage.select('match', { stage_id: stage.id });
+            if (!matches) throw Error('Error getting matches.');
+
+            if (matches.every(match => match.status >= Status.Completed))
+                continue;
+
+            return stage;
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns the round that is not completed yet, because of uncompleted matches.
+     * If all matches are completed in this stage of a tournament, there is no "current round", so `null` is returned.
+     * 
+     * @param stageId ID of the stage.
+     * @example
+     * If you don't know the stage id, you can first get the current stage.
+     * ```js
+     * const tournamentId = 3;
+     * const currentStage = await manager.get.currentStage(tournamentId);
+     * const currentRound = await manager.get.currentRound(currentStage.id);
+     * ```
+     */
+    public async currentRound(stageId: number): Promise<Round | null> {
+        const matches = await this.storage.select('match', { stage_id: stageId });
+        if (!matches) throw Error('Error getting matches.');
+
+        const matchesByRound = helpers.splitBy(matches, 'round_id');
+
+        for (const roundMatches of matchesByRound) {
+            if (roundMatches.every(match => match.status >= Status.Completed))
+                continue;
+
+            const round = await this.storage.select('round', roundMatches[0].round_id);
+            if (!round) throw Error('Round not found.');
+            return round;
+        }
+
+        return null;
     }
 
     /**
