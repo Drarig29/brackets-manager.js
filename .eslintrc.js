@@ -32,7 +32,6 @@ module.exports = {
         'jsdoc/require-returns': 0,
         'jsdoc/require-returns-type': 0,
 
-        '@typescript-eslint/no-var-requires': 'off', // For mocha tests
         '@typescript-eslint/explicit-function-return-type': ['error'],
         '@typescript-eslint/no-empty-function': 0,
 
