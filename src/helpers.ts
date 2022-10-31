@@ -1093,7 +1093,7 @@ export function extractParticipantsFromSeeding(tournamentId: number, seeding: Se
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsNamesToDatabase(seeding: Seeding, database: (Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('name', seeding, database, positions);
 }
 
@@ -1104,7 +1104,7 @@ export function mapParticipantsNamesToDatabase(seeding: Seeding, database: (Part
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsIdsToDatabase(seeding: Seeding, database: (Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('id', seeding, database, positions);
 }
 
@@ -1116,23 +1116,14 @@ export function mapParticipantsIdsToDatabase(seeding: Seeding, database: (Partic
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsToDatabase(prop: keyof CustomParticipant, seeding: Seeding, database: (Participant | CustomParticipant)[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsToDatabase(prop: keyof Participant, seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
     const slots = seeding.map((slot, i) => {
         if (slot === null) return null; // BYE.
-        if (typeof slot === 'string' || typeof slot === 'number') {
 
-            const found = database.find(participant => participant[prop as keyof Participant] === slot);
-            if (!found) throw Error(`Participant ${prop} not found in database.`);
+        const found = database.find(participant => participant[prop] === slot);
+        if (!found) throw Error(`Participant ${prop} not found in database.`);
 
-            return { id: found.id, position: i + 1 };
-
-        } else {
-            const found: CustomParticipant | undefined = (database as CustomParticipant[]).find(customParticipant => customParticipant[prop as keyof CustomParticipant] === slot[prop as keyof CustomParticipant]);
-            if (!found) throw Error(`Custom participant ${prop} not found in database.`);
-            return { id: found.id, position: i + 1 };
-        }
-
-
+        return { id: found.id, position: i + 1 };
     });
 
     if (!positions)
@@ -1141,7 +1132,7 @@ export function mapParticipantsToDatabase(prop: keyof CustomParticipant, seeding
     if (positions.length !== slots.length)
         throw Error('Not enough seeds in at least one group of the manual ordering.');
 
-    return positions.map(position => slots[position - 1]); // position = i + 1
+    return positions.map(position => slots[position - 1]); // Because `position` is `i + 1`.
 }
 
 /**
