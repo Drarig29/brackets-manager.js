@@ -19,7 +19,7 @@ export class Delete {
      * @param stageId ID of the stage.
      */
     public async stage(stageId: number): Promise<void> {
-        // The order is important because the abstract storage possibly has foreign checks.
+        // The order is important here, because the abstract storage can possibly have foreign key checks (e.g. SQL).
 
         if (!await this.storage.delete('match_game', { stage_id: stageId }))
             throw Error('Could not delete match games.');
