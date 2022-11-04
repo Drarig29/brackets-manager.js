@@ -37,7 +37,7 @@ export class BaseUpdater extends BaseGetter {
             throw Error('Error getting matches associated to the seeding.');
 
         const ordered = ordering[method](slots);
-        await BaseUpdater.assertCanUpdateSeeding(matches, ordered);
+        BaseUpdater.assertCanUpdateSeeding(matches, ordered);
 
         await create.run();
     }
@@ -95,7 +95,7 @@ export class BaseUpdater extends BaseGetter {
      * @param matches The matches stored in the database.
      * @param slots The slots to check from the new seeding.
      */
-    protected static async assertCanUpdateSeeding(matches: Match[], slots: ParticipantSlot[]): Promise<void> {
+    protected static assertCanUpdateSeeding(matches: Match[], slots: ParticipantSlot[]): void {
         let index = 0;
 
         for (const match of matches) {

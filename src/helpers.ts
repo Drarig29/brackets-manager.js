@@ -18,22 +18,24 @@ import { BracketKind, Database, Duel, FinalStandingsItem, IdMapping, Nullable, O
 import { ordering } from './ordering';
 
 /**
- * Splits an array based on values of a given key of the objects of the array.
+ * Splits an array of objects based on their values at a given key.
  *
- * @param array The array to split.
+ * @param objects The array to split.
  * @param key The key of T.
  */
-export function splitBy<T>(array: T[], key: keyof T): T[][] {
-    const obj = Object();
+export function splitBy<T>(objects: T[], key: keyof T): T[][] {
+    const map = {} as Record<string | number, T[]>;
 
-    for (const value of array) {
-        if (!obj[value[key]])
-            obj[value[key]] = [];
+    for (const obj of objects) {
+        const commonValue = obj[key] as string | number;
 
-        obj[value[key]].push(value);
+        if (!map[commonValue])
+            map[commonValue] = [];
+
+        map[commonValue].push(obj);
     }
 
-    return Object.values(obj);
+    return Object.values(map);
 }
 
 /**
@@ -112,7 +114,7 @@ export function makeRoundRobinDistribution<T>(participants: T[]): [T, T][][] {
  * @param input The input seeding.
  * @param output The resulting distribution of seeds in groups.
  */
-export function assertRoundRobin<T>(input: T[], output: [T, T][][]): void {
+export function assertRoundRobin(input: number[], output: [number, number][][]): void {
     const n = input.length;
     const matchPerRound = Math.floor(n / 2);
     const roundCount = n % 2 === 0 ? n - 1 : n;
@@ -120,10 +122,10 @@ export function assertRoundRobin<T>(input: T[], output: [T, T][][]): void {
     if (output.length !== roundCount) throw Error('Round count is wrong');
     if (!output.every(round => round.length === matchPerRound)) throw Error('Not every round has the good number of matches');
 
-    const checkAllOpponents = Object.fromEntries(input.map(element => [element, new Set<T>()]));
+    const checkAllOpponents = Object.fromEntries(input.map(element => [element, new Set<number>()])) as Record<number, Set<number>>;
 
     for (const round of output) {
-        const checkUnique = new Set<T>();
+        const checkUnique = new Set<number>();
 
         for (const match of round) {
             if (match.length !== 2) throw Error('One match is not a pair');
