@@ -1,9 +1,20 @@
 module.exports = {
-    parser: '@typescript-eslint/parser', // Specifies the ESLint parser
+    parser: '@typescript-eslint/parser',
     parserOptions: {
-        ecmaVersion: 2020, // Allows for the parsing of modern ECMAScript features
-        sourceType: 'module', // Allows for the use of imports
+        ecmaVersion: 2020,
+        sourceType: 'module',
     },
+    overrides: [
+        {
+            files: ['*.ts'],
+            extends: [
+                'plugin:@typescript-eslint/recommended-requiring-type-checking',
+            ],
+            parserOptions: {
+                project: './tsconfig.json',
+            },
+        },
+    ],
     ignorePatterns: ['dist/', 'webpack.config.js'],
     extends: [
         'plugin:@typescript-eslint/recommended',
