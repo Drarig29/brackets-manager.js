@@ -13,7 +13,7 @@ export class BaseUpdater extends BaseGetter {
      * Updates or resets the seeding of a stage.
      *
      * @param stageId ID of the stage.
-     * @param seeding A new seeding or null to reset the existing seeding.
+     * @param seeding A new seeding or `null` to reset the existing seeding.
      */
     protected async updateSeeding(stageId: number, seeding: Seeding | null): Promise<void> {
         const stage = await this.storage.select('stage', stageId);

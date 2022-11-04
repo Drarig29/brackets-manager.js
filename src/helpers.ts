@@ -5,6 +5,7 @@ import {
     MatchResults,
     Participant,
     ParticipantResult,
+    CustomParticipant,
     Result,
     RoundRobinMode,
     Seeding,
@@ -314,7 +315,10 @@ export function ensureEvenSized<T>(array: T[]): void {
  */
 export function ensureNoDuplicates<T>(array: Nullable<T>[]): void {
     const nonNull = getNonNull(array);
-    const unique = [...new Set(nonNull)];
+    const unique = nonNull.filter((item, index) => {
+        const stringifiedItem = JSON.stringify(item);
+        return nonNull.findIndex(obj => JSON.stringify(obj) === stringifiedItem) === index;
+    });
 
     if (unique.length < nonNull.length)
         throw new Error('The seeding has a duplicate participant.');
@@ -1068,27 +1072,37 @@ export function setForfeits(stored: MatchResults, match: Partial<MatchResults>):
 }
 
 /**
- * Indicates if a seeding is filled with participants' names or IDs.
+ * Indicates if a seeding is filled with participants' IDs.
  *
  * @param seeding The seeding.
  */
 export function isSeedingWithIds(seeding: Seeding): boolean {
-    return seeding.some((value: string | number | null) => typeof value === 'number');
+    return seeding.some(value => typeof value === 'number');
 }
 
 /**
- * Extracts participants from a seeding, without the byes.
+ * Extracts participants from a seeding, without the BYEs.
  *
  * @param tournamentId ID of the tournament.
- * @param seeding The seeding.
+ * @param seeding The seeding (no IDs).
  */
 export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding): OmitId<Participant>[] {
-    const withoutByes = seeding.filter(name => name !== null) as string[];
+    const withoutByes = seeding.filter((name): name is /* number */ | string | CustomParticipant => name !== null);
 
-    const participants = withoutByes.map<OmitId<Participant>>(name => ({
-        tournament_id: tournamentId,
-        name,
-    }));
+    const participants = withoutByes.map<OmitId<Participant>>((item) => {
+        if (typeof item === 'string') {
+            return {
+                tournament_id: tournamentId,
+                name: item,
+            };
+        }
+
+        return {
+            ...item,
+            tournament_id: tournamentId,
+            name: item.name,
+        };
+    });
 
     return participants;
 }
@@ -1139,7 +1153,7 @@ export function mapParticipantsToDatabase(prop: keyof Participant, seeding: Seed
     if (positions.length !== slots.length)
         throw Error('Not enough seeds in at least one group of the manual ordering.');
 
-    return positions.map(position => slots[position - 1]); // position = i + 1
+    return positions.map(position => slots[position - 1]); // Because `position` is `i + 1`.
 }
 
 /**
