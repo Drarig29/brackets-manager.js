@@ -11,7 +11,7 @@
         "node": ">=12"
     },
     "dependencies": {
-        "brackets-model": "^1.3.9"
+        "brackets-model": "^1.3.10"
     },
     "devDependencies": {
         "@types/chai": "^4.2.22",
