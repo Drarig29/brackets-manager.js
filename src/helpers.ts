@@ -1137,12 +1137,16 @@ export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Partici
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsToDatabase(prop: keyof Participant, seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsToDatabase(prop: 'id' | 'name', seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
     const slots = seeding.map((slot, i) => {
         if (slot === null) return null; // BYE.
 
-        const found = database.find(participant => participant[prop] === slot);
-        if (!found) throw Error(`Participant ${prop} not found in database.`);
+        const found = database.find(
+            participant => typeof slot === 'object' ? participant[prop] === slot[prop] : participant[prop] === slot,
+        );
+
+        if (!found)
+            throw Error(`Participant ${prop} not found in database.`);
 
         return { id: found.id, position: i + 1 };
     });
