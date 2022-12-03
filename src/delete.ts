@@ -14,7 +14,12 @@ export class Delete {
     }
 
     /**
-     * Deletes a stage.
+     * Deletes a stage, and all its components:
+     * 
+     * - Groups
+     * - Rounds
+     * - Matches
+     * - Match games
      *
      * @param stageId ID of the stage.
      */
@@ -34,6 +39,23 @@ export class Delete {
             throw Error('Could not delete groups.');
 
         if (!await this.storage.delete('stage', { id: stageId }))
-            throw Error('Could not delete stages.');
+            throw Error('Could not delete the stage.');
+    }
+
+    /**
+     * Deletes **the stages** of a tournament (and all their components, see {@link stage | delete.stage()}).
+     * 
+     * You are responsible for deleting the tournament itself.
+     * 
+     * @param tournamentId ID of the tournament.
+     */
+    public async tournament(tournamentId: number): Promise<void> {
+        const stages = await this.storage.select('stage', { tournament_id: tournamentId });
+        if (!stages)
+            throw Error('Error getting the stages.');
+
+        // Not doing this in a `Promise.all()` since this can be a heavy operation.
+        for (const stage of stages)
+            await this.stage(stage.id);
     }
 }
