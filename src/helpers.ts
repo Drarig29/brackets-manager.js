@@ -24,11 +24,15 @@ import { ordering } from './ordering';
  * @param objects The array to split.
  * @param key The key of T.
  */
-export function splitBy<T>(objects: T[], key: keyof T): T[][] {
-    const map = {} as Record<string | number, T[]>;
+export function splitBy<
+    T extends Record<string, unknown>,
+    K extends keyof T,
+    U extends Record<K, string | number>
+>(objects: U[], key: K): U[][] {
+    const map = {} as Record<string | number, U[]>;
 
     for (const obj of objects) {
-        const commonValue = obj[key] as string | number;
+        const commonValue = obj[key];
 
         if (!map[commonValue])
             map[commonValue] = [];
