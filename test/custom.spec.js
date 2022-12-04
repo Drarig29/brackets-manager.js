@@ -64,3 +64,121 @@ describe('Create tournaments with custom seeding', async () => {
         assert.strictEqual(stageData.participant.length, 16);
     });
 });
+
+describe('Update results with extra fields', () => {
+    beforeEach(async () => {
+        storage.reset();
+    });
+
+    it('Extra fields when updating a match', async () => {
+        await manager.create({
+            name: 'Amateur',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+            ],
+        });
+
+        await manager.update.match({
+            id: 0,
+            weather: 'rainy', // Extra field.
+            opponent1: {
+                score: 3,
+                result: 'win',
+            },
+            opponent2: {
+                score: 1,
+                result: 'loss',
+            },
+        });
+
+        await manager.update.match({
+            id: 1,
+            opponent1: {
+                score: 3,
+                result: 'win',
+                foo: 42, // Extra field.
+            },
+            opponent2: {
+                score: 1,
+                result: 'loss',
+            },
+        });
+
+        await manager.update.match({
+            id: 2,
+            opponent1: {
+                score: 3,
+                result: 'win',
+            },
+            opponent2: {
+                score: 1,
+                result: 'loss',
+                info: { replacements: [1, 2] }, // Extra field.
+            },
+        });
+
+        assert.strictEqual((await storage.select('match', 0)).weather, 'rainy');
+        assert.strictEqual((await storage.select('match', 1)).opponent1.foo, 42);
+        assert.deepStrictEqual((await storage.select('match', 2)).opponent2.info, { replacements: [1, 2] });
+    });
+
+    it('Extra fields when updating a match game', async () => {
+        await manager.create({
+            name: 'Amateur',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', 'Team 2',
+            ],
+            settings: {
+                matchesChildCount: 3,
+            },
+        });
+
+        await manager.update.matchGame({
+            id: 0,
+            weather: 'rainy', // Extra field.
+            opponent1: {
+                score: 3,
+                result: 'win',
+            },
+            opponent2: {
+                score: 1,
+                result: 'loss',
+            },
+        });
+
+        await manager.update.matchGame({
+            id: 1,
+            opponent1: {
+                score: 3,
+                result: 'win',
+                foo: 42, // Extra field.
+            },
+            opponent2: {
+                score: 1,
+                result: 'loss',
+            },
+        });
+
+        await manager.update.matchGame({
+            id: 2,
+            opponent1: {
+                score: 3,
+                result: 'win',
+            },
+            opponent2: {
+                score: 1,
+                result: 'loss',
+                info: { replacements: [1, 2] }, // Extra field.
+            },
+        });
+
+        assert.strictEqual((await storage.select('match_game', 0)).weather, 'rainy');
+        assert.strictEqual((await storage.select('match_game', 1)).opponent1.foo, 42);
+        assert.deepStrictEqual((await storage.select('match_game', 2)).opponent2.info, { replacements: [1, 2] });
+    });
+});

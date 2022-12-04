@@ -13,7 +13,7 @@ export class Update extends BaseUpdater {
      *
      * @param match Values to change in a match.
      */
-    public async match(match: Partial<Match>): Promise<void> {
+    public async match<M extends Match = Match>(match: Partial<M>): Promise<void> {
         if (match.id === undefined)
             throw Error('No match id given.');
 
@@ -30,7 +30,7 @@ export class Update extends BaseUpdater {
      *
      * @param game Values to change in a match game.
      */
-    public async matchGame(game: Partial<MatchGame>): Promise<void> {
+    public async matchGame<G extends MatchGame = MatchGame>(game: Partial<G>): Promise<void> {
         const stored = await this.findMatchGame(game);
 
         await this.updateMatchGame(stored, game);

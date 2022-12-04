@@ -698,6 +698,7 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
     const completed = isMatchCompleted(match);
     const currentlyCompleted = isMatchCompleted(stored);
 
+    setExtraFields(stored, match);
     handleOpponentsInversion(stored, match);
 
     const statusChanged = setScores(stored, match);
@@ -738,6 +739,56 @@ export function resetMatchResults(stored: MatchResults): void {
     }
 
     stored.status = getMatchStatus(stored);
+}
+
+/**
+ * Passes user-defined extra fields to the stored match.
+ * 
+ * @param stored A reference to what will be updated in the storage.
+ * @param match Input of the update.
+ */
+export function setExtraFields(stored: MatchResults, match: Partial<MatchResults>): void {
+    const partialAssign = (
+        target: unknown,
+        update: unknown,
+        ignoredKeys: string[],
+    ): void => {
+        if (!target || !update)
+            return;
+
+        const retainedKeys = Object.keys(update).filter(
+            (key) => !(ignoredKeys).includes(key),
+        );
+
+        retainedKeys.forEach(key => {
+            (target as Record<string, unknown>)[key] = (update as Record<string, unknown>)[key];
+        });
+    };
+
+    const ignoredKeys: Array<keyof (Match & MatchGame)> = [
+        'id',
+        'number',
+        'stage_id',
+        'group_id',
+        'round_id',
+        'status',
+        'opponent1',
+        'opponent2',
+        'child_count',
+        'parent_id',
+    ];
+
+    const ignoredOpponentKeys: Array<keyof ParticipantResult> = [
+        'id',
+        'score',
+        'position',
+        'forfeit',
+        'result',
+    ];
+
+    partialAssign(stored, match, ignoredKeys);
+    partialAssign(stored.opponent1, match.opponent1, ignoredOpponentKeys);
+    partialAssign(stored.opponent2, match.opponent2, ignoredOpponentKeys);
 }
 
 /**
