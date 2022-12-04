@@ -757,7 +757,7 @@ export function setExtraFields(stored: MatchResults, match: Partial<MatchResults
             return;
 
         const retainedKeys = Object.keys(update).filter(
-            (key) => !(ignoredKeys).includes(key),
+            (key) => !ignoredKeys.includes(key),
         );
 
         retainedKeys.forEach(key => {
