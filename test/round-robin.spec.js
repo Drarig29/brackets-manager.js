@@ -209,7 +209,7 @@ describe('Update scores in a round-robin stage', () => {
         });
     });
 
-    it('should set two forfeits for the match', async() => {
+    it('should set two forfeits for the match', async () => {
         await manager.update.match({
             id: 0,
             opponent1: { forfeit: true },

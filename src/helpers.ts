@@ -358,14 +358,20 @@ export function fixSeeding(seeding: Seeding, participantCount: number): Seeding 
 /**
  * Ensures that the participant count is valid.
  *
+ * @param stageType Type of the stage to test.
  * @param participantCount The number to test.
  */
-export function ensureValidSize(participantCount: number): void {
+export function ensureValidSize(stageType: StageType, participantCount: number): void {
     if (participantCount === 0)
         throw Error('Impossible to create an empty stage. If you want an empty seeding, just set the size of the stage.');
 
     if (participantCount < 2)
         throw Error('Impossible to create a stage with less than 2 participants.');
+
+    if (stageType === 'round_robin') {
+        // Round robin supports any number of participants.
+        return;
+    }
 
     if (!Number.isInteger(Math.log2(participantCount)))
         throw Error('The library only supports a participant count which is a power of two.');

@@ -466,7 +466,7 @@ export class Create {
      */
     public async getSlots(positions?: number[]): Promise<ParticipantSlot[]> {
         const size = this.stage.settings?.size || this.stage.seeding?.length || 0;
-        helpers.ensureValidSize(size);
+        helpers.ensureValidSize(this.stage.type, size);
 
         if (size && !this.stage.seeding)
             return Array.from(Array(size), (_: ParticipantSlot, i) => ({ id: null, position: i + 1 }));
