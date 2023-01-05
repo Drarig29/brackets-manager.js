@@ -283,9 +283,11 @@ export class Get extends BaseGetter {
             const consolationFinal = matches.filter(match => match.group_id === finalGroup.id).pop();
             if (!consolationFinal) throw Error('Consolation final not found.');
 
+            const consolationFinalWinner = helpers.findParticipant(participants, helpers.getWinner(consolationFinal));
+            const consolationFinalLoser = helpers.findParticipant(participants, helpers.getLoser(consolationFinal));
+
             // Overwrite semi-final losers with the consolation final results.
-            grouped[2][0] = helpers.findParticipant(participants, helpers.getWinner(consolationFinal));
-            grouped[2][1] = helpers.findParticipant(participants, helpers.getLoser(consolationFinal));
+            grouped.splice(2, 1, [consolationFinalWinner], [consolationFinalLoser]);
         }
 
         return helpers.makeFinalStandings(grouped);

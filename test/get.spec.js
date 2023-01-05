@@ -87,12 +87,12 @@ describe('Get final standings', () => {
 
             // The consolation final has inverted those ones (rank 3).
             { id: 1, name: 'Team 2', rank: 3 },
-            { id: 4, name: 'Team 5', rank: 3 },
+            { id: 4, name: 'Team 5', rank: 4 },
 
-            { id: 7, name: 'Team 8', rank: 4 },
-            { id: 3, name: 'Team 4', rank: 4 },
-            { id: 6, name: 'Team 7', rank: 4 },
-            { id: 2, name: 'Team 3', rank: 4 },
+            { id: 7, name: 'Team 8', rank: 5 },
+            { id: 3, name: 'Team 4', rank: 5 },
+            { id: 6, name: 'Team 7', rank: 5 },
+            { id: 2, name: 'Team 3', rank: 5 },
         ]);
     });
 
