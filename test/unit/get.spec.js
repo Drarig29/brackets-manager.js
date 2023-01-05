@@ -50,7 +50,7 @@ describe('Unit - get', () => {
                 { stage_id: 2, id: 0 },
             ],
             [
-                'two rounds, with some running matches in 1st round',
+                'two rounds, with some uncompleted matches in 1st round',
                 [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
                 [{ stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Waiting }],
                 { stage_id: 2, id: 0 },
@@ -67,6 +67,12 @@ describe('Unit - get', () => {
                 [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Completed }],
                 null,
             ],
+            [
+                'one stage, with two groups',
+                [{ stage_id: 2, group_id: 0, id: 0 }, { stage_id: 2, group_id: 0, id: 1 }, { stage_id: 2, group_id: 1, id: 2 }],
+                [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Completed }, { stage_id: 2, round_id: 2, status: Status.Waiting }],
+                { stage_id: 2, group_id: 1, id: 2 },
+            ],
         ]).it('%j', async (_, rounds, matches, expectedRound) => {
             const db = new InMemoryDatabase();
             const manager = new BracketsManager(db);
@@ -74,6 +80,67 @@ describe('Unit - get', () => {
 
             const round = await manager.get.currentRound(2);
             expect(round).to.deep.equal(expectedRound);
+        });
+    });
+
+    describe('currentMatches', () => {
+        each([
+            [
+                'single round, with a running match',
+                { id: 2, type: 'single_elimination', settings: { size: 2 } },
+                [{ stage_id: 2, id: 0 }],
+                [{ stage_id: 2, round_id: 0, status: Status.Running }],
+                [{ stage_id: 2, round_id: 0, status: Status.Running }],
+            ],
+            [
+                'two rounds, with some uncompleted matches in 1st round',
+                { id: 2, type: 'single_elimination', settings: { size: 4 } },
+                [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
+                [{ stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Waiting }],
+                [{ stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 0, status: Status.Completed }],
+            ],
+            [
+                'two stages, with 1st stage completed',
+                { id: 2, type: 'single_elimination', settings: { size: 4 } },
+                [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
+                [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Waiting }],
+                [{ stage_id: 2, round_id: 1, status: Status.Waiting }],
+            ],
+            [
+                'two stages, with all matches completed',
+                { id: 2, type: 'single_elimination', settings: { size: 4 } },
+                [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
+                [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Completed }],
+                [],
+            ],
+            [
+                'one stage, with consolation final - both finals running',
+                { id: 2, type: 'single_elimination', settings: { size: 4, consolationFinal: true } },
+                [{ stage_id: 2, group_id: 0, id: 0 }, { stage_id: 2, group_id: 0, id: 1 }, { stage_id: 2, group_id: 1, id: 2 }],
+                [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Running }, { stage_id: 2, round_id: 2, status: Status.Running }],
+                [{ stage_id: 2, round_id: 1, status: Status.Running }, { stage_id: 2, round_id: 2, status: Status.Running }],
+            ],
+            [
+                'one stage, with consolation final - only consolation final running',
+                { id: 2, type: 'single_elimination', settings: { size: 4, consolationFinal: true } },
+                [{ stage_id: 2, group_id: 0, id: 0 }, { stage_id: 2, group_id: 0, id: 1 }, { stage_id: 2, group_id: 1, id: 2 }],
+                [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Completed }, { stage_id: 2, round_id: 2, status: Status.Running }],
+                [{ stage_id: 2, round_id: 1, status: Status.Completed }, { stage_id: 2, round_id: 2, status: Status.Running }],
+            ],
+            [
+                'one stage, with consolation final - both finals completed',
+                { id: 2, type: 'single_elimination', settings: { size: 4, consolationFinal: true } },
+                [{ stage_id: 2, group_id: 0, id: 0 }, { stage_id: 2, group_id: 0, id: 1 }, { stage_id: 2, group_id: 1, id: 2 }],
+                [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Completed }, { stage_id: 2, round_id: 2, status: Status.Completed }],
+                [],
+            ],
+        ]).it('%j', async (_, stage, rounds, matches, expectedMatches) => {
+            const db = new InMemoryDatabase();
+            const manager = new BracketsManager(db);
+            db.setData({ stage: [stage], round: rounds, match: matches });
+
+            const round = await manager.get.currentMatches(2);
+            expect(round).to.deep.equal(expectedMatches);
         });
     });
 });

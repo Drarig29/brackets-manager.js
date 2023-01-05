@@ -91,6 +91,8 @@ export class Get extends BaseGetter {
      * Returns the round that is not completed yet, because of uncompleted matches.
      * If all matches are completed in this stage of a tournament, there is no "current round", so `null` is returned.
      * 
+     * Note: The consolation final of single elimination and the grand final of double elimination will be in a different `Group`.
+     * 
      * @param stageId ID of the stage.
      * @example
      * If you don't know the stage id, you can first get the current stage.
@@ -116,6 +118,64 @@ export class Get extends BaseGetter {
         }
 
         return null;
+    }
+
+    /**
+     * Returns the matches that can currently be played in parallel.
+     * If all matches are completed in this stage of a tournament, an empty array is returned.
+     * 
+     * Note: Completed matches are also returned.
+     * 
+     * @param stageId ID of the stage.
+     * @example
+     * If you don't know the stage id, you can first get the current stage.
+     * ```js
+     * const tournamentId = 3;
+     * const currentStage = await manager.get.currentStage(tournamentId);
+     * const currentMatches = await manager.get.currentMatches(currentStage.id);
+     * ```
+     */
+    public async currentMatches(stageId: number): Promise<Match[]> {
+        const stage = await this.storage.select('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
+
+        // TODO: Implement this for all stage types.
+        // - For round robin, 1 round per group can be played in parallel at their own pace.
+        // - For double elimination, 1 round per bracket (upper and lower) can be played in parallel at their own pace.
+        if (stage.type !== 'single_elimination')
+            throw Error('Not implemented for round robin and double elimination. Ask if needed.');
+
+        const matches = await this.storage.select('match', { stage_id: stageId });
+        if (!matches) throw Error('Error getting matches.');
+
+        const matchesByRound = helpers.splitBy(matches, 'round_id');
+        const roundCount = helpers.getUpperBracketRoundCount(stage.settings.size!);
+
+        // Save multiple queries for `round`.
+        let currentRoundIndex = -1;
+
+        for (const roundMatches of matchesByRound) {
+            currentRoundIndex++;
+
+            if (stage.settings.consolationFinal && currentRoundIndex === roundCount - 1) {
+                // We are on the final of the single elimination.
+                const [final] = roundMatches;
+                const [consolationFinal] = matchesByRound[currentRoundIndex + 1];
+
+                const finals = [final, consolationFinal];
+                if (finals.every(match => match.status >= Status.Completed))
+                    return [];
+
+                return finals;
+            }
+
+            if (roundMatches.every(match => match.status >= Status.Completed))
+                continue;
+
+            return roundMatches;
+        }
+
+        return [];
     }
 
     /**
