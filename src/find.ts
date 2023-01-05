@@ -50,9 +50,12 @@ export class Find extends BaseGetter {
     /**
      * Returns the matches leading to the given match.
      * 
+     * If a `participantId` is given, the previous match _from their point of view_ is returned.
+     * 
      * @param matchId ID of the target match.
+     * @param participantId Optional ID of the participant.
      */
-    public async previousMatches(matchId: number): Promise<Match[]> {
+    public async previousMatches(matchId: number, participantId?: number): Promise<Match[]> {
         const match = await this.storage.select('match', matchId);
         if (!match) throw Error('Match not found.');
 
@@ -66,16 +69,25 @@ export class Find extends BaseGetter {
         if (!round) throw Error('Round not found.');
 
         const matchLocation = helpers.getMatchLocation(stage.type, group.number);
+        const previousMatches = await this.getPreviousMatches(match, matchLocation, stage, round.number);
 
-        return this.getPreviousMatches(match, matchLocation, stage, round.number);
+        if (participantId !== undefined)
+            return previousMatches.filter(m => helpers.isParticipantInMatch(m, participantId));
+
+        return previousMatches;
     }
 
     /**
      * Returns the matches following the given match.
      * 
+     * If a `participantId` is given:
+     * - If the participant won, the next match _from their point of view_ is returned.
+     * - If the participant is eliminated, no match is returned.
+     * 
      * @param matchId ID of the target match.
+     * @param participantId Optional ID of the participant.
      */
-    public async nextMatches(matchId: number): Promise<Match[]> {
+    public async nextMatches(matchId: number, participantId?: number): Promise<Match[]> {
         const match = await this.storage.select('match', matchId);
         if (!match) throw Error('Match not found.');
 
@@ -88,8 +100,35 @@ export class Find extends BaseGetter {
         const { roundNumber, roundCount } = await this.getRoundPositionalInfo(match.round_id);
         const matchLocation = helpers.getMatchLocation(stage.type, group.number);
 
-        const nextMatches = await this.getNextMatches(match, matchLocation, stage, roundNumber, roundCount);
-        return helpers.getNonNull(nextMatches);
+        const nextMatches = helpers.getNonNull(
+            await this.getNextMatches(match, matchLocation, stage, roundNumber, roundCount),
+        );
+
+        if (participantId !== undefined) {
+            const loser = helpers.getLoser(match);
+            if (stage.type === 'single_elimination' && loser?.id === participantId)
+                return []; // Eliminated.
+
+            if (stage.type === 'double_elimination') {
+                const [upperBracketMatch, lowerBracketMatch] = nextMatches;
+
+                if (loser?.id === participantId) {
+                    if (lowerBracketMatch)
+                        return [lowerBracketMatch];
+                    else
+                        return []; // Eliminated from lower bracket.
+                }
+
+                const winner = helpers.getWinner(match);
+                if (winner?.id === participantId)
+                    return [upperBracketMatch];
+
+                throw Error('The participant does not belong to this match.');
+            }
+
+        }
+
+        return nextMatches;
     }
 
     /**

@@ -535,6 +535,16 @@ export function findPosition(matches: Match[], position: number): ParticipantSlo
 }
 
 /**
+ * Checks if a participant is involved in a given match.
+ * 
+ * @param match A match.
+ * @param participantId ID of a participant.
+ */
+export function isParticipantInMatch(match: MatchResults, participantId: number): boolean {
+    return [match.opponent1, match.opponent2].some(m => m?.id === participantId);
+}
+
+/**
  * Gets the side where the winner of the given match will go in the next match.
  *
  * @param matchNumber Number of the match.

@@ -66,6 +66,36 @@ describe('Find previous and next matches in single elimination', () => {
         const afterFinal = await manager.find.nextMatches(6);
         assert.strictEqual(afterFinal.length, 0);
     });
+
+    it('should return matches from the point of view of a participant', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', 'Team 2', 'Team 3', 'Team 4',
+                'Team 5', 'Team 6', 'Team 7', 'Team 8',
+            ],
+            settings: {
+                seedOrdering: ['natural'],
+            },
+        });
+
+        await manager.update.match({ id: 0, opponent1: { result: 'loss' } });
+        const afterFirstEliminated = await manager.find.nextMatches(0, 0);
+        assert.strictEqual(afterFirstEliminated.length, 0);
+        const afterFirstContinued = await manager.find.nextMatches(0, 1);
+        assert.strictEqual(afterFirstContinued.length, 1);
+
+        await manager.update.match({ id: 1, opponent1: { result: 'win' } });
+        const beforeSemi1Up = await manager.find.previousMatches(4, 1);
+        assert.strictEqual(beforeSemi1Up.length, 1);
+        assert.strictEqual(beforeSemi1Up[0].id, 0);
+
+        const beforeSemi1Down = await manager.find.previousMatches(4, 2);
+        assert.strictEqual(beforeSemi1Down.length, 1);
+        assert.strictEqual(beforeSemi1Down[0].id, 1);
+    });
 });
 
 describe('Find previous and next matches in double elimination', () => {
@@ -163,5 +193,45 @@ describe('Find previous and next matches in double elimination', () => {
 
         const afterFinalLB = await manager.find.nextMatches(12);
         assert.strictEqual(afterFinalLB.length, 0);
+    });
+
+    it('should return matches from the point of view of a participant', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: [
+                'Team 1', 'Team 2', 'Team 3', 'Team 4',
+            ],
+            settings: {
+                seedOrdering: ['natural'],
+            },
+        });
+
+        await manager.update.match({ id: 0, opponent1: { result: 'loss' } });
+        const afterFirstEliminated = await manager.find.nextMatches(0, 0);
+        assert.strictEqual(afterFirstEliminated.length, 1);
+        assert.strictEqual(afterFirstEliminated[0].id, 3);
+        const afterFirstContinued = await manager.find.nextMatches(0, 1);
+        assert.strictEqual(afterFirstContinued.length, 1);
+        assert.strictEqual(afterFirstContinued[0].id, 2);
+
+        await manager.update.match({ id: 1, opponent1: { result: 'win' } });
+        const beforeSemi1Up = await manager.find.previousMatches(2, 1);
+        assert.strictEqual(beforeSemi1Up.length, 1);
+        assert.strictEqual(beforeSemi1Up[0].id, 0);
+
+        const beforeSemi1Down = await manager.find.previousMatches(2, 2);
+        assert.strictEqual(beforeSemi1Down.length, 1);
+        assert.strictEqual(beforeSemi1Down[0].id, 1);
+
+        await manager.update.match({ id: 3, opponent1: { result: 'loss' } });
+        const afterLowerBracketEliminated = await manager.find.nextMatches(3, 0);
+        assert.strictEqual(afterLowerBracketEliminated.length, 0);
+        const afterLowerBracketContinued = await manager.find.nextMatches(3, 3);
+        assert.strictEqual(afterLowerBracketContinued.length, 1);
+        assert.strictEqual(afterLowerBracketContinued[0].id, 4);
+
+        await assert.isRejected(manager.find.nextMatches(3, 42), 'The participant does not belong to this match.');
     });
 });
