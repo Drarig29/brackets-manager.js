@@ -914,6 +914,7 @@ export function getGrandFinalDecisiveMatch(type: GrandFinalType, matches: Match[
  * @param slot The slot of the participant to find.
  */
 export function findParticipant(participants: Participant[], slot: ParticipantSlot): Participant {
+    if (!slot) throw Error('Cannot find a BYE participant.');
     const participant = participants.find(participant => participant.id === slot?.id);
     if (!participant) throw Error('Participant not found.');
     return participant;

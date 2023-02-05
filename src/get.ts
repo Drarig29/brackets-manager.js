@@ -273,7 +273,7 @@ export class Get extends BaseGetter {
         if (!final) throw Error('Final not found.');
 
         // 1st place: Final winner.
-        grouped[0] = [helpers.findParticipant(participants, helpers.getWinner(final))];
+        grouped[0] = [helpers.findParticipant(participants, getFinalWinnerIfDefined(final))];
 
         // Rest: every loser in reverse order.
         const losers = helpers.getLosers(participants, matches.filter(match => match.group_id === singleBracket.id));
@@ -283,7 +283,7 @@ export class Get extends BaseGetter {
             const consolationFinal = matches.filter(match => match.group_id === finalGroup.id).pop();
             if (!consolationFinal) throw Error('Consolation final not found.');
 
-            const consolationFinalWinner = helpers.findParticipant(participants, helpers.getWinner(consolationFinal));
+            const consolationFinalWinner = helpers.findParticipant(participants, getFinalWinnerIfDefined(consolationFinal));
             const consolationFinalLoser = helpers.findParticipant(participants, helpers.getLoser(consolationFinal));
 
             // Overwrite semi-final losers with the consolation final results.
@@ -314,16 +314,16 @@ export class Get extends BaseGetter {
             if (!finalLB) throw Error('LB final not found.');
 
             // 1st place: WB Final winner.
-            grouped[0] = [helpers.findParticipant(participants, helpers.getWinner(finalWB))];
+            grouped[0] = [helpers.findParticipant(participants, getFinalWinnerIfDefined(finalWB))];
 
             // 2nd place: LB Final winner.
-            grouped[1] = [helpers.findParticipant(participants, helpers.getWinner(finalLB))];
+            grouped[1] = [helpers.findParticipant(participants, getFinalWinnerIfDefined(finalLB))];
         } else {
             const grandFinalMatches = matches.filter(match => match.group_id === finalGroup.id);
             const decisiveMatch = helpers.getGrandFinalDecisiveMatch(stage.settings?.grandFinal || 'none', grandFinalMatches);
 
             // 1st place: Grand Final winner.
-            grouped[0] = [helpers.findParticipant(participants, helpers.getWinner(decisiveMatch))];
+            grouped[0] = [helpers.findParticipant(participants, getFinalWinnerIfDefined(decisiveMatch))];
 
             // 2nd place: Grand Final loser.
             grouped[1] = [helpers.findParticipant(participants, helpers.getLoser(decisiveMatch))];
@@ -371,3 +371,9 @@ export class Get extends BaseGetter {
         };
     }
 }
+
+const getFinalWinnerIfDefined = (match: Match): ParticipantSlot => {
+    const winner = helpers.getWinner(match);
+    if (!winner) throw Error('The final match does not have a winner.');
+    return winner;
+};
