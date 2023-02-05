@@ -711,6 +711,9 @@ export function setMatchResults(stored: MatchResults, match: Partial<MatchResult
     statusChanged: boolean,
     resultChanged: boolean,
 } {
+    if (!inRoundRobin && (match.opponent1?.result === 'draw' || match.opponent2?.result === 'draw'))
+        throw Error('Having a draw is forbidden in an elimination tournament.');
+
     const completed = isMatchCompleted(match);
     const currentlyCompleted = isMatchCompleted(stored);
 

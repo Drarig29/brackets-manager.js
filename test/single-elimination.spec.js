@@ -210,6 +210,23 @@ describe('Create single elimination stage', () => {
             ],
         }), 'The seeding has a duplicate participant.');
     });
+
+    it('should throw if trying to set a draw as a result', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+            ],
+        });
+
+        await assert.isRejected(manager.update.match({
+            id: 0,
+            opponent1: { result: 'draw' },
+        }), 'Having a draw is forbidden in an elimination tournament.');
+    });
 });
 
 describe('Previous and next match update in single elimination stage', () => {
