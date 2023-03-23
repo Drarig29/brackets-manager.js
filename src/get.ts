@@ -187,10 +187,16 @@ export class Get extends BaseGetter {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
-        if (stage.type === 'round_robin')
-            return this.roundRobinSeeding(stage);
+        const pickRelevantProps = (slot: ParticipantSlot): ParticipantSlot => {
+            if (slot === null) return null;
+            const { id, position } = slot;
+            return { id, position };
+        };
 
-        return this.eliminationSeeding(stage);
+        if (stage.type === 'round_robin')
+            return (await this.roundRobinSeeding(stage)).map(pickRelevantProps);
+
+        return (await this.eliminationSeeding(stage)).map(pickRelevantProps);
     }
 
     /**
