@@ -394,9 +394,9 @@ export function ensureNotTied(scores: [number, number]): void {
  */
 export function convertTBDtoBYE(slot: ParticipantSlot): ParticipantSlot {
     if (slot === null) return null; // Already a BYE.
-    if (slot?.id === null) return null; // Is a TBD.
+    if (slot?.id === null) return null; // It's a TBD: make it a BYE.
 
-    return slot; // Is a determined participant.
+    return slot; // It's a determined participant.
 }
 
 /**
