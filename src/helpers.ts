@@ -13,9 +13,10 @@ import {
     Stage,
     StageType,
     Status,
+    GroupType,
 } from 'brackets-model';
 
-import { BracketKind, Database, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
+import { Database, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
 
 /**
@@ -931,7 +932,7 @@ export function findParticipant(participants: Participant[], slot: ParticipantSl
  * @param roundCount Count of rounds.
  * @param matchLocation Location of the current match.
  */
-export function getNextSide(matchNumber: number, roundNumber: number, roundCount: number, matchLocation: BracketKind): Side {
+export function getNextSide(matchNumber: number, roundNumber: number, roundCount: number, matchLocation: GroupType): Side {
     // The nextSide comes from the same bracket.
     if (matchLocation === 'loser_bracket' && roundNumber % 2 === 1)
         return 'opponent2';
@@ -1701,7 +1702,7 @@ export function isFinalGroup(stageType: StageType, groupNumber: number): boolean
  * @param stageType Type of the stage.
  * @param groupNumber Number of the group.
  */
-export function getMatchLocation(stageType: StageType, groupNumber: number): BracketKind {
+export function getMatchLocation(stageType: StageType, groupNumber: number): GroupType {
     if (isWinnerBracket(stageType, groupNumber))
         return 'winner_bracket';
 

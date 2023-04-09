@@ -1,6 +1,6 @@
 import { Storage } from '../types';
-import { Group, Match, MatchGame, Round, SeedOrdering, Stage, StageType } from 'brackets-model';
-import { BracketKind, RoundPositionalInfo } from '../types';
+import { Group, Match, MatchGame, Round, SeedOrdering, Stage, StageType, GroupType } from 'brackets-model';
+import { RoundPositionalInfo } from '../types';
 import { Create } from '../create';
 import * as helpers from '../helpers';
 
@@ -87,7 +87,7 @@ export class BaseGetter {
      * @param stage The parent stage.
      * @param roundNumber Number of the round.
      */
-    protected async getPreviousMatches(match: Match, matchLocation: BracketKind, stage: Stage, roundNumber: number): Promise<Match[]> {
+    protected async getPreviousMatches(match: Match, matchLocation: GroupType, stage: Stage, roundNumber: number): Promise<Match[]> {
         if (matchLocation === 'loser_bracket')
             return this.getPreviousMatchesLB(match, stage, roundNumber);
 
@@ -205,7 +205,7 @@ export class BaseGetter {
      * @param roundNumber The number of the current round.
      * @param roundCount Count of rounds.
      */
-    protected async getNextMatches(match: Match, matchLocation: BracketKind, stage: Stage, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
+    protected async getNextMatches(match: Match, matchLocation: GroupType, stage: Stage, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
         switch (matchLocation) {
             case 'single_bracket':
                 return this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount);

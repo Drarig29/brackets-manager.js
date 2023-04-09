@@ -1,5 +1,5 @@
-import { Match, MatchGame, Seeding, Stage, Status } from 'brackets-model';
-import { BracketKind, ParticipantSlot, Side } from '../types';
+import { Match, MatchGame, Seeding, Stage, Status, GroupType } from 'brackets-model';
+import { ParticipantSlot, Side } from '../types';
 import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
 import { Create } from '../create';
@@ -214,7 +214,7 @@ export class BaseUpdater extends BaseGetter {
      * @param stage The parent stage.
      * @param roundNumber Number of the round.
      */
-    protected async updatePrevious(match: Match, matchLocation: BracketKind, stage: Stage, roundNumber: number): Promise<void> {
+    protected async updatePrevious(match: Match, matchLocation: GroupType, stage: Stage, roundNumber: number): Promise<void> {
         const previousMatches = await this.getPreviousMatches(match, matchLocation, stage, roundNumber);
         if (previousMatches.length === 0) return;
 
@@ -257,7 +257,7 @@ export class BaseUpdater extends BaseGetter {
      * @param roundNumber Number of the round.
      * @param roundCount Count of rounds.
      */
-    protected async updateNext(match: Match, matchLocation: BracketKind, stage: Stage, roundNumber: number, roundCount: number): Promise<void> {
+    protected async updateNext(match: Match, matchLocation: GroupType, stage: Stage, roundNumber: number, roundCount: number): Promise<void> {
         const nextMatches = await this.getNextMatches(match, matchLocation, stage, roundNumber, roundCount);
         if (nextMatches.length === 0) return;
 
@@ -281,7 +281,7 @@ export class BaseUpdater extends BaseGetter {
      * @param nextMatches The matches following the current match.
      * @param winnerSide Side of the winner in the current match.
      */
-    protected async applyToNextMatches(setNextOpponent: SetNextOpponent, match: Match, matchLocation: BracketKind, roundNumber: number, roundCount: number, nextMatches: (Match | null)[], winnerSide?: Side): Promise<void> {
+    protected async applyToNextMatches(setNextOpponent: SetNextOpponent, match: Match, matchLocation: GroupType, roundNumber: number, roundCount: number, nextMatches: (Match | null)[], winnerSide?: Side): Promise<void> {
         if (matchLocation === 'final_group') {
             if (!nextMatches[0]) throw Error('First next match is null.');
             setNextOpponent(nextMatches[0], 'opponent1', match, 'opponent1');

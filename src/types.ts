@@ -46,15 +46,6 @@ export type Scores = { opponent1: number, opponent2: number };
 export type ChildCountLevel = 'stage' | 'group' | 'round' | 'match';
 
 /**
- * All the possible kinds of bracket (group level) in an elimination stage.
- * 
- * - `single_bracket` for single elimination.
- * - `winner_bracket` and `loser_bracket` for double elimination.
- * - `final_group` for both single and double elimination.
- */
-export type BracketKind = 'single_bracket' | 'winner_bracket' | 'loser_bracket' | 'final_group';
-
-/**
  * Positional information about a round.
  */
 export type RoundPositionalInfo = {
