@@ -1714,3 +1714,17 @@ export function getMatchLocation(stageType: StageType, groupNumber: number): Gro
 
     return 'single_bracket';
 }
+
+/**
+ * Returns the fraction of final for the current round (e.g. `1/2` for semi finals or `1/4` for quarter finals).
+ * 
+ * @param roundNumber Number of the current round.
+ * @param roundCount Count of rounds.
+ */
+export function getFractionOfFinal(roundNumber: number, roundCount: number): number {
+    if (roundNumber > roundCount)
+        throw Error(`There are more rounds than possible. ${JSON.stringify({ roundNumber, roundCount })}`);
+
+    const denominator = Math.pow(2, roundCount - roundNumber);
+    return 1 / denominator;
+}
