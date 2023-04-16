@@ -42,8 +42,8 @@ await manager.create({
 
 await manager.update.match({
   id: 0, // First match of winner bracket (round 1)
-  opponent1: { score: 16, result: 'win' },
-  opponent2: { score: 12 },
+  opponent1: { id: 0, score: 16, result: 'win' },
+  opponent2: { id: 1, score: 12 },
 });
 ```
 
