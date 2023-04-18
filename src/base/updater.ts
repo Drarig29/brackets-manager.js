@@ -1,5 +1,5 @@
 import { Match, MatchGame, Seeding, Stage, Status, GroupType } from 'brackets-model';
-import { ParticipantSlot, Side } from '../types';
+import { DeepPartial, ParticipantSlot, Side } from '../types';
 import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
 import { Create } from '../create';
@@ -139,7 +139,7 @@ export class BaseUpdater extends BaseGetter {
      * @param match Input of the update.
      * @param force Whether to force update locked matches.
      */
-    protected async updateMatch(stored: Match, match: Partial<Match>, force?: boolean): Promise<void> {
+    protected async updateMatch(stored: Match, match: DeepPartial<Match>, force?: boolean): Promise<void> {
         if (!force && helpers.isMatchUpdateLocked(stored))
             throw Error('The match is locked.');
 
@@ -164,7 +164,7 @@ export class BaseUpdater extends BaseGetter {
      * @param stored A reference to what will be updated in the storage.
      * @param game Input of the update.
      */
-    protected async updateMatchGame(stored: MatchGame, game: Partial<MatchGame>): Promise<void> {
+    protected async updateMatchGame(stored: MatchGame, game: DeepPartial<MatchGame>): Promise<void> {
         if (helpers.isMatchUpdateLocked(stored))
             throw Error('The match game is locked.');
 

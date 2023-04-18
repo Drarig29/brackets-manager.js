@@ -1,4 +1,4 @@
-import { Storage } from '../types';
+import { DeepPartial, Storage } from '../types';
 import { Group, Match, MatchGame, Round, SeedOrdering, Stage, StageType, GroupType } from 'brackets-model';
 import { RoundPositionalInfo } from '../types';
 import { Create } from '../create';
@@ -493,7 +493,7 @@ export class BaseGetter {
      * 
      * @param game Values to change in a match game.
      */
-    protected async findMatchGame(game: Partial<MatchGame>): Promise<MatchGame> {
+    protected async findMatchGame(game: DeepPartial<MatchGame>): Promise<MatchGame> {
         if (game.id !== undefined) {
             const stored = await this.storage.select('match_game', game.id);
             if (!stored) throw Error('Match game not found.');

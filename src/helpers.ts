@@ -16,7 +16,7 @@ import {
     GroupType,
 } from 'brackets-model';
 
-import { Database, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
+import { Database, DeepPartial, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
 
 /**
@@ -568,7 +568,7 @@ export function getOtherSide(side: Side): Side {
  *
  * @param match Partial match results.
  */
-export function isMatchStarted(match: Partial<MatchResults>): boolean {
+export function isMatchStarted(match: DeepPartial<MatchResults>): boolean {
     return match.opponent1?.score !== undefined || match.opponent2?.score !== undefined;
 }
 
@@ -577,7 +577,7 @@ export function isMatchStarted(match: Partial<MatchResults>): boolean {
  *
  * @param match Partial match results.
  */
-export function isMatchCompleted(match: Partial<MatchResults>): boolean {
+export function isMatchCompleted(match: DeepPartial<MatchResults>): boolean {
     return isMatchByeCompleted(match) || isMatchForfeitCompleted(match) || isMatchResultCompleted(match);
 }
 
@@ -586,7 +586,7 @@ export function isMatchCompleted(match: Partial<MatchResults>): boolean {
  * 
  * @param match Partial match results.
  */
-export function isMatchForfeitCompleted(match: Partial<MatchResults>): boolean {
+export function isMatchForfeitCompleted(match: DeepPartial<MatchResults>): boolean {
     return match.opponent1?.forfeit !== undefined || match.opponent2?.forfeit !== undefined;
 }
 
@@ -595,7 +595,7 @@ export function isMatchForfeitCompleted(match: Partial<MatchResults>): boolean {
  * 
  * @param match Partial match results.
  */
-export function isMatchResultCompleted(match: Partial<MatchResults>): boolean {
+export function isMatchResultCompleted(match: DeepPartial<MatchResults>): boolean {
     return isMatchDrawCompleted(match) || isMatchWinCompleted(match);
 }
 
@@ -604,7 +604,7 @@ export function isMatchResultCompleted(match: Partial<MatchResults>): boolean {
  * 
  * @param match Partial match results.
  */
-export function isMatchDrawCompleted(match: Partial<MatchResults>): boolean {
+export function isMatchDrawCompleted(match: DeepPartial<MatchResults>): boolean {
     return match.opponent1?.result === 'draw' && match.opponent2?.result === 'draw';
 }
 
@@ -613,7 +613,7 @@ export function isMatchDrawCompleted(match: Partial<MatchResults>): boolean {
  * 
  * @param match Partial match results.
  */
-export function isMatchWinCompleted(match: Partial<MatchResults>): boolean {
+export function isMatchWinCompleted(match: DeepPartial<MatchResults>): boolean {
     return match.opponent1?.result === 'win' || match.opponent2?.result === 'win'
         || match.opponent1?.result === 'loss' || match.opponent2?.result === 'loss';
 }
@@ -625,7 +625,7 @@ export function isMatchWinCompleted(match: Partial<MatchResults>): boolean {
  * 
  * @param match Partial match results.
  */
-export function isMatchByeCompleted(match: Partial<MatchResults>): boolean {
+export function isMatchByeCompleted(match: DeepPartial<MatchResults>): boolean {
     return (match.opponent1 === null && match.opponent2?.id !== null) // BYE vs. someone
         || (match.opponent2 === null && match.opponent1?.id !== null) // someone vs. BYE
         || (match.opponent1 === null && match.opponent2 === null); // BYE vs. BYE
@@ -654,7 +654,7 @@ export function isMatchParticipantLocked(match: MatchResults): boolean {
  * 
  * @param match Partial match results.
  */
-export function hasBye(match: Partial<MatchResults>): boolean {
+export function hasBye(match: DeepPartial<MatchResults>): boolean {
     return match.opponent1 === null || match.opponent2 === null;
 }
 
@@ -670,14 +670,14 @@ export function getMatchStatus(opponents: Duel): Status;
  *
  * @param match Partial match results.
  */
-export function getMatchStatus(match: Partial<MatchResults>): Status;
+export function getMatchStatus(match: MatchResults): Status;
 
 /**
  * Returns the status of a match based on information about it.
  * 
  * @param arg The opponents or partial results of the match.
  */
-export function getMatchStatus(arg: Duel | Partial<MatchResults>): Status {
+export function getMatchStatus(arg: Duel | MatchResults): Status {
     const match = Array.isArray(arg) ? {
         opponent1: arg[0],
         opponent2: arg[1],
@@ -708,7 +708,7 @@ export function getMatchStatus(arg: Duel | Partial<MatchResults>): Status {
  * @param match Input of the update.
  * @param inRoundRobin Indicates whether the match is in a round-robin stage.
  */
-export function setMatchResults(stored: MatchResults, match: Partial<MatchResults>, inRoundRobin: boolean): {
+export function setMatchResults(stored: MatchResults, match: DeepPartial<MatchResults>, inRoundRobin: boolean): {
     statusChanged: boolean,
     resultChanged: boolean,
 } {
@@ -767,7 +767,7 @@ export function resetMatchResults(stored: MatchResults): void {
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  */
-export function setExtraFields(stored: MatchResults, match: Partial<MatchResults>): void {
+export function setExtraFields(stored: MatchResults, match: DeepPartial<MatchResults>): void {
     const partialAssign = (
         target: unknown,
         update: unknown,
@@ -1003,7 +1003,7 @@ export function resetNextOpponent(nextMatch: Match, nextSide: Side): void {
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  */
-export function handleOpponentsInversion(stored: MatchResults, match: Partial<MatchResults>): void {
+export function handleOpponentsInversion(stored: MatchResults, match: DeepPartial<MatchResults>): void {
     const id1 = match.opponent1?.id;
     const id2 = match.opponent2?.id;
 
@@ -1025,7 +1025,7 @@ export function handleOpponentsInversion(stored: MatchResults, match: Partial<Ma
  * 
  * @param match A match to update.
  */
-export function invertOpponents(match: Partial<MatchResults>): void {
+export function invertOpponents(match: DeepPartial<MatchResults>): void {
     [match.opponent1, match.opponent2] = [match.opponent2, match.opponent1];
 }
 
@@ -1036,7 +1036,7 @@ export function invertOpponents(match: Partial<MatchResults>): void {
  * @param match Input of the update.
  * @returns `true` if the status of the match changed, `false` otherwise.
  */
-export function setScores(stored: MatchResults, match: Partial<MatchResults>): boolean {
+export function setScores(stored: MatchResults, match: DeepPartial<MatchResults>): boolean {
     // Skip if no score update.
     if (match.opponent1?.score === stored.opponent1?.score && match.opponent2?.score === stored.opponent2?.score)
         return false;
@@ -1060,7 +1060,7 @@ export function setScores(stored: MatchResults, match: Partial<MatchResults>): b
  * @param match Input of the update.
  * @param inRoundRobin Indicates whether the match is in a round-robin stage.
  */
-export function setCompleted(stored: MatchResults, match: Partial<MatchResults>, inRoundRobin: boolean): void {
+export function setCompleted(stored: MatchResults, match: DeepPartial<MatchResults>, inRoundRobin: boolean): void {
     stored.status = Status.Completed;
 
     setResults(stored, match, 'win', 'loss', inRoundRobin);
@@ -1087,7 +1087,7 @@ export function setCompleted(stored: MatchResults, match: Partial<MatchResults>,
  * @param change A result to set in each other opponent if `check` is correct.
  * @param inRoundRobin Indicates whether the match is in a round-robin stage.
  */
-export function setResults(stored: MatchResults, match: Partial<MatchResults>, check: Result, change: Result, inRoundRobin: boolean): void {
+export function setResults(stored: MatchResults, match: DeepPartial<MatchResults>, check: Result, change: Result, inRoundRobin: boolean): void {
     if (match.opponent1 && match.opponent2) {
         if (match.opponent1.result === 'win' && match.opponent2.result === 'win')
             throw Error('There are two winners.');
@@ -1122,7 +1122,7 @@ export function setResults(stored: MatchResults, match: Partial<MatchResults>, c
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
  */
-export function setForfeits(stored: MatchResults, match: Partial<MatchResults>): void {
+export function setForfeits(stored: MatchResults, match: DeepPartial<MatchResults>): void {
     if (match.opponent1?.forfeit === true && match.opponent2?.forfeit === true) {
         if (stored.opponent1) stored.opponent1.forfeit = true;
         if (stored.opponent2) stored.opponent2.forfeit = true;
@@ -1358,7 +1358,7 @@ export function transitionToMinor(previousDuels: Duel[], losers: ParticipantSlot
  * @param childCount Child count of this parent match.
  * @param inRoundRobin Indicates whether the parent match is in a round-robin stage.
  */
-export function setParentMatchCompleted(parent: Partial<MatchResults>, childCount: number, inRoundRobin: boolean): void {
+export function setParentMatchCompleted(parent: Pick<MatchResults, 'opponent1' | 'opponent2'>, childCount: number, inRoundRobin: boolean): void {
     if (parent.opponent1?.score === undefined || parent.opponent2?.score === undefined)
         throw Error('Either opponent1, opponent2 or their scores are falsy.');
 
@@ -1391,7 +1391,7 @@ export function setParentMatchCompleted(parent: Partial<MatchResults>, childCoun
  * @param storedParent The parent match stored in the database.
  * @param scores The scores of the match child games.
  */
-export function getParentMatchResults(storedParent: Match, scores: Scores): Partial<MatchResults> {
+export function getParentMatchResults(storedParent: Match, scores: Scores): Pick<MatchResults, 'opponent1' | 'opponent2'> {
     return {
         opponent1: {
             id: storedParent.opponent1 && storedParent.opponent1.id,

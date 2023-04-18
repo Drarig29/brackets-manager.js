@@ -1,7 +1,7 @@
 import { Match, MatchGame, Round, Seeding, SeedOrdering, Status } from 'brackets-model';
 import { ordering } from './ordering';
 import { BaseUpdater } from './base/updater';
-import { ChildCountLevel } from './types';
+import { ChildCountLevel, DeepPartial } from './types';
 import * as helpers from './helpers';
 
 export class Update extends BaseUpdater {
@@ -13,7 +13,7 @@ export class Update extends BaseUpdater {
      *
      * @param match Values to change in a match.
      */
-    public async match<M extends Match = Match>(match: Partial<M>): Promise<void> {
+    public async match<M extends Match = Match>(match: DeepPartial<M>): Promise<void> {
         if (match.id === undefined)
             throw Error('No match id given.');
 
@@ -30,7 +30,7 @@ export class Update extends BaseUpdater {
      *
      * @param game Values to change in a match game.
      */
-    public async matchGame<G extends MatchGame = MatchGame>(game: Partial<G>): Promise<void> {
+    public async matchGame<G extends MatchGame = MatchGame>(game: DeepPartial<G>): Promise<void> {
         const stored = await this.findMatchGame(game);
 
         await this.updateMatchGame(stored, game);

@@ -62,6 +62,13 @@ export interface ParitySplit<T> {
 }
 
 /**
+ * Makes an object type deeply partial.
+ */
+export type DeepPartial<T> = T extends object ? {
+    [P in keyof T]?: DeepPartial<T[P]>;
+} : T;
+
+/**
  * Converts all value types to array types.
  */
 type ValueToArray<T> = {
