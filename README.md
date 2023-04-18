@@ -13,6 +13,8 @@ It contains all the logic needed to manage tournaments.
 - [BYE](https://en.wikipedia.org/wiki/Bye_%28sports%29) supported: only during creation (for seeding and balancing).
 - Forfeit supported: only during updates.
 - Match supported (locked, waiting, ready, running, completed, archived).
+- Multiple stages per tournament.
+  - So you can first have a round-robin stage (which will give you a seeding), then an elimination stage.
 
 # Interface
 
@@ -32,9 +34,10 @@ const { BracketsManager } = require('brackets-manager');
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
 
+// Create an elimination stage for tournament `3`.
 await manager.create({
-  name: 'My tournament',
-  tournamentId: 0,
+  tournamentId: 3,
+  name: 'Elimination stage',
   type: 'double_elimination',
   seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
   settings: { grandFinal: 'double' },
@@ -47,6 +50,10 @@ await manager.update.match({
 });
 ```
 
+Rendered with the [viewer](https://github.com/Drarig29/brackets-viewer.js):
+
+<img width="581" alt="image" src="https://user-images.githubusercontent.com/9317502/232905749-195c4f40-527c-4f17-a639-82f639432ed9.png">
+
 As you can see, the [manager](https://drarig29.github.io/brackets-docs/reference/manager/classes/BracketsManager.html) is composed of submodules, which themselves have methods:
   - [`get`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Get.html) module: [`manager.get.seeding()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Get.html#seeding), [`manager.get.finalStandings()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Get.html#finalStandings), ...
   - [`update`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Update.html) module: [`manager.update.match()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Update.html#match), [`manager.update.confirmSeeding()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Update.html#confirmSeeding), ...
@@ -57,7 +64,7 @@ As you can see, the [manager](https://drarig29.github.io/brackets-docs/reference
 
 You can navigate the API documentation here: [`BracketsManager` class documentation](https://drarig29.github.io/brackets-docs/reference/manager/classes/BracketsManager.html)
 
-You can also use all the helpers defined by the library (see [list here](https://drarig29.github.io/brackets-docs/reference/manager/modules/helpers.html)):
+All the helpers defined by the library are available [here](https://drarig29.github.io/brackets-docs/reference/manager/modules/helpers.html):
 
 ```js
 const { helpers } = require('brackets-manager');
