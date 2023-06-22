@@ -41,7 +41,7 @@ export class Create {
         if (!this.stage.name)
             throw Error('You must provide a name for the stage.');
 
-        if (!Number.isInteger(this.stage.tournamentId))
+        if (this.stage.tournamentId === undefined)
             throw Error('You must provide a tournament id for the stage.');
 
         if (stage.type === 'round_robin')

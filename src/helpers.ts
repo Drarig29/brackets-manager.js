@@ -21,6 +21,15 @@ import { Database, DeepPartial, Duel, FinalStandingsItem, IdMapping, Nullable, O
 import { ordering } from './ordering';
 
 /**
+ * Checks whether a value is defined (i.e. not null nor undefined).
+ *
+ * @param value The value to check.
+ */
+export function isDefined<T>(value: undefined | null | T): value is T {
+    return value !== null && value !== undefined;
+}
+
+/**
  * Splits an array of objects based on their values at a given key.
  *
  * @param objects The array to split.
@@ -1041,13 +1050,13 @@ export function handleOpponentsInversion(stored: MatchResults, match: DeepPartia
     const storedId1 = stored.opponent1?.id;
     const storedId2 = stored.opponent2?.id;
 
-    if (Number.isInteger(id1) && id1 !== storedId1 && id1 !== storedId2)
+    if (isDefined(id1) && id1 !== storedId1 && id1 !== storedId2)
         throw Error('The given opponent1 ID does not exist in this match.');
 
-    if (Number.isInteger(id2) && id2 !== storedId1 && id2 !== storedId2)
+    if (isDefined(id2) && id2 !== storedId1 && id2 !== storedId2)
         throw Error('The given opponent2 ID does not exist in this match.');
 
-    if (Number.isInteger(id1) && id1 === storedId2 || Number.isInteger(id2) && id2 === storedId1)
+    if (isDefined(id1) && id1 === storedId2 || isDefined(id2) && id2 === storedId1)
         invertOpponents(match);
 }
 
