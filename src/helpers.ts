@@ -14,6 +14,7 @@ import {
     StageType,
     Status,
     GroupType,
+    Id,
 } from 'brackets-model';
 
 import { Database, DeepPartial, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
@@ -258,7 +259,7 @@ export function normalizeIds(data: Database): Database {
  * 
  * @param elements A list of elements with IDs.
  */
-export function makeNormalizedIdMapping(elements: { id: number }[]): IdMapping {
+export function makeNormalizedIdMapping(elements: { id: Id }[]): IdMapping {
     let currentId = 0;
 
     return elements.reduce((acc, current) => ({
@@ -541,7 +542,7 @@ export function findPosition(matches: Match[], position: number): ParticipantSlo
  * @param match A match.
  * @param participantId ID of a participant.
  */
-export function isParticipantInMatch(match: MatchResults, participantId: number): boolean {
+export function isParticipantInMatch(match: MatchResults, participantId: Id): boolean {
     return [match.opponent1, match.opponent2].some(m => m?.id === participantId);
 }
 
@@ -847,7 +848,7 @@ export function setExtraFields(stored: MatchResults, match: DeepPartial<MatchRes
  * @param match The match to get the opponent from.
  * @param side The side where to get the opponent from.
  */
-export function getOpponentId(match: MatchResults, side: Side): number | null {
+export function getOpponentId(match: MatchResults, side: Side): Id | null {
     const opponent = match[side];
     return opponent && opponent.id;
 }
@@ -875,7 +876,7 @@ export function getOriginPosition(match: Match, side: Side): number {
 export function getLosers(participants: Participant[], matches: Match[]): Participant[][] {
     const losers: Participant[][] = [];
 
-    let currentRound: number | null = null;
+    let currentRound: Id | null = null;
     let roundIndex = -1;
 
     for (const match of matches) {
@@ -1192,8 +1193,8 @@ export function isSeedingWithIds(seeding: Seeding): boolean {
  * @param tournamentId ID of the tournament.
  * @param seeding The seeding (no IDs).
  */
-export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding): OmitId<Participant>[] {
-    const withoutByes = seeding.filter((name): name is /* number */ | string | CustomParticipant => name !== null);
+export function extractParticipantsFromSeeding(tournamentId: Id, seeding: Seeding): OmitId<Participant>[] {
+    const withoutByes = seeding.filter((name): name is /* ignore number (no IDs) */ | string | CustomParticipant => name !== null);
 
     const participants = withoutByes.map<OmitId<Participant>>((item) => {
         if (typeof item === 'string') {

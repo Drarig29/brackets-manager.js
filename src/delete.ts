@@ -1,3 +1,4 @@
+import { Id } from 'brackets-model';
 import { Storage } from './types';
 
 export class Delete {
@@ -23,7 +24,7 @@ export class Delete {
      *
      * @param stageId ID of the stage.
      */
-    public async stage(stageId: number): Promise<void> {
+    public async stage(stageId: Id): Promise<void> {
         // The order is important here, because the abstract storage can possibly have foreign key checks (e.g. SQL).
 
         if (!await this.storage.delete('match_game', { stage_id: stageId }))
@@ -49,7 +50,7 @@ export class Delete {
      * 
      * @param tournamentId ID of the tournament.
      */
-    public async tournament(tournamentId: number): Promise<void> {
+    public async tournament(tournamentId: Id): Promise<void> {
         const stages = await this.storage.select('stage', { tournament_id: tournamentId });
         if (!stages)
             throw Error('Error getting the stages.');
