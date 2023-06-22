@@ -465,29 +465,32 @@ export class Create {
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
     public async getSlots(positions?: number[]): Promise<ParticipantSlot[]> {
-        const size = this.stage.settings?.size || this.stage.seeding?.length || 0;
+        let seeding = this.stage.seedingIds || this.stage.seeding;
+        const size = this.stage.settings?.size || seeding?.length || 0;
         helpers.ensureValidSize(this.stage.type, size);
 
-        if (size && !this.stage.seeding)
+        if (size && !seeding)
             return Array.from(Array(size), (_: ParticipantSlot, i) => ({ id: null, position: i + 1 }));
 
-        if (!this.stage.seeding) throw Error('Either size or seeding must be given.');
+        if (!seeding) throw Error('Either size or seeding must be given.');
 
         this.stage.settings = {
             ...this.stage.settings,
             size, // Always set the size.
         };
 
-        helpers.ensureNoDuplicates(this.stage.seeding);
-        this.stage.seeding = helpers.fixSeeding(this.stage.seeding, size);
+        helpers.ensureNoDuplicates(seeding);
+        seeding = helpers.fixSeeding(seeding, size);
 
         if (this.stage.type !== 'round_robin' && this.stage.settings.balanceByes)
-            this.stage.seeding = helpers.balanceByes(this.stage.seeding, this.stage.settings.size);
+            seeding = helpers.balanceByes(seeding, this.stage.settings.size);
 
-        if (helpers.isSeedingWithIds(this.stage.seeding))
-            return this.getSlotsUsingIds(this.stage.seeding, positions);
+        this.stage.seeding = seeding;
 
-        return this.getSlotsUsingNames(this.stage.seeding, positions);
+        if (this.stage.seedingIds !== undefined || helpers.isSeedingWithIds(seeding))
+            return this.getSlotsUsingIds(seeding, positions);
+
+        return this.getSlotsUsingNames(seeding, positions);
     }
 
     /**
