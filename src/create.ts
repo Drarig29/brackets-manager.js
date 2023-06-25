@@ -658,8 +658,21 @@ export class Create {
     private async insertStage(stage: OmitId<Stage>): Promise<Id> {
         let existing: Stage | null = null;
 
-        if (this.updateMode)
+        if (this.updateMode) {
             existing = await this.storage.select('stage', this.currentStageId);
+            if (!existing) throw Error('Stage not found.');
+
+            const update: Stage = {
+                ...existing,
+                settings: {
+                    ...existing.settings,
+                    ...stage.settings,
+                },
+            };
+
+            if (!await this.storage.update('stage', this.currentStageId, update))
+                throw Error('Could not update the stage.');
+        }
 
         if (!existing)
             return this.storage.insert('stage', stage);
@@ -839,15 +852,18 @@ export class Create {
     private async ensureSeedOrdering(stageId: Id): Promise<void> {
         if (this.stage.settings?.seedOrdering?.length === this.seedOrdering.length) return;
 
-        const stage = await this.storage.select('stage', stageId);
-        if (!stage) throw Error('Stage not found.');
+        const existing = await this.storage.select('stage', stageId);
+        if (!existing) throw Error('Stage not found.');
 
-        stage.settings = {
-            ...stage.settings,
-            seedOrdering: this.seedOrdering,
+        const update: Stage = {
+            ...existing,
+            settings: {
+                ...existing.settings,
+                seedOrdering: this.seedOrdering,
+            },
         };
 
-        if (!await this.storage.update('stage', stageId, stage))
+        if (!await this.storage.update('stage', stageId, update))
             throw Error('Could not update the stage.');
     }
 }

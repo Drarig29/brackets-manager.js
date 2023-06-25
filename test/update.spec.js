@@ -614,6 +614,34 @@ describe('Seeding', () => {
         });
     });
 
+    it('should shrink the seeding size', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+        ]);
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('participant')).length, 4);
+        assert.strictEqual((await storage.select('stage', 0)).settings.size, 4);
+    });
+
+    it('should grow the seeding size', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+            'Team 9', 'Team 10',
+            'Team 11', 'Team 12',
+            'Team 13', 'Team 14',
+            'Team 15', 'Team 16',
+        ]);
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('participant')).length, 16);
+        assert.strictEqual((await storage.select('stage', 0)).settings.size, 16);
+    });
+
     it('should update the seeding in a stage without any participant', async () => {
         await manager.update.seeding(0, [
             'Team 1', 'Team 2',

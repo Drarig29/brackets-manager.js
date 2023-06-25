@@ -1,4 +1,4 @@
-import { Id, Match, MatchGame, Round, Seeding, SeedOrdering, Status } from 'brackets-model';
+import { Id, IdSeeding, Match, MatchGame, Round, Seeding, SeedOrdering, Status } from 'brackets-model';
 import { ordering } from './ordering';
 import { BaseUpdater } from './base/updater';
 import { ChildCountLevel, DeepPartial } from './types';
@@ -109,7 +109,17 @@ export class Update extends BaseUpdater {
      * @param seeding The new seeding.
      */
     public async seeding(stageId: Id, seeding: Seeding): Promise<void> {
-        await this.updateSeeding(stageId, seeding);
+        await this.updateSeeding(stageId, { seeding });
+    }
+
+    /**
+     * Updates the seeding of a stage (with a list of IDs).
+     *
+     * @param stageId ID of the stage.
+     * @param seedingIds The new seeding, containing only IDs.
+     */
+    public async seedingIds(stageId: Id, seedingIds: IdSeeding): Promise<void> {
+        await this.updateSeeding(stageId, { seedingIds });
     }
 
     /**
