@@ -1,12 +1,22 @@
 import { CrudInterface, Database, DataTypes, Storage, Table } from './types';
 import { InputStage, Stage } from 'brackets-model';
-import { create } from './create';
+import { Create } from './create';
 import { Get } from './get';
 import { Update } from './update';
 import { Delete } from './delete';
 import { Find } from './find';
 import { Reset } from './reset';
 import * as helpers from './helpers';
+
+interface CallableCreate extends Create {
+    /**
+     * Creates a stage for an existing tournament. The tournament won't be created.
+     *
+     * @param stage A stage to create.
+     * @deprecated Please use `manager.create.stage()` instead.
+     */
+    (stage: InputStage): Promise<Stage>
+}
 
 /**
  * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
@@ -20,6 +30,7 @@ export class BracketsManager {
     public delete: Delete;
     public find: Find;
     public reset: Reset;
+    public create: CallableCreate;
 
     /**
      * Creates an instance of BracketsManager, which will handle all the stuff from the library.
@@ -42,20 +53,18 @@ export class BracketsManager {
         };
 
         this.storage = storage;
+
+        const create = new Create(this.storage);
+
+        this.create = Object.assign((data: InputStage) => {
+            return create.stage(data);
+        }, new Create(this.storage));
+
         this.get = new Get(this.storage);
         this.update = new Update(this.storage);
         this.delete = new Delete(this.storage);
         this.find = new Find(this.storage);
         this.reset = new Reset(this.storage);
-    }
-
-    /**
-     * Creates a stage for an existing tournament. The tournament won't be created.
-     *
-     * @param stage A stage to create.
-     */
-    public async create(stage: InputStage): Promise<Stage> {
-        return create.call(this, stage);
     }
 
     /**

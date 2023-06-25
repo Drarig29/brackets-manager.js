@@ -1,7 +1,7 @@
 import { DeepPartial, Storage } from '../types';
 import { Group, Match, MatchGame, Round, SeedOrdering, Stage, StageType, GroupType, Id } from 'brackets-model';
 import { RoundPositionalInfo } from '../types';
-import { Create } from '../create';
+import { StageCreator } from './stage/creator';
 import * as helpers from '../helpers';
 
 export class BaseGetter {
@@ -418,7 +418,7 @@ export class BaseGetter {
      * @param stageType The type of the stage.
      * @param create A reference to a Create instance.
      */
-    protected static getSeedingOrdering(stageType: StageType, create: Create): SeedOrdering {
+    protected static getSeedingOrdering(stageType: StageType, create: StageCreator): SeedOrdering {
         return stageType === 'round_robin' ? create.getRoundRobinOrdering() : create.getStandardBracketFirstRoundOrdering();
     }
 

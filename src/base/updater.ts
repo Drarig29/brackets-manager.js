@@ -2,7 +2,7 @@ import { Match, MatchGame, Seeding, Stage, Status, GroupType, Id, IdSeeding } fr
 import { DeepPartial, ParticipantSlot, Side } from '../types';
 import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
-import { Create } from '../create';
+import { StageCreator } from './stage/creator';
 import { BaseGetter } from './getter';
 import { Get } from '../get';
 import * as helpers from '../helpers';
@@ -23,7 +23,7 @@ export class BaseUpdater extends BaseGetter {
 
         const newSize = (seedingIds || seeding)?.length ?? 0;
 
-        const create = new Create(this.storage, {
+        const creator = new StageCreator(this.storage, {
             name: stage.name,
             tournamentId: stage.tournament_id,
             type: stage.type,
@@ -34,10 +34,10 @@ export class BaseUpdater extends BaseGetter {
             ...((seedingIds ? { seedingIds } : { seeding: seeding ?? undefined })),
         });
 
-        create.setExisting(stageId, false);
+        creator.setExisting(stageId, false);
 
-        const method = BaseGetter.getSeedingOrdering(stage.type, create);
-        const slots = await create.getSlots();
+        const method = BaseGetter.getSeedingOrdering(stage.type, creator);
+        const slots = await creator.getSlots();
 
         const matches = await this.getSeedingMatches(stage.id, stage.type);
         if (!matches)
@@ -46,7 +46,7 @@ export class BaseUpdater extends BaseGetter {
         const ordered = ordering[method](slots);
         BaseUpdater.assertCanUpdateSeeding(matches, ordered);
 
-        await create.run();
+        await creator.run();
     }
 
     /**
@@ -62,7 +62,7 @@ export class BaseUpdater extends BaseGetter {
         const currentSeeding = await get.seeding(stageId);
         const newSeeding = helpers.convertSlotsToSeeding(currentSeeding.map(helpers.convertTBDtoBYE));
 
-        const create = new Create(this.storage, {
+        const creator = new StageCreator(this.storage, {
             name: stage.name,
             tournamentId: stage.tournament_id,
             type: stage.type,
@@ -70,9 +70,9 @@ export class BaseUpdater extends BaseGetter {
             seeding: newSeeding,
         });
 
-        create.setExisting(stageId, true);
+        creator.setExisting(stageId, true);
 
-        await create.run();
+        await creator.run();
     }
 
     /**
