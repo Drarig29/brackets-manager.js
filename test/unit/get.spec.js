@@ -87,6 +87,8 @@ describe('Unit - get', () => {
         // OTHER STAGE ID: 1
         // CURRENT STAGE ID: 2
 
+        const oneBye = () => ({ status: Status.Locked, opponent1: null, opponent2: { id: 0 } });
+
         each([
             [
                 'single round, with a running match',
@@ -94,6 +96,26 @@ describe('Unit - get', () => {
                 [{ stage_id: 2, id: 0 }],
                 [{ stage_id: 2, round_id: 0, status: Status.Running }],
                 [{ stage_id: 2, round_id: 0, status: Status.Running }],
+            ],
+            [
+                'two rounds, with 1 running match and 3 locked matches with BYEs in 1st round',
+                { id: 2, type: 'single_elimination', settings: { size: 8 } },
+                [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
+                [
+                    { stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 0, ...oneBye() }, { stage_id: 2, round_id: 0, ...oneBye() }, { stage_id: 2, round_id: 0, ...oneBye() },
+                    { stage_id: 2, round_id: 1, status: Status.Waiting }, { stage_id: 2, round_id: 1, status: Status.Ready },
+                ],
+                [{ stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 1, status: Status.Ready }],
+            ],
+            [
+                'two rounds, with 1 completed match and 3 locked matches with BYEs in 1st round',
+                { id: 2, type: 'single_elimination', settings: { size: 8 } },
+                [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
+                [
+                    { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, ...oneBye() }, { stage_id: 2, round_id: 0, ...oneBye() }, { stage_id: 2, round_id: 0, ...oneBye() },
+                    { stage_id: 2, round_id: 1, status: Status.Ready }, { stage_id: 2, round_id: 1, status: Status.Ready },
+                ],
+                [{ stage_id: 2, round_id: 1, status: Status.Ready }, { stage_id: 2, round_id: 1, status: Status.Ready }],
             ],
             [
                 'two rounds, with some uncompleted matches in 1st round',
