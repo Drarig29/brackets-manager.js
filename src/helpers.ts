@@ -564,7 +564,22 @@ export function getOtherSide(side: Side): Side {
 }
 
 /**
+ * Checks if a match is pending (i.e. locked or waiting).
+ * 
+ * [Locked > Waiting] > Ready > Running > Completed > Archived
+ *
+ * @param match Partial match results.
+ */
+export function isMatchPending(match: DeepPartial<MatchResults>): boolean {
+    return !match.opponent1?.id || !match.opponent2?.id; // At least one BYE or TBD
+}
+
+/**
  * Checks if a match is started.
+ * 
+ * Note: this is score-based. A completed or archived match is seen as "started" as well.
+ * 
+ * Locked > Waiting > Ready > [Running > Completed > Archived]
  *
  * @param match Partial match results.
  */
@@ -573,12 +588,27 @@ export function isMatchStarted(match: DeepPartial<MatchResults>): boolean {
 }
 
 /**
- * Checks if a match is completed.
+ * Checks if a match is completed (based on BYEs, forfeit or result).
+ * 
+ * Note: archived matches are not seen as completed by this helper.
+ * 
+ * Locked > Waiting > Ready > Running > [Completed] > Archived
  *
  * @param match Partial match results.
  */
 export function isMatchCompleted(match: DeepPartial<MatchResults>): boolean {
     return isMatchByeCompleted(match) || isMatchForfeitCompleted(match) || isMatchResultCompleted(match);
+}
+
+/**
+ * Checks if a match is ongoing (i.e. ready or running).
+ * 
+ * Locked > Waiting > [Ready > Running] > Completed > Archived
+ * 
+ * @param match Partial match results.
+ */
+export function isMatchOngoing(match: MatchResults): boolean {
+    return [Status.Ready, Status.Running].includes(match.status);
 }
 
 /**
@@ -670,14 +700,14 @@ export function getMatchStatus(opponents: Duel): Status;
  *
  * @param match Partial match results.
  */
-export function getMatchStatus(match: MatchResults): Status;
+export function getMatchStatus(match: Omit<MatchResults, 'status'>): Status;
 
 /**
  * Returns the status of a match based on information about it.
  * 
  * @param arg The opponents or partial results of the match.
  */
-export function getMatchStatus(arg: Duel | MatchResults): Status {
+export function getMatchStatus(arg: Duel | Omit<MatchResults, 'status'>): Status {
     const match = Array.isArray(arg) ? {
         opponent1: arg[0],
         opponent2: arg[1],
@@ -1654,10 +1684,17 @@ export function ensureNotRoundRobin(stage: Stage): void {
     if (inRoundRobin) throw Error('Impossible to update ordering in a round-robin stage.');
 }
 
+// TODO: delete this helper in a future release.
 /**
  * Checks if a round is completed based on its matches.
- * 
+ *
  * @param roundMatches Matches of the round.
+ * @deprecated This is both functionally and semantically incorrect because:
+ * 1. A match could be completed because of BYEs.
+ * 2. You could totally give a list of matches from different rounds to this function, and it wouldn't complain
+ *    although the result will **not** tell you whether a _round_ is completed.
+ * 
+ * Please do something like `matches.every(m => isMatchCompleted(m))` instead.
  */
 export function isRoundCompleted(roundMatches: Match[]): boolean {
     return roundMatches.every(match => match.status >= Status.Completed);

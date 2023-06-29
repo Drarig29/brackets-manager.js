@@ -122,9 +122,11 @@ export class Get extends BaseGetter {
 
     /**
      * Returns the matches that can currently be played in parallel.
-     * If all matches are completed in this stage of a tournament, an empty array is returned.
+     * If the stage doesn't contain any, an empty array is returned.
      * 
-     * Note: Completed matches are also returned.
+     * Note:
+     * - Returned matches are ongoing (i.e. ready or running).
+     * - Returned matches can be from different rounds.
      * 
      * @param stageId ID of the stage.
      * @example
@@ -154,6 +156,8 @@ export class Get extends BaseGetter {
         // Save multiple queries for `round`.
         let currentRoundIndex = -1;
 
+        const currentMatches: Match[] = [];
+
         for (const roundMatches of matchesByRound) {
             currentRoundIndex++;
 
@@ -163,19 +167,19 @@ export class Get extends BaseGetter {
                 const [consolationFinal] = matchesByRound[currentRoundIndex + 1];
 
                 const finals = [final, consolationFinal];
-                if (finals.every(match => match.status >= Status.Completed))
+                if (finals.every(match => !helpers.isMatchOngoing(match)))
                     return [];
 
-                return finals;
+                return finals.filter(match => helpers.isMatchOngoing(match));
             }
 
-            if (roundMatches.every(match => match.status >= Status.Completed))
+            if (roundMatches.every(match => !helpers.isMatchOngoing(match)))
                 continue;
 
-            return roundMatches;
+            currentMatches.push(...roundMatches.filter(match => helpers.isMatchOngoing(match)));
         }
 
-        return [];
+        return currentMatches;
     }
 
     /**
