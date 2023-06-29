@@ -163,13 +163,13 @@ export class Get extends BaseGetter {
                 const [consolationFinal] = matchesByRound[currentRoundIndex + 1];
 
                 const finals = [final, consolationFinal];
-                if (finals.every(match => match.status >= Status.Completed))
+                if (finals.every(match => helpers.isMatchCompleted(match)))
                     return [];
 
                 return finals;
             }
 
-            if (roundMatches.every(match => match.status >= Status.Completed))
+            if (roundMatches.every(match => helpers.isMatchCompleted(match)))
                 continue;
 
             return roundMatches;
