@@ -17,3 +17,5 @@ jobs:
         node-version: 14
     - run: npm install
     - run: npm test
+      env:
+        FORCE_COLOR: "1"
