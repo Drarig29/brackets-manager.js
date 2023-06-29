@@ -1654,10 +1654,17 @@ export function ensureNotRoundRobin(stage: Stage): void {
     if (inRoundRobin) throw Error('Impossible to update ordering in a round-robin stage.');
 }
 
+// TODO: delete this helper in a future release.
 /**
  * Checks if a round is completed based on its matches.
- * 
+ *
  * @param roundMatches Matches of the round.
+ * @deprecated This is both functionally and semantically incorrect because:
+ * 1. A match could be completed because of BYEs.
+ * 2. You could totally give a list of matches from different rounds to this function, and it wouldn't complain
+ *    although the result will **not** tell you whether a _round_ is completed.
+ * 
+ * Please do something like `matches.every(m => isMatchCompleted(m))` instead.
  */
 export function isRoundCompleted(roundMatches: Match[]): boolean {
     return roundMatches.every(match => match.status >= Status.Completed);
