@@ -87,8 +87,6 @@ describe('Unit - get', () => {
         // OTHER STAGE ID: 1
         // CURRENT STAGE ID: 2
 
-        const oneBye = () => ({ status: Status.Locked, opponent1: null, opponent2: { id: 0 } });
-
         each([
             [
                 'single round, with a running match',
@@ -102,7 +100,7 @@ describe('Unit - get', () => {
                 { id: 2, type: 'single_elimination', settings: { size: 8 } },
                 [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
                 [
-                    { stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 0, ...oneBye() }, { stage_id: 2, round_id: 0, ...oneBye() }, { stage_id: 2, round_id: 0, ...oneBye() },
+                    { stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 0, status: Status.Locked }, { stage_id: 2, round_id: 0, status: Status.Locked }, { stage_id: 2, round_id: 0, status: Status.Locked },
                     { stage_id: 2, round_id: 1, status: Status.Waiting }, { stage_id: 2, round_id: 1, status: Status.Ready },
                 ],
                 [{ stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 1, status: Status.Ready }],
@@ -112,7 +110,7 @@ describe('Unit - get', () => {
                 { id: 2, type: 'single_elimination', settings: { size: 8 } },
                 [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
                 [
-                    { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, ...oneBye() }, { stage_id: 2, round_id: 0, ...oneBye() }, { stage_id: 2, round_id: 0, ...oneBye() },
+                    { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Locked }, { stage_id: 2, round_id: 0, status: Status.Locked }, { stage_id: 2, round_id: 0, status: Status.Locked },
                     { stage_id: 2, round_id: 1, status: Status.Ready }, { stage_id: 2, round_id: 1, status: Status.Ready },
                 ],
                 [{ stage_id: 2, round_id: 1, status: Status.Ready }, { stage_id: 2, round_id: 1, status: Status.Ready }],
@@ -122,14 +120,14 @@ describe('Unit - get', () => {
                 { id: 2, type: 'single_elimination', settings: { size: 4 } },
                 [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
                 [{ stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Waiting }],
-                [{ stage_id: 2, round_id: 0, status: Status.Running }, { stage_id: 2, round_id: 0, status: Status.Completed }],
+                [{ stage_id: 2, round_id: 0, status: Status.Running }],
             ],
             [
                 'two stages, with 1st stage completed',
                 { id: 2, type: 'single_elimination', settings: { size: 4 } },
                 [{ stage_id: 1, id: 100 }, { stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
-                [{ stage_id: 1, round_id: 100, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Waiting }],
-                [{ stage_id: 2, round_id: 1, status: Status.Waiting }],
+                [{ stage_id: 1, round_id: 100, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Ready }],
+                [{ stage_id: 2, round_id: 1, status: Status.Ready }],
             ],
             [
                 'two stages, with all matches completed',
@@ -150,7 +148,7 @@ describe('Unit - get', () => {
                 { id: 2, type: 'single_elimination', settings: { size: 4, consolationFinal: true } },
                 [{ stage_id: 2, group_id: 0, id: 0 }, { stage_id: 2, group_id: 0, id: 1 }, { stage_id: 2, group_id: 1, id: 2 }],
                 [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Completed }, { stage_id: 2, round_id: 2, status: Status.Running }],
-                [{ stage_id: 2, round_id: 1, status: Status.Completed }, { stage_id: 2, round_id: 2, status: Status.Running }],
+                [{ stage_id: 2, round_id: 2, status: Status.Running }],
             ],
             [
                 'one stage, with consolation final - both finals completed',
