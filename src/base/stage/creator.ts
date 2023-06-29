@@ -530,7 +530,7 @@ export class StageCreator {
      */
     private async getStageNumber(): Promise<number> {
         const stages = await this.storage.select('stage', { tournament_id: this.stage.tournamentId });
-        const stageNumbers = stages?.map(stage => stage.number);
+        const stageNumbers = stages?.map(stage => stage.number ?? 0);
 
         if (this.stage.number !== undefined) {
             if (stageNumbers?.includes(this.stage.number))
@@ -664,6 +664,7 @@ export class StageCreator {
 
             const update: Stage = {
                 ...existing,
+                ...stage,
                 settings: {
                     ...existing.settings,
                     ...stage.settings,

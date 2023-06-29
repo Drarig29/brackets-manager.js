@@ -432,8 +432,12 @@ export class BaseGetter {
         if (stageType === 'round_robin')
             return this.storage.select('match', { stage_id: stageId });
 
-        const firstRound = await this.getUpperBracketFirstRound(stageId);
-        return this.storage.select('match', { round_id: firstRound.id });
+        try {
+            const firstRound = await this.getUpperBracketFirstRound(stageId);
+            return this.storage.select('match', { round_id: firstRound.id });
+        } catch {
+            return []; // The stage may have not been created yet.
+        }
     }
 
     /**
