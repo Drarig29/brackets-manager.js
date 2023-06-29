@@ -84,6 +84,9 @@ describe('Unit - get', () => {
     });
 
     describe('currentMatches', () => {
+        // OTHER STAGE ID: 1
+        // CURRENT STAGE ID: 2
+
         each([
             [
                 'single round, with a running match',
@@ -102,15 +105,15 @@ describe('Unit - get', () => {
             [
                 'two stages, with 1st stage completed',
                 { id: 2, type: 'single_elimination', settings: { size: 4 } },
-                [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
-                [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Waiting }],
+                [{ stage_id: 1, id: 100 }, { stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
+                [{ stage_id: 1, round_id: 100, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Waiting }],
                 [{ stage_id: 2, round_id: 1, status: Status.Waiting }],
             ],
             [
                 'two stages, with all matches completed',
                 { id: 2, type: 'single_elimination', settings: { size: 4 } },
-                [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
-                [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Completed }],
+                [{ stage_id: 1, id: 100 }, { stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
+                [{ stage_id: 1, round_id: 100, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Completed }],
                 [],
             ],
             [
