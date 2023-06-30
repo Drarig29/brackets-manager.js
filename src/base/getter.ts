@@ -92,7 +92,7 @@ export class BaseGetter {
             return this.getPreviousMatchesLB(match, stage, roundNumber);
 
         if (matchLocation === 'final_group')
-            return this.getPreviousMatchesFinal(match, roundNumber);
+            return this.getPreviousMatchesFinal(match, stage, roundNumber);
 
         if (roundNumber === 1)
             return []; // The match is in the first round of an upper bracket.
@@ -104,24 +104,81 @@ export class BaseGetter {
      * Gets the matches leading to the given match, which is in a final group (consolation final or grand final).
      *
      * @param match The current match.
+     * @param stage The parent stage.
      * @param roundNumber Number of the current round.
      */
-    private async getPreviousMatchesFinal(match: Match, roundNumber: number): Promise<Match[]> {
+    private async getPreviousMatchesFinal(match: Match, stage: Stage, roundNumber: number): Promise<Match[]> {
+        if (stage.type === 'single_elimination')
+            return this.getPreviousMatchesFinalSingleElimination(match, stage);
+
+        return this.getPreviousMatchesFinalDoubleElimination(match, roundNumber);
+    }
+
+    /**
+     * Gets the matches leading to the given match, which is in a final group (consolation final).
+     *
+     * @param match The current match.
+     * @param stage The parent stage.
+     */
+    private async getPreviousMatchesFinalSingleElimination(match: Match, stage: Stage): Promise<Match[]> {
+        const upperBracket = await this.getUpperBracket(match.stage_id);
+        const upperBracketRoundCount = helpers.getUpperBracketRoundCount(stage.settings.size!);
+
+        const semiFinalsRound = await this.storage.selectFirst('round', {
+            group_id: upperBracket.id,
+            number: upperBracketRoundCount - 1, // Second to last round
+        });
+
+        if (!semiFinalsRound)
+            throw Error('Semi finals round not found.');
+
+        const semiFinalMatches = await this.storage.select('match', {
+            round_id: semiFinalsRound.id,
+        });
+
+        if (!semiFinalMatches)
+            throw Error('Error getting semi final matches.');
+
+        // In single elimination, both the final and consolation final have the same previous matches.
+        return semiFinalMatches;
+    }
+
+    /**
+     * Gets the matches leading to the given match, which is in a final group (grand final).
+     *
+     * @param match The current match.
+     * @param stage The parent stage.
+     * @param roundNumber Number of the current round.
+     */
+    private async getPreviousMatchesFinalDoubleElimination(match: Match, roundNumber: number): Promise<Match[]> {
         if (roundNumber > 1) // Double grand final
             return [await this.findMatch(match.group_id, roundNumber - 1, 1)];
 
-        const upperBracket = await this.getUpperBracket(match.stage_id);
-        const lastRound = await this.getLastRound(upperBracket.id);
+        const winnerBracket = await this.getUpperBracket(match.stage_id);
+        const lastRoundWB = await this.getLastRound(winnerBracket.id);
 
-        const upperBracketFinalMatch = await this.storage.selectFirst('match', {
-            round_id: lastRound.id,
+        const winnerBracketFinalMatch = await this.storage.selectFirst('match', {
+            round_id: lastRoundWB.id,
             number: 1,
         });
 
-        if (upperBracketFinalMatch === null)
+        if (!winnerBracketFinalMatch)
             throw Error('Match not found.');
 
-        return [upperBracketFinalMatch];
+        const loserBracket = await this.getLoserBracket(match.stage_id);
+        if (!loserBracket)
+            throw Error('Loser bracket not found.');
+
+        const lastRoundLB = await this.getLastRound(loserBracket.id);
+        const loserBracketFinalMatch = await this.storage.selectFirst('match', {
+            round_id: lastRoundLB.id,
+            number: 1,
+        });
+
+        if (!loserBracketFinalMatch)
+            throw Error('Match not found.');
+
+        return [winnerBracketFinalMatch, loserBracketFinalMatch];
     }
 
     /**

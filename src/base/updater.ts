@@ -231,6 +231,9 @@ export class BaseUpdater extends BaseGetter {
      */
     protected async archiveMatches(matches: Match[]): Promise<void> {
         for (const match of matches) {
+            if (match.status === Status.Archived)
+                continue;
+
             match.status = Status.Archived;
             await this.applyMatchUpdate(match);
         }
