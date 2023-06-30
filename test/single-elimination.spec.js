@@ -315,7 +315,7 @@ describe('Previous and next match update in single elimination stage', () => {
         });
 
         assert.strictEqual((await storage.select('match', 2)).status, Status.Running);
-        assert.strictEqual((await storage.select('match', 3)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Archived);
 
         await manager.update.match({
             id: 2, // Final
@@ -323,8 +323,8 @@ describe('Previous and next match update in single elimination stage', () => {
             opponent2: { score: 9 },
         });
 
-        assert.strictEqual((await storage.select('match', 2)).status, Status.Completed);
-        assert.strictEqual((await storage.select('match', 3)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Archived);
     });
 
     it('should archive previous matches', async () => {
@@ -363,6 +363,7 @@ describe('Previous and next match update in single elimination stage', () => {
             opponent2: { score: 9 },
         });
 
-        assert.strictEqual((await storage.select('match', 2)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Archived); // Final
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Archived); // Consolation final
     });
 });
