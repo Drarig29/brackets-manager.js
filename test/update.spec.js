@@ -398,7 +398,7 @@ describe('Update match games', () => {
         await manager.update.matchGame({ parent_id: 2, number: 2, opponent1: { result: 'win' } });
 
         finalMatchStatus = (await storage.select('match', 2)).status;
-        assert.strictEqual(finalMatchStatus, Status.Completed);
+        assert.strictEqual(finalMatchStatus, Status.Archived);
         assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
 
         const semi1Status = (await storage.select('match', 0)).status;
@@ -576,7 +576,7 @@ describe('Update match games', () => {
 
         await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
         await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Archived); // Completed, but single match in the stage.
 
         await manager.reset.matchGameResults(0);
         assert.strictEqual((await storage.select('match', 0)).status, Status.Running);

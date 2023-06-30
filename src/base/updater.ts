@@ -231,6 +231,9 @@ export class BaseUpdater extends BaseGetter {
      */
     protected async archiveMatches(matches: Match[]): Promise<void> {
         for (const match of matches) {
+            if (match.status === Status.Archived)
+                continue;
+
             match.status = Status.Archived;
             await this.applyMatchUpdate(match);
         }
@@ -259,7 +262,14 @@ export class BaseUpdater extends BaseGetter {
      */
     protected async updateNext(match: Match, matchLocation: GroupType, stage: Stage, roundNumber: number, roundCount: number): Promise<void> {
         const nextMatches = await this.getNextMatches(match, matchLocation, stage, roundNumber, roundCount);
-        if (nextMatches.length === 0) return;
+        if (nextMatches.length === 0) {
+            // Archive match if it doesn't have following matches and is completed.
+            // When the stage is fully complete, all matches should be archived.
+            if (match.status === Status.Completed)
+                await this.archiveMatches([match]);
+
+            return;
+        }
 
         const winnerSide = helpers.getMatchResult(match);
         const actualRoundNumber = (stage.settings.skipFirstRound && matchLocation === 'winner_bracket') ? roundNumber + 1 : roundNumber;

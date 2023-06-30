@@ -161,24 +161,12 @@ describe('Update results with extra fields', () => {
             opponent2: {
                 score: 1,
                 result: 'loss',
-            },
-        });
-
-        await manager.update.matchGame({
-            id: 2,
-            opponent1: {
-                score: 3,
-                result: 'win',
-            },
-            opponent2: {
-                score: 1,
-                result: 'loss',
                 info: { replacements: [1, 2] }, // Extra field.
             },
         });
 
         assert.strictEqual((await storage.select('match_game', 0)).weather, 'rainy');
         assert.strictEqual((await storage.select('match_game', 1)).opponent1.foo, 42);
-        assert.deepStrictEqual((await storage.select('match_game', 2)).opponent2.info, { replacements: [1, 2] });
+        assert.deepStrictEqual((await storage.select('match_game', 1)).opponent2.info, { replacements: [1, 2] });
     });
 });

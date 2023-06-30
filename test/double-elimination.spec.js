@@ -253,6 +253,21 @@ describe('Previous and next match update in double elimination stage', () => {
             (await storage.select('match', 6)).opponent2.id, // Determined opponent for the grand final (round 2)
             (await storage.select('match', 1)).opponent2.id, // Winner of LB Final
         );
+
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Archived);
+        assert.strictEqual((await storage.select('match', 4)).status, Status.Archived);
+
+        assert.strictEqual((await storage.select('match', 5)).status, Status.Completed); // Grand final (round 1)
+        assert.strictEqual((await storage.select('match', 6)).status, Status.Ready); // Grand final (round 2)
+
+        await manager.update.match({
+            id: 6, // Grand Final round 2
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 10 },
+        });
+
+        assert.strictEqual((await storage.select('match', 5)).status, Status.Archived); // Grand final (round 1)
+        assert.strictEqual((await storage.select('match', 6)).status, Status.Archived); // Grand final (round 2)
     });
 
     it('should determine next matches and reset them', async () => {
