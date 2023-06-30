@@ -255,12 +255,6 @@ describe('Previous and next match update in single elimination stage', () => {
             opponent2: { score: 16, result: 'win' },
         });
 
-        await manager.update.match({
-            id: 2, // Final
-            opponent1: { score: 16, result: 'win' },
-            opponent2: { score: 9 },
-        });
-
         assert.strictEqual(
             (await storage.select('match', 3)).opponent1.id, // Determined opponent for the consolation final
             (await storage.select('match', 0)).opponent2.id, // Loser of Semi 1
@@ -270,6 +264,67 @@ describe('Previous and next match update in single elimination stage', () => {
             (await storage.select('match', 3)).opponent2.id, // Determined opponent for the consolation final
             (await storage.select('match', 1)).opponent1.id, // Loser of Semi 2
         );
+
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Ready);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Ready);
+    });
+
+    it('should play both the final and consolation final in parallel', async () => {
+        await manager.create({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { consolationFinal: true },
+        });
+
+        await manager.update.match({
+            id: 0, // First match of round 1
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        });
+
+        await manager.update.match({
+            id: 1, // Second match of round 1
+            opponent1: { score: 13 },
+            opponent2: { score: 16, result: 'win' },
+        });
+
+        await manager.update.match({
+            id: 2, // Final
+            opponent1: { score: 12 },
+            opponent2: { score: 9 },
+        });
+
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Running);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Ready);
+
+        await manager.update.match({
+            id: 3, // Consolation final
+            opponent1: { score: 12 },
+            opponent2: { score: 9 },
+        });
+
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Running);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Running);
+
+        await manager.update.match({
+            id: 3, // Consolation final
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 9 },
+        });
+
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Running);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Completed);
+
+        await manager.update.match({
+            id: 2, // Final
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 9 },
+        });
+
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Completed);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Completed);
     });
 
     it('should archive previous matches', async () => {

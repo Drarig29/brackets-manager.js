@@ -107,7 +107,7 @@ export class BaseGetter {
      * @param roundNumber Number of the current round.
      */
     private async getPreviousMatchesFinal(match: Match, roundNumber: number): Promise<Match[]> {
-        if (roundNumber > 1)
+        if (roundNumber > 1) // Double grand final
             return [await this.findMatch(match.group_id, roundNumber - 1, 1)];
 
         const upperBracket = await this.getUpperBracket(match.stage_id);
