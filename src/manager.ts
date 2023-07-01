@@ -1,4 +1,4 @@
-import { CrudInterface, Database, DataTypes, Storage, Table } from './types';
+import { CrudInterface, Database, Storage } from './types';
 import { InputStage, Stage } from 'brackets-model';
 import { Create } from './create';
 import { Get } from './get';
@@ -6,6 +6,7 @@ import { Update } from './update';
 import { Delete } from './delete';
 import { Find } from './find';
 import { Reset } from './reset';
+import { v4 as uuidv4 } from 'uuid';
 import * as helpers from './helpers';
 
 interface CallableCreate extends Create {
@@ -18,11 +19,15 @@ interface CallableCreate extends Create {
     (stage: InputStage): Promise<Stage>
 }
 
+type CrudMethod = (table: string, ...args: unknown[]) => Promise<unknown>;
+type AbstractStorage = Record<string, CrudMethod>;
+
 /**
  * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
  */
 export class BracketsManager {
 
+    public verbose = false;
     public storage: Storage;
 
     public get: Get;
@@ -36,29 +41,35 @@ export class BracketsManager {
      * Creates an instance of BracketsManager, which will handle all the stuff from the library.
      *
      * @param storageInterface An implementation of CrudInterface.
+     * @param verbose Whether to log CRUD operations.
      */
-    constructor(storageInterface: CrudInterface) {
-        const storage = storageInterface as Storage;
+    constructor(storageInterface: CrudInterface, verbose?: boolean) {
+        this.verbose = verbose ?? false;
 
-        storage.selectFirst = async <T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<DataTypes[T] | null> => {
-            const results = await this.storage.select<T>(table, filter);
-            if (!results || results.length === 0) return null;
-            return results[0];
+        this.storage = storageInterface as Storage;
+        this.instrumentStorage();
+
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+        this.storage.selectFirst = async (table, filter) => {
+            const results = await this.storage.select(table, filter);
+            if (!results || results.length === 0)
+                return null;
+
+            return results[0] ?? null;
         };
 
-        storage.selectLast = async <T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<DataTypes[T] | null> => {
-            const results = await this.storage.select<T>(table, filter);
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+        this.storage.selectLast = async (table, filter) => {
+            const results = await this.storage.select(table, filter);
             if (!results || results.length === 0) return null;
-            return results[results.length - 1];
-        };
 
-        this.storage = storage;
+            return results[results.length - 1] ?? null;
+        };
 
         const create = new Create(this.storage);
 
-        this.create = Object.assign((data: InputStage) => {
-            return create.stage(data);
-        }, new Create(this.storage));
+        const deprecatedCreateFunction = create.stage.bind(this);
+        this.create = Object.assign(deprecatedCreateFunction, new Create(this.storage));
 
         this.get = new Get(this.storage);
         this.update = new Update(this.storage);
@@ -137,5 +148,44 @@ export class BracketsManager {
             match: matches,
             match_game: matchGames,
         };
+    }
+
+    /**
+     * Add `console.log()` to storage methods in verbose mode.
+     */
+    private instrumentStorage(): void {
+        const storage = this.storage as unknown as AbstractStorage;
+        const instrumentedMethods: Array<keyof CrudInterface> = ['insert', 'select', 'update', 'delete'];
+
+        for (const method of Object.getOwnPropertyNames(Object.getPrototypeOf(storage))) {
+            if (!(instrumentedMethods as string[]).includes(method))
+                continue;
+
+            const originalMethod = storage[method].bind(storage);
+
+            storage[method] = async (table: string, ...args: unknown[]): Promise<unknown> => {
+                const verbose = this.verbose;
+                let id: string;
+                let start: number;
+
+                if (verbose) {
+                    id = uuidv4();
+                    start = Date.now();
+                    console.log(`${id} ${method.toUpperCase()} "${table}" args: ${JSON.stringify(args)}`);
+                }
+
+                const result = await originalMethod(table, ...args);
+
+                if (verbose) {
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+                    const duration = Date.now() - start!;
+
+                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+                    console.log(`${id!} ${duration}ms - Returned ${JSON.stringify(result)}`);
+                }
+
+                return result;
+            };
+        }
     }
 }
