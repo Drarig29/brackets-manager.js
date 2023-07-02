@@ -74,8 +74,8 @@ export class BracketsManager {
 
         const create = new Create(this.storage);
 
-        const deprecatedCreateFunction = create.stage.bind(this);
-        this.create = Object.assign(deprecatedCreateFunction, new Create(this.storage));
+        const createStageFunction = create.stage.bind(this);
+        this.create = Object.assign(createStageFunction, { stage: createStageFunction }) as CallableCreate;
 
         this.get = new Get(this.storage);
         this.update = new Update(this.storage);
