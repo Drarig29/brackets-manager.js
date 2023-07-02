@@ -752,6 +752,8 @@ export function setMatchResults(stored: MatchResults, match: DeepPartial<MatchRe
     statusChanged: boolean,
     resultChanged: boolean,
 } {
+    handleGivenStatus(stored, match);
+
     if (!inRoundRobin && (match.opponent1?.result === 'draw' || match.opponent2?.result === 'draw'))
         throw Error('Having a draw is forbidden in an elimination tournament.');
 
@@ -1058,6 +1060,35 @@ export function handleOpponentsInversion(stored: MatchResults, match: DeepPartia
 
     if (isDefined(id1) && id1 === storedId2 || isDefined(id2) && id2 === storedId1)
         invertOpponents(match);
+}
+
+/**
+ * Sets the `result` of both opponents based on their scores.
+ * 
+ * @param stored A reference to what will be updated in the storage.
+ * @param match Input of the update.
+ */
+export function handleGivenStatus(stored: MatchResults, match: DeepPartial<MatchResults>): void {
+    if (match.status === Status.Running) {
+        delete stored.opponent1?.result;
+        delete stored.opponent2?.result;
+        stored.status = Status.Running;
+    } else if (match.status === Status.Completed) {
+        if (match.opponent1?.score === undefined || match.opponent2?.score === undefined)
+            return;
+
+        if (match.opponent1.score > match.opponent2.score)
+            match.opponent1.result = 'win';
+        else if (match.opponent2.score > match.opponent1.score)
+            match.opponent2.result = 'win';
+        else {
+            // This will throw in an elimination stage.
+            match.opponent1.result = 'draw';
+            match.opponent2.result = 'draw';
+        }
+
+        stored.status = Status.Completed;
+    }
 }
 
 /**

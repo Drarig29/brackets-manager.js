@@ -212,18 +212,54 @@ describe('Update matches', () => {
     it('should end the match by setting the winner and the scores', async () => {
         await manager.update.match({
             id: 1,
-            opponent1: { score: 6 },
-            opponent2: { result: 'win', score: 3 },
+            opponent1: { score: 6, result: 'win' },
+            opponent2: { score: 3 },
         });
 
         const after = await storage.select('match', 1);
         assert.strictEqual(after.status, Status.Completed);
 
-        assert.strictEqual(after.opponent1.result, 'loss');
+        assert.strictEqual(after.opponent1.result, 'win');
         assert.strictEqual(after.opponent1.score, 6);
 
-        assert.strictEqual(after.opponent2.result, 'win');
+        assert.strictEqual(after.opponent2.result, 'loss');
         assert.strictEqual(after.opponent2.score, 3);
+    });
+
+    it('should set the winner and the scores when status completed is given', async () => {
+        await manager.update.match({
+            id: 2,
+            status: Status.Completed,
+            opponent1: { score: 6 },
+            opponent2: { score: 3 },
+        });
+
+        const after = await storage.select('match', 2);
+        assert.strictEqual(after.status, Status.Completed);
+
+        assert.strictEqual(after.opponent1.result, 'win');
+        assert.strictEqual(after.opponent1.score, 6);
+
+        assert.strictEqual(after.opponent2.result, 'loss');
+        assert.strictEqual(after.opponent2.score, 3);
+    });
+
+    it('should remove the winner and update the scores when status running is given', async () => {
+        await manager.update.match({
+            id: 2,
+            status: Status.Running,
+            opponent1: { score: 6 },
+            opponent2: { score: 3 },
+        });
+
+        const after = await storage.select('match', 2);
+        assert.strictEqual(after.status, Status.Running);
+
+        assert.strictEqual(after.opponent1.score, 6);
+        assert.notExists(after.opponent1.result);
+
+        assert.strictEqual(after.opponent2.score, 3);
+        assert.notExists(after.opponent2.result);
     });
 
     it('should throw if two winners', async () => {
@@ -248,18 +284,38 @@ describe('Update matches', () => {
         }), 'There are two forfeits.');
     });
 
+    it('should throw if draws in elimination stage', async () => {
+        await assert.isRejected(manager.update.match({
+            id: 3,
+            opponent1: { result: 'draw' },
+        }), 'Having a draw is forbidden in an elimination tournament.');
+
+        await assert.isRejected(manager.update.match({
+            id: 3,
+            opponent1: { result: 'draw' },
+            opponent2: { result: 'draw' },
+        }), 'Having a draw is forbidden in an elimination tournament.');
+
+        await assert.isRejected(manager.update.match({
+            id: 3,
+            status: Status.Completed,
+            opponent1: { score: 2 },
+            opponent2: { score: 2 },
+        }), 'Having a draw is forbidden in an elimination tournament.');
+    });
+
     it('should throw if one forfeit then the other without resetting the match between', async () => {
         await manager.update.match({
-            id: 2,
+            id: 4,
             opponent1: { forfeit: true },
         });
 
-        let after = await storage.select('match', 2);
+        let after = await storage.select('match', 4);
         assert.strictEqual(after.opponent1.forfeit, true);
         assert.notExists(after.opponent2.forfeit);
 
         manager.update.match({
-            id: 2,
+            id: 4,
             opponent2: { forfeit: true },
         });
     });
