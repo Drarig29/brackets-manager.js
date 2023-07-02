@@ -50,18 +50,24 @@ export class BracketsManager {
         this.instrumentStorage();
 
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        this.storage.selectFirst = async (table, filter) => {
+        this.storage.selectFirst = async (table, filter, assertUnique = true) => {
             const results = await this.storage.select(table, filter);
             if (!results || results.length === 0)
                 return null;
+
+            if (assertUnique && results.length > 1)
+                throw Error(`Selecting ${JSON.stringify(filter)} on table "${table}" must return a unique value.`);
 
             return results[0] ?? null;
         };
 
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        this.storage.selectLast = async (table, filter) => {
+        this.storage.selectLast = async (table, filter, assertUnique = true) => {
             const results = await this.storage.select(table, filter);
             if (!results || results.length === 0) return null;
+
+            if (assertUnique && results.length > 1)
+                throw Error(`Selecting ${JSON.stringify(filter)} on table "${table}" must return a unique value.`);
 
             return results[results.length - 1] ?? null;
         };

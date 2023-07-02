@@ -447,7 +447,7 @@ export class BaseGetter {
      */
     private async getUpperBracketFirstRound(stageId: Id): Promise<Round> {
         // Considering the database is ordered, this round will always be the first round of the upper bracket.
-        const firstRound = await this.storage.selectFirst('round', { stage_id: stageId, number: 1 });
+        const firstRound = await this.storage.selectFirst('round', { stage_id: stageId, number: 1 }, false);
         if (!firstRound) throw Error('Round not found.');
         return firstRound;
     }
@@ -458,7 +458,7 @@ export class BaseGetter {
      * @param groupId ID of the group.
      */
     private async getLastRound(groupId: Id): Promise<Round> {
-        const round = await this.storage.selectLast('round', { group_id: groupId });
+        const round = await this.storage.selectLast('round', { group_id: groupId }, false);
         if (!round) throw Error('Error getting rounds.');
         return round;
     }

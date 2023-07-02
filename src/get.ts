@@ -257,10 +257,10 @@ export class Get extends BaseGetter {
      * @param stage The stage.
      */
     private async eliminationSeeding(stage: Stage): Promise<ParticipantSlot[]> {
-        const round = await this.storage.selectFirst('round', { stage_id: stage.id, number: 1 });
-        if (!round) throw Error('Error getting the first round.');
+        const firstRound = await this.storage.selectFirst('round', { stage_id: stage.id, number: 1 }, false);
+        if (!firstRound) throw Error('Error getting the first round.');
 
-        const matches = await this.storage.select('match', { round_id: round.id });
+        const matches = await this.storage.select('match', { round_id: firstRound.id });
         if (!matches) throw Error('Error getting matches.');
 
         return helpers.convertMatchesToSeeding(matches);

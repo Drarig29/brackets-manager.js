@@ -199,6 +199,6 @@ export interface CrudInterface {
 }
 
 export interface Storage extends CrudInterface {
-    selectFirst<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<DataTypes[T] | null>
-    selectLast<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<DataTypes[T] | null>
+    selectFirst<T extends Table>(table: T, filter: Partial<DataTypes[T]>, assertUnique?: boolean): Promise<DataTypes[T] | null>
+    selectLast<T extends Table>(table: T, filter: Partial<DataTypes[T]>, assertUnique?: boolean): Promise<DataTypes[T] | null>
 }
