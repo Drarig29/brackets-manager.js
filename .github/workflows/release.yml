@@ -1,0 +1,21 @@
+name: Update docs on release
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger workflow
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.ACCESS_TOKEN }}
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: 'brackets-docs',
+              workflow_id: 'build.yml',
+              ref: 'main',
+            });
