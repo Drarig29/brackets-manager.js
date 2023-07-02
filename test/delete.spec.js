@@ -15,7 +15,7 @@ describe('Delete stage', () => {
     });
 
     it('should delete a stage and all its linked data', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -41,7 +41,7 @@ describe('Delete stage', () => {
     });
 
     it('should delete one stage and only its linked data', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example 1',
             tournamentId: 0,
             type: 'single_elimination',
@@ -51,7 +51,7 @@ describe('Delete stage', () => {
             settings: { matchesChildCount: 2 },
         });
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example 2',
             tournamentId: 0,
             type: 'single_elimination',
@@ -84,7 +84,7 @@ describe('Delete stage', () => {
     });
 
     it('should delete all stages of the tournament', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example 1',
             tournamentId: 0,
             type: 'single_elimination',
@@ -94,7 +94,7 @@ describe('Delete stage', () => {
             settings: { matchesChildCount: 2 },
         });
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example 2',
             tournamentId: 0,
             type: 'single_elimination',

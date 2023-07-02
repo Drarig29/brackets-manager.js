@@ -16,7 +16,7 @@ describe('Create double elimination stage', () => {
     });
 
     it('should create a double elimination stage', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Amateur',
             tournamentId: 0,
             type: 'double_elimination',
@@ -44,7 +44,7 @@ describe('Create double elimination stage', () => {
 
     it('should create a double elimination stage with only two participants', async () => {
         // This is an edge case. No lower bracket nor grand final will be created.
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',
@@ -64,7 +64,7 @@ describe('Create double elimination stage', () => {
     });
 
     it('should create a tournament with 256+ tournaments', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with 256 participants',
             tournamentId: 0,
             type: 'double_elimination',
@@ -73,7 +73,7 @@ describe('Create double elimination stage', () => {
     });
 
     it('should create a tournament with a double grand final', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with double grand final',
             tournamentId: 0,
             type: 'double_elimination',
@@ -98,7 +98,7 @@ describe('Previous and next match update in double elimination stage', () => {
     });
 
     it('should end a match and determine next matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Amateur',
             tournamentId: 0,
             type: 'double_elimination',
@@ -158,7 +158,7 @@ describe('Previous and next match update in double elimination stage', () => {
     });
 
     it('should propagate winner when BYE is already in next match in loser bracket', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',
@@ -195,7 +195,7 @@ describe('Previous and next match update in double elimination stage', () => {
     });
 
     it('should determine matches in grand final', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',
@@ -271,7 +271,7 @@ describe('Previous and next match update in double elimination stage', () => {
     });
 
     it('should determine next matches and reset them', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',
@@ -297,7 +297,7 @@ describe('Previous and next match update in double elimination stage', () => {
     });
 
     it('should archive previous matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',
@@ -386,7 +386,7 @@ describe('Previous and next match update in double elimination stage', () => {
     });
 
     it('should choose the correct previous and next matches based on losers ordering', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Amateur',
             tournamentId: 0,
             type: 'double_elimination',
@@ -435,7 +435,7 @@ describe('Previous and next match update in double elimination stage', () => {
     });
 
     it('should send the losers to the right LB matches in round 1', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with inner_outer loser ordering',
             tournamentId: 0,
             type: 'double_elimination',
@@ -493,7 +493,7 @@ describe('Skip first round', () => {
     beforeEach(async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with double grand final',
             tournamentId: 0,
             type: 'double_elimination',

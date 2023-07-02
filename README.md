@@ -35,7 +35,7 @@ const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
 
 // Create an elimination stage for tournament `3`.
-await manager.create({
+await manager.create.stage({
   tournamentId: 3,
   name: 'Elimination stage',
   type: 'double_elimination',
@@ -55,6 +55,7 @@ Rendered with the [viewer](https://github.com/Drarig29/brackets-viewer.js):
 <img width="581" alt="image" src="https://user-images.githubusercontent.com/9317502/232905749-195c4f40-527c-4f17-a639-82f639432ed9.png">
 
 As you can see, the [manager](https://drarig29.github.io/brackets-docs/reference/manager/classes/BracketsManager.html) is composed of submodules, which themselves have methods:
+  - [`create`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Create.html) module: [`manager.create.stage()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Create.html#stage)
   - [`get`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Get.html) module: [`manager.get.seeding()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Get.html#seeding), [`manager.get.finalStandings()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Get.html#finalStandings), ...
   - [`update`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Update.html) module: [`manager.update.match()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Update.html#match), [`manager.update.confirmSeeding()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Update.html#confirmSeeding), ...
   - [`reset`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Reset.html) module: [`manager.reset.seeding()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Reset.html#seeding), [`manager.reset.matchGame()`](https://drarig29.github.io/brackets-docs/reference/manager/classes/_internal_.Reset.html#matchResults), ...

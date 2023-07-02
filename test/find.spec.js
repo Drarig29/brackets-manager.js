@@ -15,7 +15,7 @@ describe('Find previous and next matches in single elimination', () => {
     });
 
     it('should find previous matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -45,7 +45,7 @@ describe('Find previous and next matches in single elimination', () => {
     });
 
     it('should find next matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -68,7 +68,7 @@ describe('Find previous and next matches in single elimination', () => {
     });
 
     it('should return matches from the point of view of a participant', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -105,7 +105,7 @@ describe('Find previous and next matches in double elimination', () => {
     });
 
     it('should find previous matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',
@@ -155,7 +155,7 @@ describe('Find previous and next matches in double elimination', () => {
     });
 
     it('should find next matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',
@@ -196,7 +196,7 @@ describe('Find previous and next matches in double elimination', () => {
     });
 
     it('should return matches from the point of view of a participant', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',

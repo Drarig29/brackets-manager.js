@@ -15,7 +15,7 @@ describe('Get child games', () => {
     });
 
     it('should get child games of a list of matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -34,7 +34,7 @@ describe('Get child games', () => {
     });
 
     it('should get child games of a list of matches with some which do not have child games', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -61,7 +61,7 @@ describe('Get final standings', () => {
     });
 
     it('should get the final standings for a single elimination stage with consolation final', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -97,7 +97,7 @@ describe('Get final standings', () => {
     });
 
     it('should get the final standings for a single elimination stage without consolation final', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -133,7 +133,7 @@ describe('Get final standings', () => {
     });
 
     it('should get the final standings for a double elimination stage with a grand final', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',
@@ -166,7 +166,7 @@ describe('Get final standings', () => {
     });
 
     it('should get the final standings for a double elimination stage without a grand final', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'double_elimination',
@@ -205,7 +205,7 @@ describe('Get seeding', () => {
     it('should get the seeding of a round-robin stage', async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -225,7 +225,7 @@ describe('Get seeding', () => {
     it('should get the seeding of a round-robin stage with BYEs', async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -246,7 +246,7 @@ describe('Get seeding', () => {
     it('should get the seeding of a round-robin stage with BYEs after update', async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -268,7 +268,7 @@ describe('Get seeding', () => {
     it('should get the seeding of a single elimination stage', async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -284,7 +284,7 @@ describe('Get seeding', () => {
     it('should get the seeding with BYEs', async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',

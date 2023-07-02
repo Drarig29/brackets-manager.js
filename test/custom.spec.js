@@ -42,14 +42,14 @@ describe('Create tournaments with custom seeding', async () => {
     });
 
     it('should create single elimination with custom seeding', async () => {
-        await manager.create(createTournament('single_elimination'));
+        await manager.create.stage(createTournament('single_elimination'));
         const stageData = await manager.get.stageData(0);
         assert.strictEqual(stageData.participant[0].nationality, 'US');
         assert.strictEqual(stageData.participant.length, 16);
     });
 
     it('should create double elimination with custom seeding', async () => {
-        await manager.create(createTournament('double_elimination'));
+        await manager.create.stage(createTournament('double_elimination'));
         const stageData = await manager.get.stageData(0);
 
         assert.strictEqual(stageData.participant[0].nationality, 'US');
@@ -57,7 +57,7 @@ describe('Create tournaments with custom seeding', async () => {
     });
 
     it('should create round robin with custom seeding', async () => {
-        await manager.create(createTournament('round_robin'));
+        await manager.create.stage(createTournament('round_robin'));
         const stageData = await manager.get.stageData(0);
 
         assert.strictEqual(stageData.participant[0].nationality, 'US');
@@ -71,7 +71,7 @@ describe('Update results with extra fields', () => {
     });
 
     it('Extra fields when updating a match', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Amateur',
             tournamentId: 0,
             type: 'single_elimination',
@@ -126,7 +126,7 @@ describe('Update results with extra fields', () => {
     });
 
     it('Extra fields when updating a match game', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Amateur',
             tournamentId: 0,
             type: 'single_elimination',

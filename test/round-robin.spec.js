@@ -29,7 +29,7 @@ describe('Create a round-robin stage', () => {
             settings: { groupCount: 2 },
         };
 
-        await manager.create(example);
+        await manager.create.stage(example);
 
         const stage = await storage.select('stage', 0);
         assert.strictEqual(stage.name, example.name);
@@ -60,7 +60,7 @@ describe('Create a round-robin stage', () => {
             },
         };
 
-        await manager.create(example);
+        await manager.create.stage(example);
 
         for (let groupIndex = 0; groupIndex < 2; groupIndex++) {
             const matches = await storage.select('match', { group_id: groupIndex });
@@ -76,7 +76,7 @@ describe('Create a round-robin stage', () => {
     });
 
     it('should throw if manual ordering has invalid counts', async () => {
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -94,7 +94,7 @@ describe('Create a round-robin stage', () => {
             },
         }), 'Group count in the manual ordering does not correspond to the given group count.');
 
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -128,14 +128,14 @@ describe('Create a round-robin stage', () => {
             settings: { groupCount: 2 },
         };
 
-        await manager.create(example);
+        await manager.create.stage(example);
 
         // One match must be missing.
         assert.strictEqual((await storage.select('match')).length, 11);
     });
 
     it('should create a round-robin stage with to be determined participants', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -151,7 +151,7 @@ describe('Create a round-robin stage', () => {
     });
 
     it('should create a round-robin stage with effort balanced', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with effort balanced',
             tournamentId: 0,
             type: 'round_robin',
@@ -172,7 +172,7 @@ describe('Create a round-robin stage', () => {
     });
 
     it('should throw if no group count given', async () => {
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -180,7 +180,7 @@ describe('Create a round-robin stage', () => {
     });
 
     it('should throw if the group count is not strictly positive', async () => {
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -197,7 +197,7 @@ describe('Update scores in a round-robin stage', () => {
 
     before(async () => {
         storage.reset();
-        await manager.create({
+        await manager.create.stage({
             name: 'Example scores',
             tournamentId: 0,
             type: 'round_robin',
@@ -230,7 +230,7 @@ describe('Update scores in a round-robin stage', () => {
 
         before(async () => {
             storage.reset();
-            await manager.create({
+            await manager.create.stage({
                 name: 'Example scores',
                 tournamentId: 0,
                 type: 'round_robin',

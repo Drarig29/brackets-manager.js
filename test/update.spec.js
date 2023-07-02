@@ -30,7 +30,7 @@ describe('Update matches', () => {
 
     before(async () => {
         storage.reset();
-        await manager.create(example);
+        await manager.create.stage(example);
     });
 
     it('should start a match', async () => {
@@ -270,7 +270,7 @@ describe('Give opponent IDs when updating', () => {
     beforeEach(async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Amateur',
             tournamentId: 0,
             type: 'double_elimination',
@@ -331,7 +331,7 @@ describe('Locked matches', () => {
 
     before(async () => {
         storage.reset();
-        await manager.create(example);
+        await manager.create.stage(example);
     });
 
     it('should throw when the matches leading to the match have not been completed yet', async () => {
@@ -358,7 +358,7 @@ describe('Update match games', () => {
     });
 
     it('should update child games status based on the parent match status', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -411,7 +411,7 @@ describe('Update match games', () => {
     });
 
     it('should update parent score when match game is updated', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'With match games',
             tournamentId: 0,
             type: 'single_elimination',
@@ -441,7 +441,7 @@ describe('Update match games', () => {
     });
 
     it('should throw if trying to update a locked match game', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -456,7 +456,7 @@ describe('Update match games', () => {
 
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -471,7 +471,7 @@ describe('Update match games', () => {
     });
 
     it('should throw if trying to update a child game of a locked match', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -503,7 +503,7 @@ describe('Update match games', () => {
     });
 
     it('should propagate the winner of the parent match in the next match', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -524,7 +524,7 @@ describe('Update match games', () => {
     });
 
     it('should select a match game with its parent match id and number', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -550,7 +550,7 @@ describe('Update match games', () => {
     });
 
     it('should throw if trying to reset the results of a parent match', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -564,7 +564,7 @@ describe('Update match games', () => {
     });
 
     it('should reset the results of a parent match when a child game\'s results are reset', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -583,7 +583,7 @@ describe('Update match games', () => {
     });
 
     it('should reset the forfeit of a parent match', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -603,7 +603,7 @@ describe('Seeding', () => {
     beforeEach(async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Without participants',
             tournamentId: 0,
             type: 'double_elimination',
@@ -685,7 +685,7 @@ describe('Seeding', () => {
     it('should update BYE to TBD during seeding update', async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'With participants and BYEs',
             tournamentId: 0,
             type: 'double_elimination',
@@ -911,7 +911,7 @@ describe('Match games status', () => {
     });
 
     it('should have all the child games to Locked when the parent match is Locked', async () => {
-        await manager.create({
+        await manager.create.stage({
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
@@ -926,7 +926,7 @@ describe('Match games status', () => {
     });
 
     it('should set all the child games to Waiting', async () => {
-        await manager.create({
+        await manager.create.stage({
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
@@ -944,7 +944,7 @@ describe('Match games status', () => {
     });
 
     it('should set all the child games to Ready', async () => {
-        await manager.create({
+        await manager.create.stage({
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
@@ -965,7 +965,7 @@ describe('Match games status', () => {
     });
 
     it('should set the parent match to Running when one match game starts', async () => {
-        await manager.create({
+        await manager.create.stage({
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
@@ -990,7 +990,7 @@ describe('Match games status', () => {
     });
 
     it('should set the child game to Completed without changing the siblings or the parent match status', async () => {
-        await manager.create({
+        await manager.create.stage({
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
@@ -1011,7 +1011,7 @@ describe('Match games status', () => {
     });
 
     it('should set the parent match to Completed', async () => {
-        await manager.create({
+        await manager.create.stage({
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
@@ -1032,7 +1032,7 @@ describe('Match games status', () => {
     });
 
     it('should archive previous matches and their games when next match is started', async () => {
-        await manager.create({
+        await manager.create.stage({
             tournamentId: 0,
             name: 'Example',
             type: 'single_elimination',
@@ -1069,7 +1069,7 @@ describe('Match games status', () => {
     });
 
     it('should work with unique match games when controlled via the parent', async () => {
-        await manager.create({
+        await manager.create.stage({
             tournamentId: 0,
             name: 'Example',
             type: 'double_elimination',
@@ -1100,7 +1100,7 @@ describe('Match games status', () => {
     });
 
     it('should work with unique match games when controlled via the child games', async () => {
-        await manager.create({
+        await manager.create.stage({
             tournamentId: 0,
             name: 'Example',
             type: 'double_elimination',

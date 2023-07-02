@@ -14,7 +14,7 @@ describe('BYE handling', () => {
     });
 
     it('should propagate BYEs through the brackets', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with BYEs',
             tournamentId: 0,
             type: 'double_elimination',
@@ -39,7 +39,7 @@ describe('BYE handling', () => {
     });
 
     it('should handle incomplete seeding during creation', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with BYEs',
             tournamentId: 0,
             type: 'double_elimination',
@@ -61,7 +61,7 @@ describe('BYE handling', () => {
     });
 
     it('should balance BYEs in the seeding', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with BYEs',
             tournamentId: 0,
             type: 'double_elimination',
@@ -87,7 +87,7 @@ describe('Position checks', () => {
     before(async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with double grand final',
             tournamentId: 0,
             type: 'double_elimination',
@@ -149,7 +149,7 @@ describe('Special cases', () => {
         // Simulation of external database filling for participants.
         await storage.insert('participant', participants);
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -163,21 +163,21 @@ describe('Special cases', () => {
     });
 
     it('should throw if the name of the stage is not provided', async () => {
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             tournamentId: 0,
             type: 'single_elimination',
         }), 'You must provide a name for the stage.');
     });
 
     it('should throw if the tournament id of the stage is not provided', async () => {
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             type: 'single_elimination',
         }), 'You must provide a tournament id for the stage.');
     });
 
     it('should throw if the participant count of a stage is not a power of two', async () => {
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -189,7 +189,7 @@ describe('Special cases', () => {
             ],
         }), 'The library only supports a participant count which is a power of two.');
 
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -198,14 +198,14 @@ describe('Special cases', () => {
     });
 
     it('should throw if the participant count of a stage is less than two', async () => {
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
             settings: { size: 0 },
         }), 'Impossible to create an empty stage. If you want an empty seeding, just set the size of the stage.');
 
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -218,7 +218,7 @@ describe('Update match child count', () => {
     beforeEach(async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -277,7 +277,7 @@ describe('Seeding and ordering in elimination', () => {
     beforeEach(async () => {
         storage.reset();
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Amateur',
             tournamentId: 0,
             type: 'double_elimination',
@@ -399,7 +399,7 @@ describe('Best-Of series matches completion', () => {
     });
 
     it('should end Bo1 matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -418,7 +418,7 @@ describe('Best-Of series matches completion', () => {
     });
 
     it('should end Bo2 matches in round-robin stage', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'round_robin',
@@ -440,7 +440,7 @@ describe('Best-Of series matches completion', () => {
     });
 
     it('should throw if a BoX match has a tie in an elimination stage', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -459,7 +459,7 @@ describe('Best-Of series matches completion', () => {
     });
 
     it('should end Bo3 matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -488,7 +488,7 @@ describe('Best-Of series matches completion', () => {
     });
 
     it('should let the last match be played even if not necessary', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -515,7 +515,7 @@ describe('Best-Of series matches completion', () => {
     });
 
     it('should end Bo5 matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -557,7 +557,7 @@ describe('Best-Of series matches completion', () => {
     });
 
     it('should handle match auto-win against a BYE after a BoX series', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -585,7 +585,7 @@ describe('Reset match and match games', () => {
     });
 
     it('should reset results of a match', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -632,7 +632,7 @@ describe('Reset match and match games', () => {
     });
 
     it('should throw when at least one of the following match is locked', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -664,7 +664,7 @@ describe('Reset match and match games', () => {
     });
 
     it('should reset results of a match game', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -699,7 +699,7 @@ describe('Import / export', () => {
     });
 
     it('should import data in the storage', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -742,7 +742,7 @@ describe('Import / export', () => {
     it('should import data in the storage with normalized IDs', async () => {
         await storage.insert('participant', { name: 'Unused team' });
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example 1',
             tournamentId: 0,
             type: 'round_robin',
@@ -753,7 +753,7 @@ describe('Import / export', () => {
             },
         });
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Example 2',
             tournamentId: 0,
             type: 'single_elimination',
@@ -822,7 +822,7 @@ describe('Import / export', () => {
     });
 
     it('should export data from the storage', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',

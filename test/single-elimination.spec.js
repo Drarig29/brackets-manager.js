@@ -30,7 +30,7 @@ describe('Create single elimination stage', () => {
             settings: { seedOrdering: ['natural'] },
         };
 
-        await manager.create(example);
+        await manager.create.stage(example);
 
         const stage = await storage.select('stage', 0);
         assert.strictEqual(stage.name, example.name);
@@ -42,7 +42,7 @@ describe('Create single elimination stage', () => {
     });
 
     it('should create a single elimination stage with BYEs', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with BYEs',
             tournamentId: 0,
             type: 'single_elimination',
@@ -62,7 +62,7 @@ describe('Create single elimination stage', () => {
     });
 
     it('should create a single elimination stage with consolation final', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with consolation final',
             tournamentId: 0,
             type: 'single_elimination',
@@ -81,7 +81,7 @@ describe('Create single elimination stage', () => {
     });
 
     it('should create a single elimination stage with consolation final and BYEs', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with consolation final and BYEs',
             tournamentId: 0,
             type: 'single_elimination',
@@ -103,7 +103,7 @@ describe('Create single elimination stage', () => {
     });
 
     it('should create a single elimination stage with Bo3 matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example with Bo3 matches',
             tournamentId: 0,
             type: 'single_elimination',
@@ -123,7 +123,7 @@ describe('Create single elimination stage', () => {
     });
 
     it('should determine the number property of created stages', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Stage 1',
             tournamentId: 0,
             type: 'single_elimination',
@@ -132,7 +132,7 @@ describe('Create single elimination stage', () => {
 
         assert.strictEqual((await storage.select('stage', 0)).number, 1);
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Stage 2',
             tournamentId: 0,
             type: 'single_elimination',
@@ -143,7 +143,7 @@ describe('Create single elimination stage', () => {
 
         await manager.delete.stage(0);
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Stage 3',
             tournamentId: 0,
             type: 'single_elimination',
@@ -154,14 +154,14 @@ describe('Create single elimination stage', () => {
     });
 
     it('should create a stage with the given number property', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Stage 1',
             tournamentId: 0,
             type: 'single_elimination',
             settings: { size: 2 },
         });
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Stage 2',
             tournamentId: 0,
             type: 'single_elimination',
@@ -170,7 +170,7 @@ describe('Create single elimination stage', () => {
 
         await manager.delete.stage(0);
 
-        await manager.create({
+        await manager.create.stage({
             name: 'Stage 1 (new)',
             tournamentId: 0,
             type: 'single_elimination',
@@ -182,7 +182,7 @@ describe('Create single elimination stage', () => {
     });
 
     it('should throw if the given number property already exists', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Stage 1',
             tournamentId: 0,
             type: 'single_elimination',
@@ -190,7 +190,7 @@ describe('Create single elimination stage', () => {
             settings: { size: 2 },
         });
 
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Stage 1',
             tournamentId: 0,
             type: 'single_elimination',
@@ -200,7 +200,7 @@ describe('Create single elimination stage', () => {
     });
 
     it('should throw if the seeding has duplicate participants', async () => {
-        await assert.isRejected(manager.create({
+        await assert.isRejected(manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -212,7 +212,7 @@ describe('Create single elimination stage', () => {
     });
 
     it('should throw if trying to set a draw as a result', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -235,7 +235,7 @@ describe('Previous and next match update in single elimination stage', () => {
     });
 
     it('should determine matches in consolation final', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -270,7 +270,7 @@ describe('Previous and next match update in single elimination stage', () => {
     });
 
     it('should play both the final and consolation final in parallel', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
@@ -328,7 +328,7 @@ describe('Previous and next match update in single elimination stage', () => {
     });
 
     it('should archive previous matches', async () => {
-        await manager.create({
+        await manager.create.stage({
             name: 'Example',
             tournamentId: 0,
             type: 'single_elimination',
