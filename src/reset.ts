@@ -1,4 +1,4 @@
-import { Status } from 'brackets-model';
+import { Id, Status } from 'brackets-model';
 import { BaseUpdater } from './base/updater';
 import * as helpers from './helpers';
 
@@ -11,7 +11,7 @@ export class Reset extends BaseUpdater {
      *
      * @param matchId ID of the match.
      */
-    public async matchResults(matchId: number): Promise<void> {
+    public async matchResults(matchId: Id): Promise<void> {
         const stored = await this.storage.select('match', matchId);
         if (!stored) throw Error('Match not found.');
 
@@ -54,7 +54,7 @@ export class Reset extends BaseUpdater {
      *
      * @param gameId ID of the match game.
      */
-    public async matchGameResults(gameId: number): Promise<void> {
+    public async matchGameResults(gameId: Id): Promise<void> {
         const stored = await this.storage.select('match_game', gameId);
         if (!stored) throw Error('Match game not found.');
 
@@ -76,7 +76,7 @@ export class Reset extends BaseUpdater {
      *
      * @param stageId ID of the stage.
      */
-    public async seeding(stageId: number): Promise<void> {
-        await this.updateSeeding(stageId, null);
+    public async seeding(stageId: Id): Promise<void> {
+        await this.updateSeeding(stageId, { seeding: null });
     }
 }

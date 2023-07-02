@@ -14,10 +14,20 @@ import {
     StageType,
     Status,
     GroupType,
+    Id,
 } from 'brackets-model';
 
 import { Database, DeepPartial, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
+
+/**
+ * Checks whether a value is defined (i.e. not null nor undefined).
+ *
+ * @param value The value to check.
+ */
+export function isDefined<T>(value: undefined | null | T): value is T {
+    return value !== null && value !== undefined;
+}
 
 /**
  * Splits an array of objects based on their values at a given key.
@@ -258,7 +268,7 @@ export function normalizeIds(data: Database): Database {
  * 
  * @param elements A list of elements with IDs.
  */
-export function makeNormalizedIdMapping(elements: { id: number }[]): IdMapping {
+export function makeNormalizedIdMapping(elements: { id: Id }[]): IdMapping {
     let currentId = 0;
 
     return elements.reduce((acc, current) => ({
@@ -541,7 +551,7 @@ export function findPosition(matches: Match[], position: number): ParticipantSlo
  * @param match A match.
  * @param participantId ID of a participant.
  */
-export function isParticipantInMatch(match: MatchResults, participantId: number): boolean {
+export function isParticipantInMatch(match: MatchResults, participantId: Id): boolean {
     return [match.opponent1, match.opponent2].some(m => m?.id === participantId);
 }
 
@@ -847,7 +857,7 @@ export function setExtraFields(stored: MatchResults, match: DeepPartial<MatchRes
  * @param match The match to get the opponent from.
  * @param side The side where to get the opponent from.
  */
-export function getOpponentId(match: MatchResults, side: Side): number | null {
+export function getOpponentId(match: MatchResults, side: Side): Id | null {
     const opponent = match[side];
     return opponent && opponent.id;
 }
@@ -875,7 +885,7 @@ export function getOriginPosition(match: Match, side: Side): number {
 export function getLosers(participants: Participant[], matches: Match[]): Participant[][] {
     const losers: Participant[][] = [];
 
-    let currentRound: number | null = null;
+    let currentRound: Id | null = null;
     let roundIndex = -1;
 
     for (const match of matches) {
@@ -1040,13 +1050,13 @@ export function handleOpponentsInversion(stored: MatchResults, match: DeepPartia
     const storedId1 = stored.opponent1?.id;
     const storedId2 = stored.opponent2?.id;
 
-    if (Number.isInteger(id1) && id1 !== storedId1 && id1 !== storedId2)
+    if (isDefined(id1) && id1 !== storedId1 && id1 !== storedId2)
         throw Error('The given opponent1 ID does not exist in this match.');
 
-    if (Number.isInteger(id2) && id2 !== storedId1 && id2 !== storedId2)
+    if (isDefined(id2) && id2 !== storedId1 && id2 !== storedId2)
         throw Error('The given opponent2 ID does not exist in this match.');
 
-    if (Number.isInteger(id1) && id1 === storedId2 || Number.isInteger(id2) && id2 === storedId1)
+    if (isDefined(id1) && id1 === storedId2 || isDefined(id2) && id2 === storedId1)
         invertOpponents(match);
 }
 
@@ -1192,8 +1202,8 @@ export function isSeedingWithIds(seeding: Seeding): boolean {
  * @param tournamentId ID of the tournament.
  * @param seeding The seeding (no IDs).
  */
-export function extractParticipantsFromSeeding(tournamentId: number, seeding: Seeding): OmitId<Participant>[] {
-    const withoutByes = seeding.filter((name): name is /* number */ | string | CustomParticipant => name !== null);
+export function extractParticipantsFromSeeding(tournamentId: Id, seeding: Seeding): OmitId<Participant>[] {
+    const withoutByes = seeding.filter((name): name is /* ignore number (no IDs) */ | string | CustomParticipant => name !== null);
 
     const participants = withoutByes.map<OmitId<Participant>>((item) => {
         if (typeof item === 'string') {

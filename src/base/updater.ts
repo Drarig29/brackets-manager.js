@@ -1,4 +1,4 @@
-import { Match, MatchGame, Seeding, Stage, Status, GroupType } from 'brackets-model';
+import { Match, MatchGame, Seeding, Stage, Status, GroupType, Id, IdSeeding } from 'brackets-model';
 import { DeepPartial, ParticipantSlot, Side } from '../types';
 import { SetNextOpponent } from '../helpers';
 import { ordering } from '../ordering';
@@ -14,17 +14,24 @@ export class BaseUpdater extends BaseGetter {
      *
      * @param stageId ID of the stage.
      * @param seeding A new seeding or `null` to reset the existing seeding.
+     * @param seeding.seeding Can contain names, IDs or BYEs.
+     * @param seeding.seedingIds Can only contain IDs or BYEs.
      */
-    protected async updateSeeding(stageId: number, seeding: Seeding | null): Promise<void> {
+    protected async updateSeeding(stageId: Id, { seeding, seedingIds }: { seeding?: Seeding | null, seedingIds?: IdSeeding | null }): Promise<void> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
+
+        const newSize = (seedingIds || seeding)?.length ?? 0;
 
         const create = new Create(this.storage, {
             name: stage.name,
             tournamentId: stage.tournament_id,
             type: stage.type,
-            settings: stage.settings,
-            seeding: seeding || undefined,
+            settings: {
+                ...stage.settings,
+                ...(newSize === 0 ? {} : { size: newSize }), // Just reset the seeding if the new size is going to be empty.
+            },
+            ...((seedingIds ? { seedingIds } : { seeding: seeding ?? undefined })),
         });
 
         create.setExisting(stageId, false);
@@ -47,7 +54,7 @@ export class BaseUpdater extends BaseGetter {
      *
      * @param stageId ID of the stage.
      */
-    protected async confirmCurrentSeeding(stageId: number): Promise<void> {
+    protected async confirmCurrentSeeding(stageId: Id): Promise<void> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
@@ -74,7 +81,7 @@ export class BaseUpdater extends BaseGetter {
      * @param parentId ID of the parent match.
      * @param inRoundRobin Indicates whether the parent match is in a round-robin stage.
      */
-    protected async updateParentMatch(parentId: number, inRoundRobin: boolean): Promise<void> {
+    protected async updateParentMatch(parentId: Id, inRoundRobin: boolean): Promise<void> {
         const storedParent = await this.storage.select('match', parentId);
         if (!storedParent) throw Error('Parent not found.');
 

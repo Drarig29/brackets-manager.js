@@ -1,4 +1,4 @@
-import { Group, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage } from 'brackets-model';
+import { Group, Id, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage } from 'brackets-model';
 import { defaultMinorOrdering, ordering } from './ordering';
 import { Duel, Storage, OmitId, ParticipantSlot, StandardBracketResults } from './types';
 import { BracketsManager } from '.';
@@ -22,7 +22,7 @@ export class Create {
     private readonly seedOrdering: SeedOrdering[];
     private updateMode: boolean;
     private enableByesInUpdate: boolean;
-    private currentStageId!: number;
+    private currentStageId!: Id;
 
     /**
      * Creates an instance of Create, which will handle the creation of the stage.
@@ -41,7 +41,7 @@ export class Create {
         if (!this.stage.name)
             throw Error('You must provide a name for the stage.');
 
-        if (!Number.isInteger(this.stage.tournamentId))
+        if (this.stage.tournamentId === undefined)
             throw Error('You must provide a tournament id for the stage.');
 
         if (stage.type === 'round_robin')
@@ -90,7 +90,7 @@ export class Create {
      * @param stageId ID of the stage.
      * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding.
      */
-    public setExisting(stageId: number, enableByes: boolean): void {
+    public setExisting(stageId: Id, enableByes: boolean): void {
         this.updateMode = true;
         this.currentStageId = stageId;
         this.enableByesInUpdate = enableByes;
@@ -160,7 +160,7 @@ export class Create {
      * @param stageId ID of the stage.
      * @param slots A list of slots.
      */
-    private async createDoubleEliminationSkipFirstRound(stageId: number, slots: ParticipantSlot[]): Promise<void> {
+    private async createDoubleEliminationSkipFirstRound(stageId: Id, slots: ParticipantSlot[]): Promise<void> {
         const { even: directInWb, odd: directInLb } = helpers.splitByParity(slots);
         const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, directInWb);
 
@@ -176,7 +176,7 @@ export class Create {
      * @param stageId ID of the stage.
      * @param slots A list of slots.
      */
-    private async createDoubleElimination(stageId: number, slots: ParticipantSlot[]): Promise<void> {
+    private async createDoubleElimination(stageId: Id, slots: ParticipantSlot[]): Promise<void> {
         const { losers: losersWb, winner: winnerWb } = await this.createStandardBracket(stageId, 1, slots);
 
         if (helpers.isDoubleEliminationNecessary(this.stage.settings?.size!)) {
@@ -194,7 +194,7 @@ export class Create {
      * @param number Number in the stage.
      * @param slots A list of slots.
      */
-    private async createRoundRobinGroup(stageId: number, number: number, slots: ParticipantSlot[]): Promise<void> {
+    private async createRoundRobinGroup(stageId: Id, number: number, slots: ParticipantSlot[]): Promise<void> {
         const groupId = await this.insertGroup({
             stage_id: stageId,
             number,
@@ -218,7 +218,7 @@ export class Create {
      * @param number Number in the stage.
      * @param slots A list of slots.
      */
-    private async createStandardBracket(stageId: number, number: number, slots: ParticipantSlot[]): Promise<StandardBracketResults> {
+    private async createStandardBracket(stageId: Id, number: number, slots: ParticipantSlot[]): Promise<StandardBracketResults> {
         const roundCount = helpers.getUpperBracketRoundCount(slots.length);
         const groupId = await this.insertGroup({
             stage_id: stageId,
@@ -253,7 +253,7 @@ export class Create {
      * @param number Number in the stage.
      * @param losers One list of losers per upper bracket round.
      */
-    private async createLowerBracket(stageId: number, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
+    private async createLowerBracket(stageId: Id, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
         const participantCount = this.stage.settings?.size!;
         const roundPairCount = helpers.getRoundPairCount(participantCount);
 
@@ -296,7 +296,7 @@ export class Create {
      * @param number Number in the stage.
      * @param duels A list of duels.
      */
-    private async createUniqueMatchBracket(stageId: number, number: number, duels: Duel[]): Promise<void> {
+    private async createUniqueMatchBracket(stageId: Id, number: number, duels: Duel[]): Promise<void> {
         const groupId = await this.insertGroup({
             stage_id: stageId,
             number,
@@ -318,7 +318,7 @@ export class Create {
      * @param matchCount Duel/match count.
      * @param duels A list of duels.
      */
-    private async createRound(stageId: number, groupId: number, roundNumber: number, matchCount: number, duels: Duel[]): Promise<void> {
+    private async createRound(stageId: Id, groupId: Id, roundNumber: number, matchCount: number, duels: Duel[]): Promise<void> {
         const matchesChildCount = this.getMatchesChildCount();
 
         const roundId = await this.insertRound({
@@ -347,7 +347,7 @@ export class Create {
      * @param opponents The two opponents matching against each other.
      * @param childCount Child count for this match (number of games).
      */
-    private async createMatch(stageId: number, groupId: number, roundId: number, matchNumber: number, opponents: Duel, childCount: number): Promise<void> {
+    private async createMatch(stageId: Id, groupId: Id, roundId: Id, matchNumber: number, opponents: Duel, childCount: number): Promise<void> {
         const opponent1 = helpers.toResultWithPosition(opponents[0]);
         const opponent2 = helpers.toResultWithPosition(opponents[1]);
 
@@ -465,29 +465,32 @@ export class Create {
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
     public async getSlots(positions?: number[]): Promise<ParticipantSlot[]> {
-        const size = this.stage.settings?.size || this.stage.seeding?.length || 0;
+        let seeding = this.stage.seedingIds || this.stage.seeding;
+        const size = this.stage.settings?.size || seeding?.length || 0;
         helpers.ensureValidSize(this.stage.type, size);
 
-        if (size && !this.stage.seeding)
+        if (size && !seeding)
             return Array.from(Array(size), (_: ParticipantSlot, i) => ({ id: null, position: i + 1 }));
 
-        if (!this.stage.seeding) throw Error('Either size or seeding must be given.');
+        if (!seeding) throw Error('Either size or seeding must be given.');
 
         this.stage.settings = {
             ...this.stage.settings,
             size, // Always set the size.
         };
 
-        helpers.ensureNoDuplicates(this.stage.seeding);
-        this.stage.seeding = helpers.fixSeeding(this.stage.seeding, size);
+        helpers.ensureNoDuplicates(seeding);
+        seeding = helpers.fixSeeding(seeding, size);
 
         if (this.stage.type !== 'round_robin' && this.stage.settings.balanceByes)
-            this.stage.seeding = helpers.balanceByes(this.stage.seeding, this.stage.settings.size);
+            seeding = helpers.balanceByes(seeding, this.stage.settings.size);
 
-        if (helpers.isSeedingWithIds(this.stage.seeding))
-            return this.getSlotsUsingIds(this.stage.seeding, positions);
+        this.stage.seeding = seeding;
 
-        return this.getSlotsUsingNames(this.stage.seeding, positions);
+        if (this.stage.seedingIds !== undefined || helpers.isSeedingWithIds(seeding))
+            return this.getSlotsUsingIds(seeding, positions);
+
+        return this.getSlotsUsingNames(seeding, positions);
     }
 
     /**
@@ -652,11 +655,24 @@ export class Create {
      *
      * @param stage The stage to insert.
      */
-    private async insertStage(stage: OmitId<Stage>): Promise<number> {
+    private async insertStage(stage: OmitId<Stage>): Promise<Id> {
         let existing: Stage | null = null;
 
-        if (this.updateMode)
+        if (this.updateMode) {
             existing = await this.storage.select('stage', this.currentStageId);
+            if (!existing) throw Error('Stage not found.');
+
+            const update: Stage = {
+                ...existing,
+                settings: {
+                    ...existing.settings,
+                    ...stage.settings,
+                },
+            };
+
+            if (!await this.storage.update('stage', this.currentStageId, update))
+                throw Error('Could not update the stage.');
+        }
 
         if (!existing)
             return this.storage.insert('stage', stage);
@@ -669,7 +685,7 @@ export class Create {
      *
      * @param group The group to insert.
      */
-    private async insertGroup(group: OmitId<Group>): Promise<number> {
+    private async insertGroup(group: OmitId<Group>): Promise<Id> {
         let existing: Group | null = null;
 
         if (this.updateMode) {
@@ -690,7 +706,7 @@ export class Create {
      *
      * @param round The round to insert.
      */
-    private async insertRound(round: OmitId<Round>): Promise<number> {
+    private async insertRound(round: OmitId<Round>): Promise<Id> {
         let existing: Round | null = null;
 
         if (this.updateMode) {
@@ -712,7 +728,7 @@ export class Create {
      * @param match The match to insert.
      * @param existing An existing match corresponding to the current one.
      */
-    private async insertMatch(match: OmitId<Match>, existing: Match | null): Promise<number> {
+    private async insertMatch(match: OmitId<Match>, existing: Match | null): Promise<Id> {
         if (!existing)
             return this.storage.insert('match', match);
 
@@ -728,7 +744,7 @@ export class Create {
      *
      * @param matchGame The match game to insert.
      */
-    private async insertMatchGame(matchGame: OmitId<MatchGame>): Promise<number> {
+    private async insertMatchGame(matchGame: OmitId<MatchGame>): Promise<Id> {
         let existing: MatchGame | null = null;
 
         if (this.updateMode) {
@@ -799,7 +815,7 @@ export class Create {
      * @param stageId ID of the stage.
      * @param losers The semi final losers who will play the consolation final.
      */
-    private async createConsolationFinal(stageId: number, losers: ParticipantSlot[][]): Promise<void> {
+    private async createConsolationFinal(stageId: Id, losers: ParticipantSlot[][]): Promise<void> {
         if (!this.stage.settings?.consolationFinal) return;
 
         const semiFinalLosers = losers[losers.length - 2] as Duel;
@@ -813,7 +829,7 @@ export class Create {
      * @param winnerWb The winner of the winner bracket.
      * @param winnerLb The winner of the loser bracket.
      */
-    private async createGrandFinal(stageId: number, winnerWb: ParticipantSlot, winnerLb: ParticipantSlot): Promise<void> {
+    private async createGrandFinal(stageId: Id, winnerWb: ParticipantSlot, winnerLb: ParticipantSlot): Promise<void> {
         // No Grand Final by default.
         const grandFinal = this.stage.settings?.grandFinal;
         if (grandFinal === 'none') return;
@@ -833,18 +849,21 @@ export class Create {
      *
      * @param stageId ID of the stage.
      */
-    private async ensureSeedOrdering(stageId: number): Promise<void> {
+    private async ensureSeedOrdering(stageId: Id): Promise<void> {
         if (this.stage.settings?.seedOrdering?.length === this.seedOrdering.length) return;
 
-        const stage = await this.storage.select('stage', stageId);
-        if (!stage) throw Error('Stage not found.');
+        const existing = await this.storage.select('stage', stageId);
+        if (!existing) throw Error('Stage not found.');
 
-        stage.settings = {
-            ...stage.settings,
-            seedOrdering: this.seedOrdering,
+        const update: Stage = {
+            ...existing,
+            settings: {
+                ...existing.settings,
+                seedOrdering: this.seedOrdering,
+            },
         };
 
-        if (!await this.storage.update('stage', stageId, stage))
+        if (!await this.storage.update('stage', stageId, update))
             throw Error('Could not update the stage.');
     }
 }

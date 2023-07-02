@@ -1,4 +1,4 @@
-import { Group, Match, MatchGame, Participant, Round, SeedOrdering, Stage } from 'brackets-model';
+import { Group, Id, Match, MatchGame, Participant, Round, SeedOrdering, Stage } from 'brackets-model';
 
 /**
  * Type of an object implementing every ordering method.
@@ -18,12 +18,12 @@ export type Nullable<T> = T | null;
 /**
  * An object which maps an ID to another ID.
  */
-export type IdMapping = Record<number, number>;
+export type IdMapping = Record<Id, Id>;
 
 /**
  * Used by the library to handle placements. Is `null` if is a BYE. Has a `null` name if it's yet to be determined.
  */
-export type ParticipantSlot = { id: number | null, position?: number } | null;
+export type ParticipantSlot = { id: Id | null, position?: number } | null;
 
 /**
  * The library only handles duels. It's one participant versus another participant.
@@ -101,7 +101,7 @@ export type Database = ValueToArray<DataTypes>;
  * An item in the final standings of an elimination stage.
  */
 export interface FinalStandingsItem {
-    id: number,
+    id: Id,
     name: string,
     rank: number,
 }
@@ -154,7 +154,7 @@ export interface CrudInterface {
      * @param table Where to get from.
      * @param id What to get.
      */
-    select<T extends Table>(table: T, id: number): Promise<DataTypes[T] | null>
+    select<T extends Table>(table: T, id: Id): Promise<DataTypes[T] | null>
 
     /**
      * Gets data from a table in the database with a filter.
@@ -171,7 +171,7 @@ export interface CrudInterface {
      * @param id What to update.
      * @param value How to update.
      */
-    update<T extends Table>(table: T, id: number, value: DataTypes[T]): Promise<boolean>
+    update<T extends Table>(table: T, id: Id, value: DataTypes[T]): Promise<boolean>
 
     /**
      * Updates data in a table.
