@@ -897,6 +897,41 @@ describe('Seeding', () => {
         ]), 'A match is locked.');
     });
 
+    it('should throw if a match is archived and would have to be changed', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]);
+
+        await manager.update.match({
+            id: 0, // WB 1.1
+            opponent1: { score: 1, result: 'win' },
+            opponent2: { score: 0 },
+        });
+
+        await manager.update.match({
+            id: 1, // WB 1.2
+            opponent1: { score: 1, result: 'win' },
+            opponent2: { score: 0 },
+        });
+
+        // This will archive matches 0 and 1.
+        await manager.update.match({
+            id: 4, // WB Semi 1
+            opponent1: { score: 1 },
+            opponent2: { score: 0 },
+        });
+
+        await assert.isRejected(manager.update.seeding(0, [
+            'Team 1', 'Team 2', // Do not even need to change this pair.
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+        ]), 'A match of round 1 is archived, which means round 2 was started.');
+    });
+
     it('should throw if a match is locked and would have to be changed', async () => {
         await manager.update.seeding(0, [
             'Team 1', 'Team 2',

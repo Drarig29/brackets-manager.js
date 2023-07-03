@@ -106,13 +106,16 @@ export class BaseUpdater extends BaseGetter {
         let index = 0;
 
         for (const match of matches) {
+            // Changing the seeding would reset the matches of round >= 2, leaving the scores behind, with no participants.
+            if (match.status === Status.Archived)
+                throw Error('A match of round 1 is archived, which means round 2 was started.');
+
             const opponent1 = slots[index++];
             const opponent2 = slots[index++];
+            const isParticipantLocked = helpers.isMatchParticipantLocked(match);
 
-            const locked = helpers.isMatchParticipantLocked(match);
-            if (!locked) continue;
-
-            if (match.opponent1?.id !== opponent1?.id || match.opponent2?.id !== opponent2?.id)
+            // The match is participant locked, and the participants would have to change.
+            if (isParticipantLocked && (match.opponent1?.id !== opponent1?.id || match.opponent2?.id !== opponent2?.id))
                 throw Error('A match is locked.');
         }
     }
