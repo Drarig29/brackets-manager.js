@@ -71,7 +71,7 @@ export type DeepPartial<T> = T extends object ? {
 /**
  * Converts all value types to array types.
  */
-type ValueToArray<T> = {
+export type ValueToArray<T> = {
     [K in keyof T]: Array<T[K]>;
 };
 

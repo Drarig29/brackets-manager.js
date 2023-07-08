@@ -9,7 +9,7 @@ import { Reset } from './reset';
 import { v4 as uuidv4 } from 'uuid';
 import * as helpers from './helpers';
 
-interface CallableCreate extends Create {
+export interface CallableCreate extends Create {
     /**
      * Creates a stage for an existing tournament. The tournament won't be created.
      *
