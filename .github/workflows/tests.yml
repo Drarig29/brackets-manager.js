@@ -20,4 +20,7 @@ jobs:
       - run: npm test
         env:
           FORCE_COLOR: "1"
-      - run: npx typedoc src/index.ts --treatValidationWarningsAsErrors
+      - name: Test documentation
+        run: |
+          npm install typedoc
+          npx typedoc src/index.ts --excludePrivate --excludeExternals --treatValidationWarningsAsErrors
