@@ -2,20 +2,21 @@ name: Unit Tests
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 14
-    - run: npm install
-    - run: npm test
-      env:
-        FORCE_COLOR: "1"
+      - uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14
+      - run: npm install
+      - run: npm lint
+      - run: npm test
+        env:
+          FORCE_COLOR: "1"
