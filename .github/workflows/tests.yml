@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: 14
       - run: npm install
-      - run: npm lint
+      - run: npm run lint
       - run: npm test
         env:
           FORCE_COLOR: "1"
