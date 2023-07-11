@@ -184,6 +184,12 @@ describe('Previous and next match update in double elimination stage', () => {
             loserId,
         );
 
+        await assert.isRejected(manager.update.match({
+            id: 3, // First match of LB round 1
+            opponent1: { score: 16, result: 'win' },
+            opponent2: { score: 12 },
+        }), 'The match is locked.');
+
         await manager.reset.matchResults(1); // Second match of WB round 1
 
         matchSemiLB = await storage.select('match', 3);
