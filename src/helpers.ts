@@ -300,7 +300,7 @@ export function normalizeParticipant(participant: ParticipantResult | null, mapp
  * @param placeholder A placeholder to use to fill the empty space.
  */
 export function setArraySize<T>(array: T[], length: number, placeholder: T): T[] {
-    return Array.from(Array(length), (_, i) => array[i] || placeholder);
+    return Array.from({ length }, (_, i) => array[i] || placeholder);
 }
 
 /**
@@ -1541,7 +1541,7 @@ export function getChildGamesResults(games: MatchGame[]): Scores {
  */
 export function getSeeds(inLoserBracket: boolean, roundNumber: number, roundCountLB: number, matchCount: number): number[] {
     const seedCount = getSeedCount(inLoserBracket, roundNumber, roundCountLB, matchCount);
-    return Array.from(Array(seedCount), (_, i) => i + 1);
+    return Array.from({ length: seedCount }, (_, i) => i + 1);
 }
 
 /**
@@ -1633,7 +1633,7 @@ export function isDoubleEliminationNecessary(participantCount: number): boolean 
  */
 export function findLoserMatchNumber(participantCount: number, roundNumber: number, matchNumber: number, method?: SeedOrdering): number {
     const loserCount = getLoserRoundLoserCount(participantCount, roundNumber);
-    const losers = Array.from(Array(loserCount), (_, i) => i + 1);
+    const losers = Array.from({ length: loserCount }, (_, i) => i + 1);
     const ordered = method ? ordering[method](losers) : losers;
     const matchNumberLB = ordered.indexOf(matchNumber) + 1;
 

@@ -66,7 +66,7 @@ export const ordering: OrderingMap = {
         return result;
     },
     'groups.seed_optimized': <T>(array: T[], groupCount: number) => {
-        const groups = Array.from(Array(groupCount), (_): T[] => []);
+        const groups = Array.from({ length: groupCount }, (_): T[] => []);
 
         for (let run = 0; run < array.length / groupCount; run++) {
             if (run % 2 === 0) {

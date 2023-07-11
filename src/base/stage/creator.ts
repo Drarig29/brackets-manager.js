@@ -474,7 +474,7 @@ export class StageCreator {
         helpers.ensureValidSize(this.stage.type, size);
 
         if (size && !seeding)
-            return Array.from(Array(size), (_: ParticipantSlot, i) => ({ id: null, position: i + 1 }));
+            return Array.from({ length: size }, (_: ParticipantSlot, i) => ({ id: null, position: i + 1 }));
 
         if (!seeding) throw Error('Either size or seeding must be given.');
 
