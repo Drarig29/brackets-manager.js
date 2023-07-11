@@ -1654,6 +1654,13 @@ export function getLoserRoundMatchCount(participantCount: number, roundNumber: n
     const roundPairIndex = Math.ceil(roundNumber / 2) - 1;
     const roundPairCount = getRoundPairCount(participantCount);
     const matchCount = Math.pow(2, roundPairCount - roundPairIndex - 1);
+
+    if (roundNumber === 0)
+        throw Error('Round number must start at 1.');
+
+    if (matchCount < 1)
+        throw Error(`Round number ${roundNumber} is too big for a loser bracket in a stage of ${participantCount} participants.`);
+
     return matchCount;
 }
 
