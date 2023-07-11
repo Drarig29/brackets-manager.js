@@ -166,6 +166,10 @@ describe('Previous and next match update in double elimination stage', () => {
             settings: { grandFinal: 'simple' },
         });
 
+        const firstMatchBye = await storage.select('match', 0);
+        assert.strictEqual(firstMatchBye.opponent1.result, 'win'); // Someone vs. BYE has result `win`.
+        assert.strictEqual(firstMatchBye.opponent2, null);
+
         await manager.update.match({
             id: 1, // Second match of WB round 1
             opponent1: { score: 16, result: 'win' },

@@ -382,8 +382,10 @@ export class StageCreator {
             round_id: roundId,
             child_count: childCount,
             status: status,
-            opponent1,
-            opponent2,
+            ...helpers.getInferredResult(
+                opponent1,
+                opponent2,
+            ),
         }, existing);
 
         if (parentId === -1)
@@ -395,8 +397,10 @@ export class StageCreator {
                 stage_id: stageId,
                 parent_id: parentId,
                 status: status,
-                opponent1: helpers.toResult(opponents[0]),
-                opponent2: helpers.toResult(opponents[1]),
+                ...helpers.getInferredResult(
+                    helpers.toResult(opponents[0]),
+                    helpers.toResult(opponents[1]),
+                ),
             });
 
             if (id === -1)

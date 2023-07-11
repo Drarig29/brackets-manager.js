@@ -1125,6 +1125,22 @@ export function setScores(stored: MatchResults, match: DeepPartial<MatchResults>
 }
 
 /**
+ * Infers the win result based on BYEs.
+ *
+ * @param opponent1 Opponent 1.
+ * @param opponent2 Opponent 2.
+ */
+export function getInferredResult(opponent1: ParticipantSlot, opponent2: ParticipantSlot): Pick<MatchResults, 'opponent1' | 'opponent2'> {
+    if (opponent1 && !opponent2) // someone vs. BYE
+        return { opponent1: { ...opponent1, result: 'win' }, opponent2: null };
+
+    if (!opponent1 && opponent2) // BYE vs. someone
+        return { opponent1: null, opponent2: { ...opponent2, result: 'win' } };
+
+    return { opponent1, opponent2 }; // Do nothing if both BYE or both someone
+}
+
+/**
  * Completes a match and handles results and forfeits.
  *
  * @param stored A reference to what will be updated in the storage.
@@ -1138,11 +1154,10 @@ export function setCompleted(stored: MatchResults, match: DeepPartial<MatchResul
     setResults(stored, match, 'loss', 'win', inRoundRobin);
     setResults(stored, match, 'draw', 'draw', inRoundRobin);
 
-    if (stored.opponent1 && !stored.opponent2)
-        stored.opponent1.result = 'win'; // Win against opponent 2 BYE.
+    const { opponent1, opponent2 } = getInferredResult(stored.opponent1, stored.opponent2);
 
-    if (!stored.opponent1 && stored.opponent2)
-        stored.opponent2.result = 'win'; // Win against opponent 1 BYE.
+    stored.opponent1 = opponent1;
+    stored.opponent2 = opponent2;
 
     setForfeits(stored, match);
 }
