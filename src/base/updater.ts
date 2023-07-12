@@ -128,6 +128,12 @@ export class BaseUpdater extends BaseGetter {
      * @param updateNext Whether to update the next matches.
      */
     protected async updateRelatedMatches(match: Match, updatePrevious: boolean, updateNext: boolean): Promise<void> {
+        // This is a consolation match (doesn't have a `group_id`, nor a `round_id`).
+        // It doesn't have any related matches from the POV of the library, because the 
+        // creation of consolation matches is handled by the user.
+        if (match.round_id === undefined)
+            return;
+
         const { roundNumber, roundCount } = await this.getRoundPositionalInfo(match.round_id);
 
         const stage = await this.storage.select('stage', match.stage_id);
