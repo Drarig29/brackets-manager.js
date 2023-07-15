@@ -109,7 +109,7 @@ export class Get extends BaseGetter {
         const matchesByRound = helpers.splitBy(matches, 'round_id');
 
         for (const roundMatches of matchesByRound) {
-            if (roundMatches.every(match => match.status >= Status.Completed))
+            if (roundMatches.every((match) => !helpers.isMatchOngoing(match)))
                 continue;
 
             const round = await this.storage.select('round', roundMatches[0].round_id);
