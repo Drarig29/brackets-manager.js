@@ -16,12 +16,13 @@ export class BaseUpdater extends BaseGetter {
      * @param seeding A new seeding or `null` to reset the existing seeding.
      * @param seeding.seeding Can contain names, IDs or BYEs.
      * @param seeding.seedingIds Can only contain IDs or BYEs.
+     * @param keepSameSize Whether to keep the same size as before for the stage.
      */
-    protected async updateSeeding(stageId: Id, { seeding, seedingIds }: { seeding?: Seeding | null, seedingIds?: IdSeeding | null }): Promise<void> {
+    protected async updateSeeding(stageId: Id, { seeding, seedingIds }: { seeding?: Seeding | null, seedingIds?: IdSeeding | null }, keepSameSize: boolean): Promise<void> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
-        const newSize = (seedingIds || seeding)?.length ?? 0;
+        const newSize = keepSameSize ? stage.settings.size : (seedingIds || seeding)?.length ?? 0;
 
         const creator = new StageCreator(this.storage, {
             name: stage.name,

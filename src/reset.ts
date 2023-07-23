@@ -77,6 +77,6 @@ export class Reset extends BaseUpdater {
      * @param stageId ID of the stage.
      */
     public async seeding(stageId: Id): Promise<void> {
-        await this.updateSeeding(stageId, { seeding: null });
+        await this.updateSeeding(stageId, { seeding: null }, false);
     }
 }

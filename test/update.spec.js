@@ -993,6 +993,30 @@ describe('Seeding', () => {
         assert.strictEqual((await storage.select('match', 9)).opponent1, null);
         assert.strictEqual((await storage.select('match', 10)).opponent2, null);
     });
+
+    it('should keep the same seeding size with keepSameSize=true', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+        ], true);
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('participant')).length, 4);
+        assert.strictEqual((await storage.select('stage', 0)).settings.size, 8);
+    });
+
+    it('should throw if trying to grow the seeding size but keepSameSize=true', async () => {
+        await assert.isRejected(manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            'Team 3', 'Team 4',
+            'Team 5', 'Team 6',
+            'Team 7', 'Team 8',
+            'Team 9', 'Team 10',
+            'Team 11', 'Team 12',
+            'Team 13', 'Team 14',
+            'Team 15', 'Team 16',
+        ], true), 'The seeding has more participants than the size of the stage.');
+    });
 });
 
 describe('Match games status', () => {

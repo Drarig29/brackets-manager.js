@@ -107,9 +107,10 @@ export class Update extends BaseUpdater {
      *
      * @param stageId ID of the stage.
      * @param seeding The new seeding.
+     * @param keepSameSize Whether to keep the same size as before for the stage. **Default:** false.
      */
-    public async seeding(stageId: Id, seeding: Seeding): Promise<void> {
-        await this.updateSeeding(stageId, { seeding });
+    public async seeding(stageId: Id, seeding: Seeding, keepSameSize = false): Promise<void> {
+        await this.updateSeeding(stageId, { seeding }, keepSameSize);
     }
 
     /**
@@ -117,9 +118,10 @@ export class Update extends BaseUpdater {
      *
      * @param stageId ID of the stage.
      * @param seedingIds The new seeding, containing only IDs.
+     * @param keepSameSize Whether to keep the same size as before for the stage. **Default:** false.
      */
-    public async seedingIds(stageId: Id, seedingIds: IdSeeding): Promise<void> {
-        await this.updateSeeding(stageId, { seedingIds });
+    public async seedingIds(stageId: Id, seedingIds: IdSeeding, keepSameSize = false): Promise<void> {
+        await this.updateSeeding(stageId, { seedingIds }, keepSameSize);
     }
 
     /**
