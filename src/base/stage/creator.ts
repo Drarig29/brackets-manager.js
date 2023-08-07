@@ -34,7 +34,7 @@ export class StageCreator {
         this.storage = storage;
         this.stage = stage;
         this.stage.settings = this.stage.settings || {};
-        this.seedOrdering = this.stage.settings.seedOrdering || [];
+        this.seedOrdering = [...this.stage.settings.seedOrdering || []];
         this.updateMode = false;
         this.enableByesInUpdate = false;
 
