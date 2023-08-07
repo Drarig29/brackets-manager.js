@@ -622,6 +622,17 @@ export function isMatchOngoing(match: MatchResults): boolean {
 }
 
 /**
+ * Checks if a match is stale (i.e. it should not change anymore).
+ * 
+ * [Locked - BYE] > Waiting > Ready > Running > [Completed > Archived]
+ * 
+ * @param match Partial match results.
+ */
+export function isMatchStale(match: MatchResults): boolean {
+    return match.status >= Status.Completed || isMatchByeCompleted(match);
+}
+
+/**
  * Checks if a match is completed because of a forfeit.
  * 
  * @param match Partial match results.

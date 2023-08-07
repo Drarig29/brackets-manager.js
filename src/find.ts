@@ -105,27 +105,42 @@ export class Find extends BaseGetter {
         );
 
         if (participantId !== undefined) {
+            if (!helpers.isParticipantInMatch(match, participantId))
+                throw Error('The participant does not belong to this match.');
+
+            if (!helpers.isMatchStale(match))
+                throw Error('The match is not stale yet, so it is not possible to conclude the next matches for this participant.');
+
             const loser = helpers.getLoser(match);
             if (stage.type === 'single_elimination' && loser?.id === participantId)
                 return []; // Eliminated.
 
             if (stage.type === 'double_elimination') {
-                const [upperBracketMatch, lowerBracketMatch] = nextMatches;
-
-                if (loser?.id === participantId) {
-                    if (lowerBracketMatch)
-                        return [lowerBracketMatch];
-                    else
-                        return []; // Eliminated from lower bracket.
-                }
-
+                const { winnerBracketMatch, loserBracketMatch, finalGroupMatch } = await this.getMatchesByGroupDoubleElimination(nextMatches, new Map([[group.id, group]]));
                 const winner = helpers.getWinner(match);
-                if (winner?.id === participantId)
-                    return [upperBracketMatch];
 
-                throw Error('The participant does not belong to this match.');
+                if (matchLocation === 'loser_bracket') {
+                    if (participantId === loser?.id)
+                        return []; // Eliminated from lower bracket.
+
+                    if (participantId === winner?.id)
+                        return loserBracketMatch ? [loserBracketMatch] : [];
+                } else if (matchLocation === 'winner_bracket') {
+                    if (!loserBracketMatch)
+                        throw Error('All matches of winner bracket should lead to loser bracket.');
+
+                    if (participantId === loser?.id)
+                        return [loserBracketMatch]; // Eliminated from upper bracket, going to lower bracket.
+
+                    if (participantId === winner?.id)
+                        return winnerBracketMatch ? [winnerBracketMatch] : [];
+                } else if (matchLocation === 'final_group') {
+                    if (!finalGroupMatch)
+                        throw Error('All matches of a final group should also lead to the final group.');
+
+                    return [finalGroupMatch];
+                }
             }
-
         }
 
         return nextMatches;
@@ -151,5 +166,46 @@ export class Find extends BaseGetter {
      */
     public async matchGame(game: Partial<MatchGame>): Promise<MatchGame> {
         return this.findMatchGame(game);
+    }
+
+    /**
+     * Returns an object with 1 match per group type. Only supports double elimination.
+     *
+     * @param matches A list of matches.
+     * @param fetchedGroups A map of groups which were already fetched.
+     */
+    private async getMatchesByGroupDoubleElimination(matches: Match[], fetchedGroups: Map<Id, Group>): Promise<{
+        winnerBracketMatch?: Match;
+        loserBracketMatch?: Match;
+        finalGroupMatch?: Match;
+    }> {
+        const getGroup = async (groupId: Id): Promise<Group> => {
+            const existing = fetchedGroups.get(groupId);
+            if (existing)
+                return existing;
+
+            const group = await this.storage.select('group', groupId);
+            if (!group) throw Error('Group not found.');
+            fetchedGroups.set(groupId, group);
+            return group;
+        };
+
+        let matchByGroupType: {
+            winnerBracketMatch?: Match
+            loserBracketMatch?: Match
+            finalGroupMatch?: Match
+        } = {};
+
+        for (const match of matches) {
+            const group = await getGroup(match.group_id);
+
+            matchByGroupType = {
+                winnerBracketMatch: matchByGroupType['winnerBracketMatch'] ?? (helpers.isWinnerBracket('double_elimination', group.number) ? match : undefined),
+                loserBracketMatch: matchByGroupType['loserBracketMatch'] ?? (helpers.isLoserBracket('double_elimination', group.number) ? match : undefined),
+                finalGroupMatch: matchByGroupType['finalGroupMatch'] ?? (helpers.isFinalGroup('double_elimination', group.number) ? match : undefined),
+            };
+        }
+
+        return matchByGroupType;
     }
 }

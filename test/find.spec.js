@@ -232,6 +232,15 @@ describe('Find previous and next matches in double elimination', () => {
         assert.strictEqual(afterLowerBracketContinued.length, 1);
         assert.strictEqual(afterLowerBracketContinued[0].id, 4);
 
+        await assert.isRejected(manager.find.nextMatches(2, 1), 'The match is not stale yet, so it is not possible to conclude the next matches for this participant.');
+
+        await manager.update.match({ id: 2, opponent1: { result: 'win' } });
+        const afterFinalWBForWinner = await manager.find.nextMatches(2, 1);
+        assert.strictEqual(afterFinalWBForWinner.length, 0);
+        const afterFinalWBForLoser = await manager.find.nextMatches(2, 2);
+        assert.strictEqual(afterFinalWBForLoser.length, 1);
+        assert.strictEqual(afterFinalWBForLoser[0].id, 4);
+
         await assert.isRejected(manager.find.nextMatches(3, 42), 'The participant does not belong to this match.');
     });
 });
