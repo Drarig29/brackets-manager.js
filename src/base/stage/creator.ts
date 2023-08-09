@@ -15,6 +15,8 @@ export async function create(this: BracketsManager, stage: InputStage): Promise<
     return creator.run();
 }
 
+type ConsolationFinalOverrides = { existingGroupId?: Id, matchNumberStart?: number };
+
 export class StageCreator {
 
     private storage: Storage;
@@ -181,7 +183,15 @@ export class StageCreator {
 
         if (helpers.isDoubleEliminationNecessary(this.stage.settings?.size!)) {
             const winnerLb = await this.createLowerBracket(stageId, 2, losersWb);
-            await this.createGrandFinal(stageId, winnerWb, winnerLb);
+            const finalGroupId = await this.createGrandFinal(stageId, winnerWb, winnerLb);
+
+            await this.createConsolationFinal(stageId, losersWb, {
+                existingGroupId: finalGroupId, // Reuse the existing final group
+
+                // Arbitrary way to differentiate the grand final and consolation final matches.
+                // Grand final matches always have had `number: 1`. Now, consolation final matches always have `number: 2`.
+                matchNumberStart: 2,
+            });
         }
     }
 
@@ -191,13 +201,13 @@ export class StageCreator {
      * This will make as many rounds as needed to let each participant match every other once.
      *
      * @param stageId ID of the parent stage.
-     * @param number Number in the stage.
+     * @param groupNumber Number of the group in the stage.
      * @param slots A list of slots.
      */
-    private async createRoundRobinGroup(stageId: Id, number: number, slots: ParticipantSlot[]): Promise<void> {
+    private async createRoundRobinGroup(stageId: Id, groupNumber: number, slots: ParticipantSlot[]): Promise<void> {
         const groupId = await this.insertGroup({
             stage_id: stageId,
-            number,
+            number: groupNumber,
         });
 
         if (groupId === -1)
@@ -215,14 +225,14 @@ export class StageCreator {
      * This will make as many rounds as needed to end with one winner.
      *
      * @param stageId ID of the parent stage.
-     * @param number Number in the stage.
+     * @param groupNumber Number of the group in the stage.
      * @param slots A list of slots.
      */
-    private async createStandardBracket(stageId: Id, number: number, slots: ParticipantSlot[]): Promise<StandardBracketResults> {
+    private async createStandardBracket(stageId: Id, groupNumber: number, slots: ParticipantSlot[]): Promise<StandardBracketResults> {
         const roundCount = helpers.getUpperBracketRoundCount(slots.length);
         const groupId = await this.insertGroup({
             stage_id: stageId,
-            number,
+            number: groupNumber,
         });
 
         if (groupId === -1)
@@ -250,10 +260,10 @@ export class StageCreator {
      * - A minor round matches the previous (major) round's winners against upper bracket losers of the corresponding round.
      *
      * @param stageId ID of the parent stage.
-     * @param number Number in the stage.
+     * @param groupNumber Number of the group in the stage.
      * @param losers One list of losers per upper bracket round.
      */
-    private async createLowerBracket(stageId: Id, number: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
+    private async createLowerBracket(stageId: Id, groupNumber: number, losers: ParticipantSlot[][]): Promise<ParticipantSlot> {
         const participantCount = this.stage.settings?.size!;
         const roundPairCount = helpers.getRoundPairCount(participantCount);
 
@@ -264,7 +274,7 @@ export class StageCreator {
 
         const groupId = await this.insertGroup({
             stage_id: stageId,
-            number,
+            number: groupNumber,
         });
 
         if (groupId === -1)
@@ -293,20 +303,40 @@ export class StageCreator {
      * Creates a bracket with rounds that only have 1 match each. Used for finals.
      *
      * @param stageId ID of the parent stage.
-     * @param number Number in the stage.
+     * @param groupNumber Number of the group in the stage.
      * @param duels A list of duels.
+     * @param overrides Optional overrides.
      */
-    private async createUniqueMatchBracket(stageId: Id, number: number, duels: Duel[]): Promise<void> {
-        const groupId = await this.insertGroup({
-            stage_id: stageId,
-            number,
-        });
+    private async createUniqueMatchBracket(
+        stageId: Id,
+        groupNumber: number,
+        duels: Duel[],
+        overrides: ConsolationFinalOverrides = {},
+    ): Promise<Id> {
+        let groupId = overrides.existingGroupId;
+        let roundNumberStart = 1;
 
-        if (groupId === -1)
-            throw Error('Could not insert the group.');
+        if (groupId !== undefined) {
+            const rounds = await this.storage.select('round', { group_id: groupId });
+            if (!rounds)
+                throw Error('Error getting rounds.');
+
+            // When we add rounds to an existing group, we resume the round numbering.
+            roundNumberStart = rounds.length + 1;
+        } else {
+            groupId = await this.insertGroup({
+                stage_id: stageId,
+                number: groupNumber,
+            });
+
+            if (groupId === -1)
+                throw Error('Could not insert the group.');
+        }
 
         for (let i = 0; i < duels.length; i++)
-            await this.createRound(stageId, groupId, i + 1, 1, [duels[i]]);
+            await this.createRound(stageId, groupId, roundNumberStart + i, 1, [duels[i]], overrides.matchNumberStart);
+
+        return groupId;
     }
 
     /**
@@ -317,8 +347,9 @@ export class StageCreator {
      * @param roundNumber Number in the group.
      * @param matchCount Duel/match count.
      * @param duels A list of duels.
+     * @param matchNumberStart Optionally give the starting point for the match numbers. Starts at 1 by default.
      */
-    private async createRound(stageId: Id, groupId: Id, roundNumber: number, matchCount: number, duels: Duel[]): Promise<void> {
+    private async createRound(stageId: Id, groupId: Id, roundNumber: number, matchCount: number, duels: Duel[], matchNumberStart = 1): Promise<void> {
         const matchesChildCount = this.getMatchesChildCount();
 
         const roundId = await this.insertRound({
@@ -331,7 +362,7 @@ export class StageCreator {
             throw Error('Could not insert the round.');
 
         for (let i = 0; i < matchCount; i++)
-            await this.createMatch(stageId, groupId, roundId, i + 1, duels[i], matchesChildCount);
+            await this.createMatch(stageId, groupId, roundId, matchNumberStart + i, duels[i], matchesChildCount);
     }
 
     /**
@@ -797,12 +828,13 @@ export class StageCreator {
      * Creates a new stage.
      */
     private async createStage(): Promise<Stage> {
-        const number = await this.getStageNumber();
+        const stageNumber = await this.getStageNumber();
+
         const stage: OmitId<Stage> = {
             tournament_id: this.stage.tournamentId,
             name: this.stage.name,
             type: this.stage.type,
-            number: number,
+            number: stageNumber,
             settings: this.stage.settings || {},
         };
 
@@ -815,16 +847,17 @@ export class StageCreator {
     }
 
     /**
-     * Creates a consolation final for the semi final losers of a single elimination stage.
+     * Creates a consolation final for the semi final losers of an upper bracket (single or double elimination).
      *
      * @param stageId ID of the stage.
      * @param losers The semi final losers who will play the consolation final.
+     * @param overrides Optional overrides.
      */
-    private async createConsolationFinal(stageId: Id, losers: ParticipantSlot[][]): Promise<void> {
+    private async createConsolationFinal(stageId: Id, losers: ParticipantSlot[][], overrides: ConsolationFinalOverrides = {}): Promise<void> {
         if (!this.stage.settings?.consolationFinal) return;
 
         const semiFinalLosers = losers[losers.length - 2] as Duel;
-        await this.createUniqueMatchBracket(stageId, 2, [semiFinalLosers]);
+        await this.createUniqueMatchBracket(stageId, 2, [semiFinalLosers], overrides);
     }
 
     /**
@@ -834,7 +867,7 @@ export class StageCreator {
      * @param winnerWb The winner of the winner bracket.
      * @param winnerLb The winner of the loser bracket.
      */
-    private async createGrandFinal(stageId: Id, winnerWb: ParticipantSlot, winnerLb: ParticipantSlot): Promise<void> {
+    private async createGrandFinal(stageId: Id, winnerWb: ParticipantSlot, winnerLb: ParticipantSlot): Promise<Id | undefined> {
         // No Grand Final by default.
         const grandFinal = this.stage.settings?.grandFinal;
         if (grandFinal === 'none') return;
@@ -846,7 +879,8 @@ export class StageCreator {
         if (grandFinal === 'double')
             finalDuels.push([{ id: null }, { id: null }]);
 
-        await this.createUniqueMatchBracket(stageId, 3, finalDuels);
+        const groupId = await this.createUniqueMatchBracket(stageId, 3, finalDuels);
+        return groupId;
     }
 
     /**
