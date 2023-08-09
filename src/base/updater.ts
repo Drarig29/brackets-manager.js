@@ -298,9 +298,12 @@ export class BaseUpdater extends BaseGetter {
     }
 
     /**
-     * Applies a SetNextOpponent function to matches following the current match.
-     *
-     * @param setNextOpponent The SetNextOpponent function.
+     * Applies a `SetNextOpponent` function to matches following the current match.
+     * 
+     * - `nextMatches[0]` is assumed to be next match for the winner of the current match.
+     * - `nextMatches[1]` is assumed to be next match for the loser of the current match.
+     * 
+     * @param setNextOpponent The `SetNextOpponent` function.
      * @param match The current match.
      * @param matchLocation Location of the current match.
      * @param roundNumber Number of the current round.

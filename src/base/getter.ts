@@ -298,7 +298,7 @@ export class BaseGetter {
         const actualMatchNumberLB = helpers.findLoserMatchNumber(participantCount, roundNumberLB, match.number, method);
 
         return [
-            ...await this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount),
+            ...await this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount), // Can be `null`, to denote that the winner goes nowhere, e.g. in `WB Final`.
             await this.findMatch(loserBracket.id, roundNumberLB, actualMatchNumberLB),
         ];
     }
@@ -373,7 +373,7 @@ export class BaseGetter {
     private async getFirstMatchFinal(match: Match, stageType: StageType): Promise<Match | null> {
         const finalGroupId = await this.getFinalGroupId(match.stage_id, stageType);
         if (finalGroupId === null)
-            return null;
+            return null; // `null` is required for `getNextMatchesWB()` because of how `applyToNextMatches()` works.
 
         return this.findMatch(finalGroupId, 1, 1);
     }

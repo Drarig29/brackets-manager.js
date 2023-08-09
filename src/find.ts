@@ -116,6 +116,7 @@ export class Find extends BaseGetter {
                 return []; // Eliminated.
 
             if (stage.type === 'double_elimination') {
+                // TODO: refactor `getNextMatches()` to return 1 next match per group. Then we can get rid of `getMatchesByGroupDoubleElimination()`.
                 const { winnerBracketMatch, loserBracketMatch, finalGroupMatch } = await this.getMatchesByGroupDoubleElimination(nextMatches, new Map([[group.id, group]]));
                 const winner = helpers.getWinner(match);
 
