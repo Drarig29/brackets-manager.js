@@ -322,6 +322,7 @@ export class BaseUpdater extends BaseGetter {
 
         const nextSide = helpers.getNextSide(match.number, roundNumber, roundCount, matchLocation);
 
+        // First next match
         if (nextMatches[0]) {
             setNextOpponent(nextMatches[0], nextSide, match, winnerSide);
             await this.propagateByeWinners(nextMatches[0]);
@@ -330,14 +331,20 @@ export class BaseUpdater extends BaseGetter {
         if (nextMatches.length !== 2) return;
         if (!nextMatches[1]) throw Error('Second next match is null.');
 
-        // The second match is either the consolation final (single elimination) or a loser bracket match (double elimination).
-
+        // Second next match
         if (matchLocation === 'single_bracket') {
+            // Going into consolation final (single elimination)
             setNextOpponent(nextMatches[1], nextSide, match, winnerSide && helpers.getOtherSide(winnerSide));
             await this.applyMatchUpdate(nextMatches[1]);
-        } else {
-            const nextSideLB = helpers.getNextSideLoserBracket(match.number, nextMatches[1], roundNumber);
-            setNextOpponent(nextMatches[1], nextSideLB, match, winnerSide && helpers.getOtherSide(winnerSide));
+        } else if (matchLocation === 'winner_bracket') {
+            // Going into loser bracket match (double elimination)
+            const nextSideIntoLB = helpers.getNextSideLoserBracket(match.number, nextMatches[1], roundNumber);
+            setNextOpponent(nextMatches[1], nextSideIntoLB, match, winnerSide && helpers.getOtherSide(winnerSide));
+            await this.propagateByeWinners(nextMatches[1]);
+        } else if (matchLocation === 'loser_bracket') {
+            // Going into consolation final (double elimination)
+            const nextSideIntoConsolationFinal = helpers.getNextSideConsolationFinalDoubleElimination(roundNumber);
+            setNextOpponent(nextMatches[1], nextSideIntoConsolationFinal, match, winnerSide && helpers.getOtherSide(winnerSide));
             await this.propagateByeWinners(nextMatches[1]);
         }
     }

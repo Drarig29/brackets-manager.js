@@ -203,10 +203,10 @@ export class BaseGetter {
         if (roundNumber === 1)
             return this.getMatchesBeforeFirstRoundLB(match, winnerBracket.id, roundNumberWB);
 
-        if (roundNumber % 2 === 0)
-            return this.getMatchesBeforeMinorRoundLB(match, winnerBracket.id, roundNumber, roundNumberWB);
+        if (helpers.isMajorRound(roundNumber))
+            return this.getMatchesBeforeMajorRound(match, roundNumber);
 
-        return this.getMatchesBeforeMajorRound(match, roundNumber);
+        return this.getMatchesBeforeMinorRoundLB(match, winnerBracket.id, roundNumber, roundNumberWB);
     }
 
     /**
@@ -265,13 +265,13 @@ export class BaseGetter {
     protected async getNextMatches(match: Match, matchLocation: GroupType, stage: Stage, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
         switch (matchLocation) {
             case 'single_bracket':
-                return this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount);
+                return this.getNextMatchesUpperBracket(match, stage, roundNumber, roundCount);
             case 'winner_bracket':
                 return this.getNextMatchesWB(match, stage, roundNumber, roundCount);
             case 'loser_bracket':
-                return this.getNextMatchesLB(match, stage.type, roundNumber, roundCount);
+                return this.getNextMatchesLB(match, stage, roundNumber, roundCount);
             case 'final_group':
-                return this.getNextMatchesFinal(match, roundNumber, roundCount);
+                return this.getNextMatchesFinal(match, stage, roundNumber, roundCount);
             default:
                 throw Error('Unknown bracket kind.');
         }
@@ -298,7 +298,7 @@ export class BaseGetter {
         const actualMatchNumberLB = helpers.findLoserMatchNumber(participantCount, roundNumberLB, match.number, method);
 
         return [
-            ...await this.getNextMatchesUpperBracket(match, stage.type, roundNumber, roundCount), // Can be `null`, to denote that the winner goes nowhere, e.g. in `WB Final`.
+            ...await this.getNextMatchesUpperBracket(match, stage, roundNumber, roundCount), // Can be `null`, to denote that the winner goes nowhere, e.g. in `WB Final`.
             await this.findMatch(loserBracket.id, roundNumberLB, actualMatchNumberLB),
         ];
     }
@@ -307,18 +307,15 @@ export class BaseGetter {
      * Gets the match(es) where the opponents of the current match of an upper bracket will go just after.
      *
      * @param match The current match.
-     * @param stageType Type of the stage.
+     * @param stage The parent stage.
      * @param roundNumber The number of the current round.
      * @param roundCount Count of rounds.
      */
-    private async getNextMatchesUpperBracket(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
-        if (stageType === 'single_elimination')
-            return this.getNextMatchesUpperBracketSingleElimination(match, stageType, roundNumber, roundCount);
+    private async getNextMatchesUpperBracket(match: Match, stage: Stage, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
+        if (stage.type === 'single_elimination')
+            return this.getNextMatchesUpperBracketSingleElimination(match, stage.type, roundNumber, roundCount);
 
-        if (stageType === 'double_elimination' && roundNumber === roundCount)
-            return [await this.getFirstMatchFinal(match, stageType)];
-
-        return [await this.getDiagonalMatch(match.group_id, roundNumber, match.number)];
+        return this.getNextMatchesUpperBracketDoubleElimination(match, stage.type, roundNumber, roundCount);
     }
 
     /**
@@ -331,10 +328,11 @@ export class BaseGetter {
      */
     private async getNextMatchesUpperBracketSingleElimination(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<Match[]> {
         if (roundNumber === roundCount - 1) {
-            const final = await this.getFirstMatchFinal(match, stageType);
+            const finalGroupId = await this.getFinalGroupId(match.stage_id, stageType);
+            const consolationFinal = await this.getFinalGroupFirstMatch(finalGroupId);
             return [
                 await this.getDiagonalMatch(match.group_id, roundNumber, match.number),
-                ...final ? [final] : [],
+                ...consolationFinal ? [consolationFinal] : [],
             ];
         }
 
@@ -345,20 +343,52 @@ export class BaseGetter {
     }
 
     /**
-     * Gets the match(es) where the opponents of the current match of loser bracket will go just after.
+     * Gets the match(es) where the opponents of the current match of the unique bracket of a double elimination will go just after.
      *
      * @param match The current match.
      * @param stageType Type of the stage.
      * @param roundNumber The number of the current round.
      * @param roundCount Count of rounds.
      */
-    private async getNextMatchesLB(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<Match[]> {
+    private async getNextMatchesUpperBracketDoubleElimination(match: Match, stageType: StageType, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
         if (roundNumber === roundCount) {
-            const final = await this.getFirstMatchFinal(match, stageType);
-            return final ? [final] : [];
+            const finalGroupId = await this.getFinalGroupId(match.stage_id, stageType);
+            return [await this.getFinalGroupFirstMatch(finalGroupId)];
         }
 
-        if (roundNumber % 2 === 1)
+        return [await this.getDiagonalMatch(match.group_id, roundNumber, match.number)];
+    }
+
+    /**
+     * Gets the match(es) where the opponents of the current match of loser bracket will go just after.
+     *
+     * @param match The current match.
+     * @param stage The parent stage.
+     * @param roundNumber The number of the current round.
+     * @param roundCount Count of rounds.
+     */
+    private async getNextMatchesLB(match: Match, stage: Stage, roundNumber: number, roundCount: number): Promise<(Match | null)[]> {
+        if (roundNumber === roundCount - 1) {
+            const finalGroupId = await this.getFinalGroupId(match.stage_id, stage.type);
+            const consolationFinal = await this.getConsolationFinalMatchDoubleElimination(finalGroupId);
+            return [
+                ...await this.getMatchAfterMajorRoundLB(match, roundNumber), // Winner follows.
+                ...consolationFinal ? [consolationFinal] : [], // Loser goes in consolation.
+            ];
+        }
+
+        if (roundNumber === roundCount) {
+            const finalGroupId = await this.getFinalGroupId(match.stage_id, stage.type);
+            const grandFinal = await this.getFinalGroupFirstMatch(finalGroupId);
+            const consolationFinal = await this.getConsolationFinalMatchDoubleElimination(finalGroupId);
+
+            return [
+                grandFinal, // Null if no grand final.
+                ...consolationFinal ? [consolationFinal] : [], // Returned array is length 1 if no consolation final.
+            ];
+        }
+
+        if (helpers.isMajorRound(roundNumber))
             return this.getMatchAfterMajorRoundLB(match, roundNumber);
 
         return this.getMatchAfterMinorRoundLB(match, roundNumber);
@@ -367,11 +397,9 @@ export class BaseGetter {
     /**
      * Gets the first match of the final group (consolation final or grand final).
      *
-     * @param match The current match.
-     * @param stageType Type of the stage.
+     * @param finalGroupId ID of the final group.
      */
-    private async getFirstMatchFinal(match: Match, stageType: StageType): Promise<Match | null> {
-        const finalGroupId = await this.getFinalGroupId(match.stage_id, stageType);
+    private async getFinalGroupFirstMatch(finalGroupId: Id | null): Promise<Match | null> {
         if (finalGroupId === null)
             return null; // `null` is required for `getNextMatchesWB()` because of how `applyToNextMatches()` works.
 
@@ -379,21 +407,40 @@ export class BaseGetter {
     }
 
     /**
-     * Gets the matches following the current match, which is in the final group (consolation final or grand final).
+     * Gets the consolation final in a double elimination tournament.
+     *
+     * @param finalGroupId ID of the final group.
+     */
+    private async getConsolationFinalMatchDoubleElimination(finalGroupId: Id | null): Promise<Match | null> {
+        if (finalGroupId === null)
+            return null;
+
+        return this.storage.selectFirst('match', {
+            group_id: finalGroupId,
+            number: 2, // Used to differentiate grand final and consolation final matches in the same final group.
+        });
+    }
+
+    /**
+     * Gets the match following the current match, which is in the final group (consolation final or grand final).
      *
      * @param match The current match.
+     * @param stage The parent stage.
      * @param roundNumber The number of the current round.
      * @param roundCount The count of rounds.
      */
-    private async getNextMatchesFinal(match: Match, roundNumber: number, roundCount: number): Promise<Match[]> {
+    private async getNextMatchesFinal(match: Match, stage: Stage, roundNumber: number, roundCount: number): Promise<Match[]> {
         if (roundNumber === roundCount)
             return [];
+
+        if (stage.settings.consolationFinal && match.number === 1 && roundNumber === roundCount - 1)
+            return []; // Current match is the last grand final match.
 
         return [await this.findMatch(match.group_id, roundNumber + 1, 1)];
     }
 
     /**
-     * Gets the match(es) where the opponents of the current match of a winner bracket's major round will go just after.
+     * Gets the match where the opponents of the current match of a winner bracket's major round will go just after.
      *
      * @param match The current match.
      * @param roundNumber The number of the current round.
@@ -403,7 +450,7 @@ export class BaseGetter {
     }
 
     /**
-     * Gets the match(es) where the opponents of the current match of a winner bracket's minor round will go just after.
+     * Gets the match where the opponents of the current match of a winner bracket's minor round will go just after.
      *
      * @param match The current match.
      * @param roundNumber The number of the current round.
@@ -464,13 +511,13 @@ export class BaseGetter {
     }
 
     /**
-     * Returns the id of the final group (consolation final or grand final).
+     * Returns the id of the final group (containing consolation final, or grand final, or both).
      *
      * @param stageId ID of the stage.
      * @param stageType Type of the stage.
      */
     private async getFinalGroupId(stageId: Id, stageType: StageType): Promise<Id | null> {
-        const groupNumber = stageType === 'single_elimination' ? 2 /* Consolation final */ : 3 /* Grand final */;
+        const groupNumber = stageType === 'single_elimination' ? 2 /* single bracket + final */ : 3 /* winner bracket + loser bracket + final */;
         const finalGroup = await this.storage.selectFirst('group', { stage_id: stageId, number: groupNumber });
         if (!finalGroup) return null;
         return finalGroup.id;

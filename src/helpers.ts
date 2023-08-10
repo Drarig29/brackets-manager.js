@@ -1016,6 +1016,15 @@ export function getNextSideLoserBracket(matchNumber: number, nextMatch: Match, r
     return 'opponent2';
 }
 
+/**
+ * Gets the side the loser of the current match in loser bracket will go in the next match.
+ *
+ * @param roundNumber Number of the current round.
+ */
+export function getNextSideConsolationFinalDoubleElimination(roundNumber: number): Side {
+    return isMajorRound(roundNumber) ? 'opponent1' : 'opponent2';
+}
+
 export type SetNextOpponent = (nextMatch: Match, nextSide: Side, match?: Match, currentSide?: Side) => void;
 
 /**
@@ -1406,6 +1415,24 @@ export function uniqueBy<T>(array: T[], key: (obj: T) => unknown): T[] {
 }
 
 /**
+ * Indicates whether the loser bracket round is major.
+ * 
+ * @param roundNumber Number of the round.
+ */
+export function isMajorRound(roundNumber: number): boolean {
+    return roundNumber % 2 === 1;
+}
+
+/**
+ * Indicates whether the loser bracket round is minor.
+ * 
+ * @param roundNumber Number of the round.
+ */
+export function isMinorRound(roundNumber: number): boolean {
+    return !isMajorRound(roundNumber);
+}
+
+/**
  * Makes the transition to a major round for duels of the previous round. The duel count is divided by 2.
  *
  * @param previousDuels The previous duels to transition from.
@@ -1602,7 +1629,7 @@ export function isOrderingSupportedUpperBracket(roundNumber: number): boolean {
  * @param roundCount The count of rounds.
  */
 export function isOrderingSupportedLoserBracket(roundNumber: number, roundCount: number): boolean {
-    return roundNumber === 1 || (roundNumber % 2 === 0 && roundNumber < roundCount);
+    return roundNumber === 1 || (isMinorRound(roundNumber) && roundNumber < roundCount);
 }
 
 /**
