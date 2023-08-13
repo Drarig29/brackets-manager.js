@@ -367,6 +367,15 @@ export function fixSeeding(seeding: Seeding, participantCount: number): Seeding 
 }
 
 /**
+ * Indicates whether a number is a power of two.
+ *
+ * @param number The number to test.
+ */
+export function isPowerOfTwo(number: number): boolean {
+    return Number.isInteger(Math.log2(number));
+}
+
+/**
  * Ensures that the participant count is valid.
  *
  * @param stageType Type of the stage to test.
@@ -384,7 +393,7 @@ export function ensureValidSize(stageType: StageType, participantCount: number):
         return;
     }
 
-    if (!Number.isInteger(Math.log2(participantCount)))
+    if (!isPowerOfTwo(participantCount))
         throw Error('The library only supports a participant count which is a power of two.');
 }
 
