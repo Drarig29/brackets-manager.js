@@ -24,6 +24,7 @@ export {
 } from './types';
 
 export * as helpers from './helpers';
+export { ordering } from './ordering';
 
 export { Get } from './get';
 export { Update } from './update';
