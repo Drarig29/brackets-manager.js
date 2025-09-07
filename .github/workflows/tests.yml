@@ -22,5 +22,5 @@ jobs:
           FORCE_COLOR: "1"
       - name: Test documentation
         run: |
-          npm install typedoc
+          npm install typedoc@0.25.0
           npx typedoc src/index.ts --excludePrivate --excludeExternals --treatValidationWarningsAsErrors
