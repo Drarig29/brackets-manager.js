@@ -5,7 +5,9 @@ import * as helpers from './helpers';
 export class Reset extends BaseUpdater {
 
     /**
-     * Resets the results of a match.
+     * Resets the results of a match: the match `status`, and each opponent's `forfeit` and `result` properties.
+     * 
+     * After resetting the results, you can update the match scores and complete the match again.
      *
      * This will update related matches accordingly.
      *
