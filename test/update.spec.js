@@ -1244,4 +1244,44 @@ describe('Match games status', () => {
         assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
         assert.strictEqual((await storage.select('match_game', 3)).status, Status.Ready);
     });
+
+    it('should update child count for a specific match', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { seedOrdering: ['natural'] },
+        });
+
+        const finalMatchId = 2; // In a 4-size single elimination, final match id is 2.
+
+        await manager.update.matchChildCount('match', finalMatchId, 3);
+
+        const games = await storage.select('match_game', { parent_id: finalMatchId });
+        assert.strictEqual(games.length, 3);
+
+        const parent = await storage.select('match', finalMatchId);
+        assert.strictEqual(games[0].status, parent.status);
+        assert.strictEqual(games[1].status, parent.status);
+        assert.strictEqual(games[2].status, parent.status);
+
+        // Other matches should remain without child games.
+        const semi1Games = await storage.select('match_game', { parent_id: 0 });
+        const semi2Games = await storage.select('match_game', { parent_id: 1 });
+        assert.strictEqual(semi1Games ? semi1Games.length : 0, 0);
+        assert.strictEqual(semi2Games ? semi2Games.length : 0, 0);
+
+        // Shrink back to Bo1 and ensure only one game remains with number 1.
+        await manager.update.matchChildCount('match', finalMatchId, 1);
+        const gamesAfterShrink = await storage.select('match_game', { parent_id: finalMatchId });
+        assert.strictEqual(gamesAfterShrink.length, 1);
+        assert.strictEqual(gamesAfterShrink[0].number, 1);
+        assert.strictEqual(gamesAfterShrink[0].status, parent.status);
+
+        // Remove all child games.
+        await manager.update.matchChildCount('match', finalMatchId, 0);
+        const noGames = await storage.select('match_game', { parent_id: finalMatchId });
+        assert.strictEqual(noGames.length, 0);
+    });
 });
