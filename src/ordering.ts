@@ -63,8 +63,82 @@ export const ordering: OrderingMap = {
 
         return groups.flat();
     },
-    'groups.bracket_optimized': () => {
-        throw Error('Not implemented.');
+    'groups.bracket_optimized': <T>(array: T[], groupCount: number) => {
+        if (groupCount < 2)
+            return [...array];
+
+        // This method relies on pairing seeds as they would be matched in a
+        // classic bracket (inner-outer). Then it distributes each pair across
+        // two opposite groups so these opponents never end up in the same
+        // round-robin group.
+
+        // Require an even number of groups to strictly separate paired seeds.
+        // If it's odd, fall back to the seed-optimized grouping which is the
+        // closest sensible behavior.
+        if (groupCount % 2 === 1)
+            return ordering['groups.seed_optimized'](array, groupCount);
+
+        const participantCount = array.length;
+        const halfGroupCount = groupCount / 2;
+
+        // Generate standard bracket seeding positions iteratively (1-based).
+        let positions: number[] = [1, 2];
+        while (positions.length < participantCount) {
+            const size = positions.length * 2;
+            const next: number[] = [];
+            for (const pos of positions)
+                next.push(pos, size + 1 - pos);
+            positions = next;
+        }
+
+        // Helper that returns the base group index (0-based) for the first
+        // element of the i-th pair in the bracket. The second element of the
+        // pair goes to the opposite group (base + halfGroupCount).
+        const baseGroupForPair = (i: number): number => {
+            const t = i % halfGroupCount; // index inside the current block
+            const r = Math.floor(i / halfGroupCount); // block index
+
+            // Toggle orientation every two blocks to create a balanced snake
+            // pattern across left and right halves of the groups.
+            const inverted = Math.floor(r / 2) % 2 === 1;
+
+            if (r % 2 === 0) {
+                // Left half of groups: [0 .. half-1]
+                return inverted ? (halfGroupCount - 1 - t) : t;
+            }
+
+            // Right half of groups: [groupCount-1 .. half]
+            return inverted ? (halfGroupCount + t) : (groupCount - 1 - t);
+        };
+
+        const groups = Array.from({ length: groupCount }, (): T[] => []);
+
+        const pairCount = Math.floor(positions.length / 2);
+
+        // First, distribute the first element of each pair to its base group
+        // to keep the strongest seeds spread nicely.
+        for (let i = 0; i < pairCount; i++) {
+            const base = baseGroupForPair(i);
+            const aIndex = positions[2 * i] - 1; // convert to 0-based
+            groups[base].push(array[aIndex]);
+        }
+
+        // Then, distribute the second element of each pair to the opposite
+        // group to avoid having bracket-opponents in the same group.
+        for (let i = 0; i < pairCount; i++) {
+            const base = baseGroupForPair(i);
+            const bIndex = positions[2 * i + 1] - 1; // convert to 0-based
+            groups[(base + halfGroupCount) % groupCount].push(array[bIndex]);
+        }
+
+        // Sort each group by original seed order so the strongest seed of the
+        // group appears first, matching common UI expectations and the
+        // reference layout.
+        const indexByItem = new Map<T, number>(array.map((v, i) => [v, i]));
+        for (const g of groups)
+            g.sort((a, b) => (indexByItem.get(a)! - indexByItem.get(b)!));
+
+        return groups.flat();
     },
 };
 
