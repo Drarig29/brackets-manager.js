@@ -149,6 +149,78 @@ describe('Helpers', () => {
                 2, 3, 6, 7, // 2nd group
             ]);
         });
+
+        it('should make a bracket-optimized ordering for groups (8 seeds, 4 groups)', () => {
+            const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
+            const result = ordering['groups.bracket_optimized'](seeds, 4);
+
+            const groups = makeGroups(result, 4);
+
+            // Build first-round bracket pairs using inner-outer.
+            const bracket = ordering['inner_outer'](seeds);
+            const pairs = Array.from({ length: bracket.length / 2 }, (_, i) => [bracket[2 * i], bracket[2 * i + 1]]);
+
+            // Each pair of bracket opponents must be split across two different groups.
+            for (const [a, b] of pairs) {
+                const ga = groups.findIndex(g => g.includes(a));
+                const gb = groups.findIndex(g => g.includes(b));
+                assert.notStrictEqual(ga, -1);
+                assert.notStrictEqual(gb, -1);
+                assert.notStrictEqual(ga, gb);
+            }
+        });
+
+        it('should make a bracket-optimized ordering for groups (16 seeds, 4 groups)', () => {
+            const seeds = Array.from({ length: 16 }, (_, i) => i + 1);
+            const result = ordering['groups.bracket_optimized'](seeds, 4);
+
+            const groups = makeGroups(result, 4);
+
+            // Split bracket opponents.
+            const bracket = ordering['inner_outer'](seeds);
+            const pairs = Array.from({ length: bracket.length / 2 }, (_, i) => [bracket[2 * i], bracket[2 * i + 1]]);
+
+            for (const [a, b] of pairs) {
+                const ga = groups.findIndex(g => g.includes(a));
+                const gb = groups.findIndex(g => g.includes(b));
+                assert.notStrictEqual(ga, -1);
+                assert.notStrictEqual(gb, -1);
+                assert.notStrictEqual(ga, gb);
+            }
+
+            // Ensure top seeds are spread across groups.
+            const topSeeds = [1, 2, 3, 4];
+            const topGroups = topSeeds.map(s => groups.findIndex(g => g.includes(s)));
+            assert.strictEqual(new Set(topGroups).size, 4);
+        });
+
+        it('should fall back to snake ordering for odd group counts', () => {
+            const seeds = Array.from({ length: 12 }, (_, i) => i + 1);
+            const a = ordering['groups.bracket_optimized'](seeds, 3);
+            const b = ordering['groups.seed_optimized'](seeds, 3);
+            assert.deepStrictEqual(a, b);
+        });
+
+        it('should match the reference layout for 16 seeds and 4 groups', () => {
+            const seeds = Array.from({ length: 16 }, (_, i) => i + 1);
+            const result = ordering['groups.bracket_optimized'](seeds, 4);
+
+            // Exact flattened layout by groups, left-to-right, top-to-bottom.
+            assert.deepStrictEqual(result, [
+                1, 7, 12, 14, // Group 1
+                2, 8, 11, 13, // Group 2
+                3, 5, 10, 16, // Group 3
+                4, 6, 9, 15,  // Group 4
+            ]);
+
+            // And the grouped structure should be exactly these groups.
+            assert.deepStrictEqual(makeGroups(result, 4), [
+                [1, 7, 12, 14],
+                [2, 8, 11, 13],
+                [3, 5, 10, 16],
+                [4, 6, 9, 15],
+            ]);
+        });
     });
 
     describe('Balance BYEs', () => {
