@@ -15,7 +15,7 @@ module.exports = {
             },
         },
     ],
-    ignorePatterns: ['dist/', 'webpack.config.js'],
+    ignorePatterns: ['dist/', 'docs/', 'webpack.config.js'],
     extends: [
         'plugin:@typescript-eslint/recommended',
         'plugin:jsdoc/recommended',
@@ -42,6 +42,7 @@ module.exports = {
         'jsdoc/require-param-type': 0,
         'jsdoc/require-returns': 0,
         'jsdoc/require-returns-type': 0,
+        'jsdoc/check-param-names': 2,
 
         '@typescript-eslint/explicit-function-return-type': ['error'],
         '@typescript-eslint/no-empty-function': 0,
