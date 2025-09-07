@@ -147,7 +147,6 @@ export class BaseGetter {
      * Gets the matches leading to the given match, which is in a final group (grand final).
      *
      * @param match The current match.
-     * @param stage The parent stage.
      * @param roundNumber Number of the current round.
      */
     private async getPreviousMatchesFinalDoubleElimination(match: Match, roundNumber: number): Promise<Match[]> {
