@@ -65,6 +65,29 @@ describe('Helpers', () => {
             ]);
         });
 
+        it('should place 32 participants with inner-outer method', () => {
+            const teams = Array.from({ length: 32 }, (_, i) => i + 1);
+            const placement = ordering['inner_outer'](teams);
+            assert.deepStrictEqual(placement, [
+                1, 32,
+                16, 17,
+                8, 25,
+                9, 24,
+                4, 29,
+                13, 20,
+                5, 28,
+                12, 21,
+                2, 31,
+                15, 18,
+                7, 26,
+                10, 23,
+                3, 30,
+                14, 19,
+                6, 27,
+                11, 22,
+            ]);
+        });
+
         it('should make a natural ordering', () => {
             assert.deepStrictEqual(ordering['natural']([1, 2, 3, 4, 5, 6, 7, 8]), [1, 2, 3, 4, 5, 6, 7, 8]);
         });
