@@ -21,6 +21,8 @@ export class Delete {
      * - Rounds
      * - Matches
      * - Match games
+     * 
+     * This does not delete the related participants.
      *
      * @param stageId ID of the stage.
      */
@@ -46,7 +48,7 @@ export class Delete {
     /**
      * Deletes **the stages** of a tournament (and all their components, see {@link stage | delete.stage()}).
      * 
-     * You are responsible for deleting the tournament itself.
+     * This does not delete the related participants and you are responsible for deleting the tournament itself.
      * 
      * @param tournamentId ID of the tournament.
      */
