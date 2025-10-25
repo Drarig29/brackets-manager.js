@@ -137,6 +137,13 @@ describe('Unit - get', () => {
                 [],
             ],
             [
+                'one stage, with consolation final - initial state',
+                { id: 2, type: 'single_elimination', settings: { size: 4, consolationFinal: true } },
+                [{ stage_id: 2, group_id: 0, id: 0 }, { stage_id: 2, group_id: 0, id: 1 }, { stage_id: 2, group_id: 1, id: 2 }],
+                [{ stage_id: 2, round_id: 0, status: Status.Ready }, { stage_id: 2, round_id: 0, status: Status.Ready }, { stage_id: 2, round_id: 1, status: Status.Locked }, { stage_id: 2, round_id: 2, status: Status.Locked }],
+                [{ stage_id: 2, round_id: 0, status: Status.Ready }, { stage_id: 2, round_id: 0, status: Status.Ready }],
+            ],
+            [
                 'one stage, with consolation final - both finals running',
                 { id: 2, type: 'single_elimination', settings: { size: 4, consolationFinal: true } },
                 [{ stage_id: 2, group_id: 0, id: 0 }, { stage_id: 2, group_id: 0, id: 1 }, { stage_id: 2, group_id: 1, id: 2 }],

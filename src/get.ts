@@ -162,13 +162,12 @@ export class Get extends BaseGetter {
             currentRoundIndex++;
 
             if (stage.settings.consolationFinal && currentRoundIndex === roundCount - 1) {
-                // We are on the final of the single elimination.
                 const [final] = roundMatches;
                 const [consolationFinal] = matchesByRound[currentRoundIndex + 1];
 
                 const finals = [final, consolationFinal];
                 if (finals.every(match => !helpers.isMatchOngoing(match)))
-                    return [];
+                    return currentMatches;
 
                 return finals.filter(match => helpers.isMatchOngoing(match));
             }
