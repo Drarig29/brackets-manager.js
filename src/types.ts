@@ -118,7 +118,19 @@ export interface RoundRobinFinalStandingsItem extends RankingItem {
  * Options for the final standings of a round-robin stage.
  */
 export interface RoundRobinFinalStandingsOptions {
+    /**
+     * A formula required to rank participants in a round-robin stage.
+     * 
+     * See {@link RankingItem} for the possible properties on `item`.
+     * 
+     * The default formula used by the viewer is:
+     *
+     * @example (item) => 3 * item.wins + 1 * item.draws + 0 * item.losses
+     */
     rankingFormula: RankingFormula,
+    /**
+     * The maximum number of participants to qualify per group.
+     */
     maxQualifiedParticipantsPerGroup?: number,
 }
 
