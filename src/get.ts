@@ -310,7 +310,7 @@ export class Get extends BaseGetter {
             return qualifiedOnly.map(item => ({
                 ...item,
                 groupId: groupMatches[0].group_id,
-                name: participants.find(participant => participant.id === item.id)?.name || `Participant not found (id: ${item.id})`,
+                name: helpers.findParticipant(participants, item).name,
             }));
         });
 
