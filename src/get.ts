@@ -1,5 +1,5 @@
-import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id, RankingFormula, RankingItem } from 'brackets-model';
-import { Database, FinalStandingsItem, ParticipantSlot } from './types';
+import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id, RankingItem } from 'brackets-model';
+import { Database, FinalStandingsItem, ParticipantSlot, type RoundRobinFinalStandingsItem, type RoundRobinFinalStandingsOptions } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
 
@@ -214,28 +214,28 @@ export class Get extends BaseGetter {
      * @param stageId ID of the stage.
      * @param rankingFormula The formula to compute the points for the ranking.
      */
-    public async finalStandings(stageId: Id, rankingFormula: RankingFormula): Promise<RankingItem[]>;
+    public async finalStandings(stageId: Id, roundRobinOptions: RoundRobinFinalStandingsOptions): Promise<RankingItem[]>;
     // eslint-disable-next-line jsdoc/require-jsdoc
-    public async finalStandings(stageId: Id, rankingFormula?: RankingFormula): Promise<FinalStandingsItem[] | RankingItem[]> {
+    public async finalStandings(stageId: Id, roundRobinOptions?: RoundRobinFinalStandingsOptions): Promise<FinalStandingsItem[] | RankingItem[]> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
         switch (stage.type) {
             case 'round_robin': {
-                if (!rankingFormula)
-                    throw Error('Computing the standings in a round-robin stage requires a ranking formula.');
+                if (!roundRobinOptions)
+                    throw Error('Round-robin options are required for round-robin stages.');
 
-                return this.roundRobinStandings(stageId, rankingFormula);
+                return this.roundRobinStandings(stageId, roundRobinOptions);
             }
             case 'single_elimination': {
-                if (rankingFormula)
-                    throw Error('Computing the standings in a single elimination stage with a ranking formula is not supported.');
+                if (roundRobinOptions)
+                    throw Error('Round-robin options are not supported for elimination stages.');
 
                 return this.singleEliminationStandings(stageId);
             }
             case 'double_elimination': {
-                if (rankingFormula)
-                    throw Error('Computing the standings in a double elimination stage with a ranking formula is not supported.');
+                if (roundRobinOptions)
+                    throw Error('Round-robin options are not supported for elimination stages.');
 
                 return this.doubleEliminationStandings(stageId);
             }
@@ -291,14 +291,30 @@ export class Get extends BaseGetter {
      * Returns the final standings of a round-robin stage.
      *
      * @param stageId ID of the stage.
-     * @param rankingFormula The formula to compute the points for the ranking.
+     * @param roundRobinOptions The options for the round-robin standings.
      */
-    private async roundRobinStandings(stageId: Id, rankingFormula: RankingFormula): Promise<RankingItem[]> {
+    private async roundRobinStandings(stageId: Id, roundRobinOptions: RoundRobinFinalStandingsOptions): Promise<RoundRobinFinalStandingsItem[]> {
+        const stage = await this.storage.select('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
+
+        const participants = await this.storage.select('participant', { tournament_id: stage.tournament_id });
+        if (!participants) throw Error('Error getting participants.');
+
         const matches = await this.storage.select('match', { stage_id: stageId });
         if (!matches) throw Error('Error getting matches.');
 
-        // Instead of computing ranking per group like in the viewer, we compute it directly for the whole stage.
-        return helpers.getRanking(matches, rankingFormula);
+        const matchesByGroup = helpers.splitBy(matches, 'group_id');
+        const unsortedRanking = matchesByGroup.flatMap(groupMatches => {
+            const groupRanking = helpers.getRanking(groupMatches, roundRobinOptions.rankingFormula);
+            const qualifiedOnly = groupRanking.slice(0, roundRobinOptions.maxQualifiedParticipantsPerGroup);
+            return qualifiedOnly.map(item => ({
+                ...item,
+                groupId: groupMatches[0].group_id,
+                name: participants.find(participant => participant.id === item.id)?.name || `Participant not found (id: ${item.id})`,
+            }));
+        });
+
+        return unsortedRanking.sort((a, b) => a.rank - b.rank);
     }
 
     /**

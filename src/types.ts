@@ -1,4 +1,4 @@
-import { Group, Id, Match, MatchGame, Participant, Round, SeedOrdering, Stage } from 'brackets-model';
+import { Group, Id, Match, MatchGame, Participant, Round, SeedOrdering, Stage, type RankingFormula, type RankingItem } from 'brackets-model';
 
 /**
  * Type of an object implementing every ordering method.
@@ -98,12 +98,28 @@ export type Table = keyof DataTypes;
 export type Database = ValueToArray<DataTypes>;
 
 /**
- * An item in the final standings of a stage. Each item represents a {@link Participant}.
+ * An item in the final standings of an elimination stage. Each item represents a {@link Participant}.
  */
 export interface FinalStandingsItem {
     id: Id,
     name: string,
     rank: number,
+}
+
+/**
+ * An item in the final standings of a round-robin stage. Each item represents a {@link Participant}.
+ */
+export interface RoundRobinFinalStandingsItem extends RankingItem {
+    groupId: Id,
+    name: string
+}
+
+/**
+ * Options for the final standings of a round-robin stage.
+ */
+export interface RoundRobinFinalStandingsOptions {
+    rankingFormula: RankingFormula,
+    maxQualifiedParticipantsPerGroup?: number,
 }
 
 /**
