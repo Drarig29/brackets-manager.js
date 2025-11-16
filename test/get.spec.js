@@ -198,6 +198,65 @@ describe('Get final standings', () => {
             { id: 1, name: 'Team 2', rank: 6 },
         ]);
     });
+
+    it('should throw for single elimination stage with a ranking formula', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+        });
+
+        await assert.isRejected(manager.get.finalStandings(0, (item) => item.wins), 'Computing the standings in a single elimination stage with a ranking formula is not supported.');
+    });
+
+    it('should throw for double elimination stage with a ranking formula', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2'],
+        });
+
+        await assert.isRejected(manager.get.finalStandings(0, (item) => item.wins), 'Computing the standings in a double elimination stage with a ranking formula is not supported.');
+    });
+
+    it('should get the final standings for a round-robin stage with a ranking formula', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            seeding: [
+                'Team 1', 'Team 2', 'Team 3', 'Team 4',
+                'Team 5', 'Team 6', 'Team 7', 'Team 8',
+            ],
+            settings: {
+                groupCount: 2,
+            },
+        });
+
+        for (let i = 0; i < 12; i++) {
+            await manager.update.match({
+                id: i,
+                ...i % 2 === 0 ? { opponent1: { result: 'win' } } : { opponent2: { result: 'win' } },
+            });
+        }
+
+        const finalStandings = await manager.get.finalStandings(0, (item) => 3 * item.wins);
+        assert.deepEqual(finalStandings, [
+            // Equal points means equal rank.
+            // Ex-aequo with 6 points
+            {rank: 1, id: 0, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6},    
+            {rank: 1, id: 1, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6},
+            {rank: 1, id: 2, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6},
+            {rank: 1, id: 3, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6},
+            {rank: 1, id: 4, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6},
+            {rank: 1, id: 5, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6},
+            // Ex-aequo with 0 points
+            {rank: 2, id: 6, played: 3, wins: 0, draws: 0, losses: 3, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 0},
+            {rank: 2, id: 7, played: 3, wins: 0, draws: 0, losses: 3, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 0},
+          ]);
+    });
 });
 
 describe('Get seeding', () => {
