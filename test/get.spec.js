@@ -242,7 +242,10 @@ describe('Get final standings', () => {
             });
         }
 
-        const finalStandings = await manager.get.finalStandings(0, { rankingFormula: (item) => 3 * item.wins });
+        const finalStandings = await manager.get.finalStandings(0, {
+            rankingFormula: (item) => 3 * item.wins,
+        });
+
         assert.deepEqual(finalStandings, [
             { id: 0, name: 'Team 1', rank: 1, groupId: 0, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6 },
             { id: 2, name: 'Team 3', rank: 1, groupId: 0, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6 },
@@ -252,6 +255,40 @@ describe('Get final standings', () => {
             { id: 5, name: 'Team 6', rank: 1, groupId: 1, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6 },
             { id: 6, name: 'Team 7', rank: 2, groupId: 0, played: 3, wins: 0, draws: 0, losses: 3, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 0 },
             { id: 7, name: 'Team 8', rank: 2, groupId: 1, played: 3, wins: 0, draws: 0, losses: 3, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 0 },
+        ]);
+    });
+
+    it('should get the final standings for a round-robin stage with a ranking formula and max qualified participants per group', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            seeding: [
+                'Team 1', 'Team 2', 'Team 3', 'Team 4',
+                'Team 5', 'Team 6', 'Team 7', 'Team 8',
+            ],
+            settings: {
+                groupCount: 2,
+            },
+        });
+
+        for (let i = 0; i < 12; i++) {
+            await manager.update.match({
+                id: i,
+                ...i % 2 === 0 ? { opponent1: { result: 'win' } } : { opponent2: { result: 'win' } },
+            });
+        }
+
+        const finalStandings = await manager.get.finalStandings(0, {
+            rankingFormula: (item) => 3 * item.wins,
+            maxQualifiedParticipantsPerGroup: 2,
+        });
+
+        assert.deepEqual(finalStandings, [
+            { id: 0, name: 'Team 1', rank: 1, groupId: 0, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6 },
+            { id: 2, name: 'Team 3', rank: 1, groupId: 0, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6 },
+            { id: 1, name: 'Team 2', rank: 1, groupId: 1, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6 },
+            { id: 3, name: 'Team 4', rank: 1, groupId: 1, played: 3, wins: 2, draws: 0, losses: 1, forfeits: 0, scoreFor: 0, scoreAgainst: 0, scoreDifference: 0, points: 6 },
         ]);
     });
 });
