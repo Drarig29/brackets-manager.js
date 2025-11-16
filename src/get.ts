@@ -11,13 +11,16 @@ export class Get extends BaseGetter {
      * @param stageId ID of the stage.
      */
     public async stageData(stageId: Id): Promise<Database> {
-        const stageData = await this.getStageSpecificData(stageId);
+        const stage = await this.storage.select('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
 
-        const participants = await this.storage.select('participant', { tournament_id: stageData.stage.tournament_id });
+        const stageData = await this.getStageSpecificData(stage.id);
+
+        const participants = await this.storage.select('participant', { tournament_id: stage.tournament_id });
         if (!participants) throw Error('Error getting participants.');
 
         return {
-            stage: [stageData.stage],
+            stage: [stage],
             group: stageData.groups,
             round: stageData.rounds,
             match: stageData.matches,
@@ -225,19 +228,19 @@ export class Get extends BaseGetter {
                 if (!roundRobinOptions)
                     throw Error('Round-robin options are required for round-robin stages.');
 
-                return this.roundRobinStandings(stageId, roundRobinOptions);
+                return this.roundRobinStandings(stage, roundRobinOptions);
             }
             case 'single_elimination': {
                 if (roundRobinOptions)
                     throw Error('Round-robin options are not supported for elimination stages.');
 
-                return this.singleEliminationStandings(stageId);
+                return this.singleEliminationStandings(stage);
             }
             case 'double_elimination': {
                 if (roundRobinOptions)
                     throw Error('Round-robin options are not supported for elimination stages.');
 
-                return this.doubleEliminationStandings(stageId);
+                return this.doubleEliminationStandings(stage);
             }
             default:
                 throw Error('Unknown stage type.');
@@ -290,17 +293,14 @@ export class Get extends BaseGetter {
     /**
      * Returns the final standings of a round-robin stage.
      *
-     * @param stageId ID of the stage.
+     * @param stage The stage.
      * @param roundRobinOptions The options for the round-robin standings.
      */
-    private async roundRobinStandings(stageId: Id, roundRobinOptions: RoundRobinFinalStandingsOptions): Promise<RoundRobinFinalStandingsItem[]> {
-        const stage = await this.storage.select('stage', stageId);
-        if (!stage) throw Error('Stage not found.');
-
+    private async roundRobinStandings(stage: Stage, roundRobinOptions: RoundRobinFinalStandingsOptions): Promise<RoundRobinFinalStandingsItem[]> {
         const participants = await this.storage.select('participant', { tournament_id: stage.tournament_id });
         if (!participants) throw Error('Error getting participants.');
 
-        const matches = await this.storage.select('match', { stage_id: stageId });
+        const matches = await this.storage.select('match', { stage_id: stage.id });
         if (!matches) throw Error('Error getting matches.');
 
         const matchesByGroup = helpers.splitBy(matches, 'group_id');
@@ -320,14 +320,13 @@ export class Get extends BaseGetter {
     /**
      * Returns the final standings of a single elimination stage.
      *
-     * @param stageId ID of the stage.
+     * @param stage The stage.
      */
-    private async singleEliminationStandings(stageId: Id): Promise<FinalStandingsItem[]> {
+    private async singleEliminationStandings(stage: Stage): Promise<FinalStandingsItem[]> {
         const grouped: Participant[][] = [];
 
-        const { stage: stages, group: groups, match: matches, participant: participants } = await this.stageData(stageId);
+        const { group: groups, match: matches, participant: participants } = await this.stageData(stage.id);
 
-        const [stage] = stages;
         const [singleBracket, finalGroup] = groups;
 
         const final = matches.filter(match => match.group_id === singleBracket.id).pop();
@@ -357,14 +356,13 @@ export class Get extends BaseGetter {
     /**
      * Returns the final standings of a double elimination stage.
      *
-     * @param stageId ID of the stage.
+     * @param stage The stage.
      */
-    private async doubleEliminationStandings(stageId: Id): Promise<FinalStandingsItem[]> {
+    private async doubleEliminationStandings(stage: Stage): Promise<FinalStandingsItem[]> {
         const grouped: Participant[][] = [];
 
-        const { stage: stages, group: groups, match: matches, participant: participants } = await this.stageData(stageId);
+        const { group: groups, match: matches, participant: participants } = await this.stageData(stage.id);
 
-        const [stage] = stages;
         const [winnerBracket, loserBracket, finalGroup] = groups;
 
         if (stage.settings?.grandFinal === 'none') {
@@ -403,15 +401,11 @@ export class Get extends BaseGetter {
      * @param stageId ID of the stage.
      */
     private async getStageSpecificData(stageId: Id): Promise<{
-        stage: Stage;
         groups: Group[];
         rounds: Round[];
         matches: Match[];
         matchGames: MatchGame[];
     }> {
-        const stage = await this.storage.select('stage', stageId);
-        if (!stage) throw Error('Stage not found.');
-
         const groups = await this.storage.select('group', { stage_id: stageId });
         if (!groups) throw Error('Error getting groups.');
 
@@ -424,7 +418,6 @@ export class Get extends BaseGetter {
         const matchGames = await this.matchGames(matches);
 
         return {
-            stage,
             groups,
             rounds,
             matches,
