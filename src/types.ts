@@ -1,4 +1,4 @@
-import { Group, Id, Match, MatchGame, Participant, Round, SeedOrdering, Stage, type RankingFormula, type RankingItem } from 'brackets-model';
+import { Group, Id, Match, MatchGame, Participant, Round, SeedOrdering, Stage, RankingFormula, RankingItem } from 'brackets-model';
 
 /**
  * Type of an object implementing every ordering method.
