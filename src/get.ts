@@ -1,4 +1,4 @@
-import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id } from 'brackets-model';
+import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id, RankingFormula, RankingItem } from 'brackets-model';
 import { Database, FinalStandingsItem, ParticipantSlot } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
@@ -203,21 +203,42 @@ export class Get extends BaseGetter {
     }
 
     /**
-     * Returns the final standings of a stage.
+     * Returns the final standings of an elimination stage.
      *
      * @param stageId ID of the stage.
      */
-    public async finalStandings(stageId: Id): Promise<FinalStandingsItem[]> {
+    public async finalStandings(stageId: Id): Promise<FinalStandingsItem[]>;
+    /**
+     * Returns the final standings of a round-robin stage with a ranking formula.
+     *
+     * @param stageId ID of the stage.
+     * @param rankingFormula The formula to compute the points for the ranking.
+     */
+    public async finalStandings(stageId: Id, rankingFormula: RankingFormula): Promise<RankingItem[]>;
+    // eslint-disable-next-line jsdoc/require-jsdoc
+    public async finalStandings(stageId: Id, rankingFormula?: RankingFormula): Promise<FinalStandingsItem[] | RankingItem[]> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
         switch (stage.type) {
-            case 'round_robin':
-                throw Error('A round-robin stage does not have standings.');
-            case 'single_elimination':
+            case 'round_robin': {
+                if (!rankingFormula)
+                    throw Error('Computing the standings in a round-robin stage requires a ranking formula.');
+
+                return this.roundRobinStandings(stageId, rankingFormula);
+            }
+            case 'single_elimination': {
+                if (rankingFormula)
+                    throw Error('Computing the standings in a single elimination stage with a ranking formula is not supported.');
+
                 return this.singleEliminationStandings(stageId);
-            case 'double_elimination':
+            }
+            case 'double_elimination': {
+                if (rankingFormula)
+                    throw Error('Computing the standings in a double elimination stage with a ranking formula is not supported.');
+
                 return this.doubleEliminationStandings(stageId);
+            }
             default:
                 throw Error('Unknown stage type.');
         }
@@ -263,6 +284,21 @@ export class Get extends BaseGetter {
         if (!matches) throw Error('Error getting matches.');
 
         return helpers.convertMatchesToSeeding(matches);
+    }
+
+
+    /**
+     * Returns the final standings of a round-robin stage.
+     *
+     * @param stageId ID of the stage.
+     * @param rankingFormula The formula to compute the points for the ranking.
+     */
+    private async roundRobinStandings(stageId: Id, rankingFormula: RankingFormula): Promise<RankingItem[]> {
+        const matches = await this.storage.select('match', { stage_id: stageId });
+        if (!matches) throw Error('Error getting matches.');
+
+        // Instead of computing ranking per group like in the viewer, we compute it directly for the whole stage.
+        return helpers.getRanking(matches, rankingFormula);
     }
 
     /**

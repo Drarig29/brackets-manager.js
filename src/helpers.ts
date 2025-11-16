@@ -15,6 +15,8 @@ import {
     Status,
     GroupType,
     Id,
+    RankingItem,
+    RankingFormula,
 } from 'brackets-model';
 
 import { Database, DeepPartial, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
@@ -1874,4 +1876,99 @@ export function getFractionOfFinal(roundNumber: number, roundCount: number): num
 
     const denominator = Math.pow(2, roundCount - roundNumber);
     return 1 / denominator;
+}
+
+type RankingMap = Record<Id, RankingItem>;
+
+/**
+ * Calculates a ranking based on a list of matches and a formula.
+ *
+ * @param matches The list of matches.
+ * @param formula The points formula to apply.
+ */
+export function getRanking(matches: Match[], formula: RankingFormula): RankingItem[] {
+    const rankingMap: RankingMap = {};
+
+    for (const match of matches) {
+        updateRankingMap(rankingMap, formula, match.opponent1, match.opponent2);
+        updateRankingMap(rankingMap, formula, match.opponent2, match.opponent1);
+    }
+
+    return createRanking(rankingMap);
+}
+
+/**
+ * Updates the ranking map with the results of a match.
+ *
+ * @param rankingMap The ranking map to edit.
+ * @param formula The points formula to apply.
+ * @param current The current participant.
+ * @param opponent The opponent.
+ */
+function updateRankingMap(rankingMap: RankingMap, formula: RankingFormula, current: ParticipantResult | null, opponent: ParticipantResult | null): void {
+    if (!current || current.id === null) return;
+
+    const item = rankingMap[current.id] || {
+        rank: 0,
+        id: 0,
+        played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        forfeits: 0,
+        scoreFor: 0,
+        scoreAgainst: 0,
+        scoreDifference: 0,
+        points: 0,
+    };
+
+    item.id = current.id;
+
+    if (current.forfeit || current.result)
+        item.played++;
+
+    if (current.result === 'win')
+        item.wins++;
+
+    if (current.result === 'draw')
+        item.draws++;
+
+    if (current.result === 'loss')
+        item.losses++;
+
+    if (current.forfeit)
+        item.forfeits++;
+
+    item.scoreFor += current.score || 0;
+    item.scoreAgainst += opponent && opponent.score || 0;
+    item.scoreDifference = item.scoreFor - item.scoreAgainst;
+
+    item.points = formula(item);
+
+    rankingMap[current.id] = item;
+}
+
+/**
+ * Creates the final ranking based on a ranking map. (Sort + Total points)
+ *
+ * @param rankingMap The ranking map (object).
+ */
+function createRanking(rankingMap: RankingMap): RankingItem[] {
+    const ranking = Object.values(rankingMap).sort((a, b) => a.points !== b.points
+        ? b.points - a.points
+        : a.played !== b.played
+            ? b.played - a.played
+            : b.scoreDifference - a.scoreDifference);
+
+    const rank = {
+        value: 0,
+        lastPoints: -1,
+    };
+
+    for (const item of ranking) {
+        item.rank = rank.lastPoints !== item.points ? ++rank.value : rank.value;
+        rank.lastPoints = item.points;
+    }
+
+    return ranking;
 }

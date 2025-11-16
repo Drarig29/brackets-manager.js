@@ -98,7 +98,7 @@ export type Table = keyof DataTypes;
 export type Database = ValueToArray<DataTypes>;
 
 /**
- * An item in the final standings of an elimination stage.
+ * An item in the final standings of a stage. Each item represents a {@link Participant}.
  */
 export interface FinalStandingsItem {
     id: Id,

@@ -11,7 +11,7 @@
         "node": ">=14"
     },
     "dependencies": {
-        "brackets-model": "^1.5.1",
+        "brackets-model": "^1.6.0",
         "uuid": "^9.0.0"
     },
     "devDependencies": {
