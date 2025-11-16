@@ -15,6 +15,8 @@ export {
     ValueToArray,
     DataTypes,
     FinalStandingsItem,
+    RoundRobinFinalStandingsItem,
+    RoundRobinFinalStandingsOptions,
     IdMapping,
     ParitySplit,
     RoundPositionalInfo,
