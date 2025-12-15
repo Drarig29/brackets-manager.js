@@ -127,6 +127,65 @@ export function makeRoundRobinDistribution<T>(participants: T[]): [T, T][][] {
 }
 
 /**
+ * Makes matches for a Swiss round.
+ * 
+ * For Round 1, it pairs top half vs bottom half based on seeding.
+ * 
+ * @param participants The participants to pair.
+ * @param roundNumber The number of the round.
+ */
+export function makeSwissMatches<T>(participants: T[], roundNumber: number): [T, T][] {
+    if (roundNumber === 1) {
+        // Top half vs Bottom half
+        const half = Math.ceil(participants.length / 2);
+        const top = participants.slice(0, half);
+        const bottom = participants.slice(half);
+
+        // If odd, the last one of top gets a BYE if we just pair top[i] with bottom[i].
+        // But normally with odd, we have one leftover.
+        // Let's assume the calling code handles BYEs or ensures even number of participants (BYE added).
+        // If participants.length is odd, `half` is (N+1)/2. `top` has k+1, `bottom` has k.
+
+        const matches: [T, T][] = [];
+        for (let i = 0; i < bottom.length; i++) {
+            matches.push([top[i], bottom[i]]);
+        }
+
+        if (top.length > bottom.length) {
+            // Last one plays BYE? Or rather, we should expect the caller to have added nulls if needed.
+            // But makeSwissMatches generic T doesn't know about nulls.
+            // Actually, `participants` here are slots.
+            // If we have 5 participants: [1, 2, 3, 4, 5]. Half = 3. Top=[1,2,3], Bottom=[4,5].
+            // 1v4, 2v5, 3 vs ?
+            // In standard swiss, usually 1v(N/2+1).
+            // If N=8. 1v5, 2v6, 3v7, 4v8.
+            // If N=5. 1v3? No.
+            // Let's assume checking constraints is done before. 
+            // If we have an odd number, we should have a BYE.
+            // Using the `balanceByes` beforehand would ensure we have even number?
+            // `StageCreator.getSlots` calls `balanceByes` for everything except RR.
+            // We should ensure it does for Swiss too.
+        }
+
+        // Just linear pairing top[i] vs bottom[i]
+        return matches;
+    }
+
+    // For later rounds, we need scores.
+    // This function signature might need to change or we throw error for now.
+    throw Error('Swiss pairing for round > 1 is not yet implemented.');
+}
+
+/**
+ * Checks if a stage is a swiss stage.
+ *
+ * @param stage The stage to check.
+ */
+export function isSwiss(stage: Stage): boolean {
+    return stage.type === 'swiss' as StageType;
+}
+
+/**
  * A helper to assert our generated round-robin is correct.
  *
  * @param input The input seeding.

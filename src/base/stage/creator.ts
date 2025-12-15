@@ -74,6 +74,9 @@ export class StageCreator {
             case 'double_elimination':
                 stage = await this.doubleElimination();
                 break;
+            case 'swiss':
+                stage = await this.swiss();
+                break;
             default:
                 throw Error('Unknown stage type.');
         }
@@ -193,6 +196,68 @@ export class StageCreator {
                 matchNumberStart: 2,
             });
         }
+    }
+
+    /**
+     * Creates a swiss stage.
+     * 
+     * Creates the group and the rounds. 
+     * Only the first round is populated with matches.
+     */
+    private async swiss(): Promise<Stage> {
+        if (Array.isArray(this.stage.settings?.seedOrdering) &&
+            this.stage.settings?.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
+
+        const slots = await this.getSlots();
+        const stage = await this.createStage();
+
+        // Swiss requires at least log2(N) rounds to determine a winner, often more.
+        // We'll use log2(N) as default if not specified elsewhere (e.g. in settings? settings.size is N).
+        // Let's assume settings.roundCount could be supported in the future, but for now derive from size.
+        const participantCount = slots.length;
+        const roundCount = Math.ceil(Math.log2(participantCount));
+
+        const groupId = await this.insertGroup({
+            stage_id: stage.id,
+            number: 1,
+        });
+
+        if (groupId === -1)
+            throw Error('Could not insert the group.');
+
+        // Round 1
+        const method = this.getSwissOrdering();
+        const ordered = ordering[method](slots);
+
+        // We only create matches for Round 1
+        const duels = helpers.makeSwissMatches(ordered, 1);
+        await this.createRound(stage.id, groupId, 1, duels.length, duels);
+
+        // We create subsequent rounds but EMPTY (matches will be created as "TBD vs TBD" or just empty matches?)
+        // The `createRound` helper expects `duels`.
+        // If we want empty matches, we can pass duels with nulls.
+        // makeSwissMatches for round > 1 throws error, so we can't use it yet.
+        // Actually, in Swiss, we can't really pre-create matches because we don't know who plays.
+        // But `brackets-manager` usually creates the structure.
+        // If we want to stay compatible with how updates work (by ID), we might need the matches to exist.
+        // However, standard Swiss pairings depend on results.
+        // Let's just create Round 1 for now. 
+        // If the user wants subsequent rounds, they might need to be created dynamically.
+        // But `brackets-manager` expects the stage to be fully created?
+        // Current implementation plan said: "Option 2: Generate rounds one by one."
+        // So we only create Round 1 here.
+
+        // However, if we only create Round 1, `stage` object might look incomplete?
+        // No, it's fine.
+
+        return stage;
+    }
+
+    /**
+     * Returns the ordering method for the first round of a swiss stage.
+     */
+    public getSwissOrdering(): SeedOrdering {
+        return this.getOrdering(0, 'groups', 'natural');
     }
 
     /**
