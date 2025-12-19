@@ -171,8 +171,68 @@ export class BaseUpdater extends BaseGetter {
         // Don't update related matches if it's a simple score update.
         if (!statusChanged && !resultChanged) return;
 
-        if (!helpers.isRoundRobin(stage))
+        if (!helpers.isRoundRobin(stage) && stage.type !== 'swiss')
             await this.updateRelatedMatches(stored, statusChanged, resultChanged);
+
+        if (stage.type === 'swiss')
+            await this.tryNextSwissRound(stage.id, stored.round_id);
+    }
+
+    /**
+     * Tries to generate the next round of a Swiss stage.
+     * 
+     * @param stageId ID of the stage.
+     * @param roundId ID of the current round.
+     */
+    private async tryNextSwissRound(stageId: Id, roundId: Id): Promise<void> {
+        const round = await this.storage.select('round', roundId);
+        if (!round) throw Error('Round not found.');
+
+        const matches = await this.storage.select('match', { round_id: roundId });
+        if (!matches) return;
+
+        const completed = matches.every(match => helpers.isMatchCompleted(match));
+        if (!completed) return;
+
+        const stage = await this.storage.select('stage', stageId);
+        if (!stage) throw Error('Stage not found.');
+
+        const { size } = stage.settings;
+        const totalRounds = Math.ceil(Math.log2(size!));
+
+        if (round.number >= totalRounds) return;
+
+        // Generate next round
+        const get = new Get(this.storage);
+        const standings = await get.finalStandings(stageId);
+
+        const nextRoundNumber = round.number + 1;
+        const pairings = helpers.makeSwissMatches(standings, nextRoundNumber);
+
+        const nextRoundId = await this.storage.insert('round', {
+            stage_id: stageId,
+            group_id: round.group_id,
+            number: nextRoundNumber,
+        });
+
+        if (nextRoundId === -1) throw Error('Could not insert round.');
+
+        for (let i = 0; i < pairings.length; i++) {
+            const [op1, op2] = pairings[i];
+            const opponent1 = op1 ? { id: op1.id } : null;
+            const opponent2 = op2 ? { id: op2.id } : null;
+
+            await this.storage.insert('match', {
+                stage_id: stageId,
+                group_id: round.group_id,
+                round_id: nextRoundId,
+                number: i + 1,
+                status: helpers.getMatchStatus({ opponent1, opponent2 }),
+                opponent1,
+                opponent2,
+                child_count: 0,
+            });
+        }
     }
 
     /**

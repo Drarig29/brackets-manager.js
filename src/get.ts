@@ -242,9 +242,68 @@ export class Get extends BaseGetter {
 
                 return this.doubleEliminationStandings(stage);
             }
+            case 'swiss': {
+                if (roundRobinOptions)
+                    throw Error('Round-robin options are not supported for swiss stages.');
+
+                return this.swissStandings(stage);
+            }
             default:
                 throw Error('Unknown stage type.');
         }
+    }
+
+    /**
+     * Returns the final standings of a swiss stage.
+     *
+     * @param stage The stage.
+     */
+    private async swissStandings(stage: Stage): Promise<FinalStandingsItem[]> {
+        const matches = await this.storage.select('match', { stage_id: stage.id });
+        if (!matches) throw Error('Error getting matches.');
+
+        const participants = await this.storage.select('participant', { tournament_id: stage.tournament_id });
+        if (!participants) throw Error('Error getting participants.');
+
+        // Calculate scores
+        const scores = new Map<Id, number>();
+        participants.forEach(p => scores.set(p.id, 0));
+
+        matches.forEach(match => {
+            if (!helpers.isMatchCompleted(match)) return;
+
+            const winner = helpers.getWinner(match);
+            if (winner && winner.id !== null) {
+                const current = scores.get(winner.id) || 0;
+                scores.set(winner.id, current + 1); // Win = 1 point
+            } else {
+                // Draw? 0.5?
+                // For now assuming Win/Loss.
+                // If draw logic exists, implement it. `getWinner` returns null for draw.
+                // But `isMatchCompleted` returns true for draw.
+                // If draw, split points?
+                if (helpers.isMatchDrawCompleted(match)) {
+                    // Check if opponents exist
+                    if (match.opponent1?.id != null) scores.set(match.opponent1.id, (scores.get(match.opponent1.id) || 0) + 0.5);
+                    if (match.opponent2?.id != null) scores.set(match.opponent2.id, (scores.get(match.opponent2.id) || 0) + 0.5);
+                }
+            }
+        });
+
+        const ranking = participants.map(p => ({
+            id: p.id,
+            name: p.name,
+            rank: 0, // Assigned later
+            score: scores.get(p.id) || 0,
+        }));
+
+        // Sort by score descending
+        ranking.sort((a, b) => b.score - a.score);
+
+        // Assign rank
+        ranking.forEach((item, index) => item.rank = index + 1);
+
+        return ranking;
     }
 
     /**
