@@ -314,7 +314,12 @@ export class Get extends BaseGetter {
             }));
         });
 
-        return unsortedRanking.sort((a, b) => a.rank - b.rank);
+        return unsortedRanking.sort((a, b) => {
+            // If the ranks are the same, sort by points.
+            // Points are compared in reverse order to get the highest points first.
+            if (a.rank === b.rank) return b.points - a.points;
+            return a.rank - b.rank;
+        });
     }
 
     /**
