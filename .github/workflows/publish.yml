@@ -1,0 +1,24 @@
+name: Publish package on NPM
+
+on:
+  push:
+    tags:
+      - v* # Any version tag
+
+permissions:
+  id-token: write # To publish on NPM with provenance and to federate tokens
+  contents: read # To read the package.json file
+
+jobs:
+  # Requires an approval
+  npm-publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+      - run: npm install
+      - run: npm publish
