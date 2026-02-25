@@ -1,4 +1,4 @@
-import { Group, Id, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage } from 'brackets-model';
+import { Group, Id, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage, Status } from 'brackets-model';
 import { defaultMinorOrdering, ordering } from '../../ordering';
 import { Duel, Storage, OmitId, ParticipantSlot, StandardBracketResults } from '../../types';
 import { BracketsManager } from '../..';
@@ -420,8 +420,10 @@ export class StageCreator {
 
             if (existing) {
                 // Keep the most advanced status when updating a match.
+                // But we intentionally allow transitions between pending statuses (Locked/Waiting/Ready),
+                // e.g. a TBD match (Waiting) becoming a BYE match (Locked) after confirmSeeding().
                 const existingStatus = helpers.getMatchStatus(existing);
-                if (existingStatus > status)
+                if (existingStatus > status && existingStatus >= Status.Running)
                     status = existingStatus;
             }
         }
