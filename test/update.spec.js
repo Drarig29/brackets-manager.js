@@ -721,10 +721,18 @@ describe('Seeding', () => {
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
 
         // In this context, a `null` value is not a BYE, but a TDB (to be determined)
-        // because we consider the tournament might have been started.
-        // If it's not and you prefer BYEs, just recreate the tournament.
+        // because we consider the tournament might not have been started yet.
+        // Use confirmSeeding() to convert TBDs to BYEs.
         assert.strictEqual((await storage.select('match', 1)).opponent1.id, null);
+        assert.strictEqual((await storage.select('match', 1)).opponent2.result, undefined);
         assert.strictEqual((await storage.select('match', 3)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent1.result, undefined);
+
+        // The participants opposite the TBD slots must not be auto-advanced to round 2.
+        assert.strictEqual((await storage.select('match', 4)).opponent1.id, null);
+        assert.strictEqual((await storage.select('match', 4)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 5)).opponent1.id, null);
+        assert.strictEqual((await storage.select('match', 5)).opponent2.id, null);
     });
 
     it('should handle incomplete seeding during seeding update', async () => {

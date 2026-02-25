@@ -90,7 +90,7 @@ export class StageCreator {
      * Enables the update mode.
      * 
      * @param stageId ID of the stage.
-     * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding.
+     * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding. Set to `true` when `confirmSeeding()` is called.
      */
     public setExisting(stageId: Id, enableByes: boolean): void {
         this.updateMode = true;
@@ -545,10 +545,14 @@ export class StageCreator {
 
         this.stage.seeding = seeding;
 
-        if (this.stage.seedingIds !== undefined || helpers.isSeedingWithIds(seeding))
-            return this.getSlotsUsingIds(seeding, positions);
+        const slots = this.stage.seedingIds !== undefined || helpers.isSeedingWithIds(seeding)
+            ? await this.getSlotsUsingIds(seeding, positions)
+            : await this.getSlotsUsingNames(seeding, positions);
 
-        return this.getSlotsUsingNames(seeding, positions);
+        if (this.updateMode && !this.enableByesInUpdate)
+            return slots.map(slot => slot === null ? { id: null } : slot);
+
+        return slots;
     }
 
     /**
