@@ -980,20 +980,27 @@ describe('Seeding', () => {
         ]);
 
         assert.strictEqual((await storage.select('match', 1)).opponent1.id, null); // First, is a TBD.
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Waiting); // TBD vs. someone is Waiting.
         assert.strictEqual((await storage.select('match', 2)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Waiting);
         assert.strictEqual((await storage.select('match', 3)).opponent1.id, null);
         assert.strictEqual((await storage.select('match', 3)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Locked); // TBD vs. TBD is Locked.
 
         await manager.update.confirmSeeding(0);
 
         assert.strictEqual((await storage.select('participant')).length, 4);
 
         assert.strictEqual((await storage.select('match', 1)).opponent1, null); // Should become a BYE.
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Locked); // Any match with a BYE is Locked.
         assert.strictEqual((await storage.select('match', 2)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Locked);
         assert.strictEqual((await storage.select('match', 3)).opponent1, null);
         assert.strictEqual((await storage.select('match', 3)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Locked);
 
         assert.strictEqual((await storage.select('match', 5)).opponent2, null); // A BYE should be propagated here.
+        assert.strictEqual((await storage.select('match', 5)).status, Status.Locked);
 
         assert.strictEqual((await storage.select('match', 7)).opponent2, null); // All of these too (in loser bracket).
         assert.strictEqual((await storage.select('match', 8)).opponent1, null);
