@@ -111,7 +111,7 @@ describe('Create a round-robin stage', () => {
                     [2, 3],
                 ],
             },
-        }), 'Not enough seeds in at least one group of the manual ordering.');
+        }), 'Manual ordering does not have the same length as the seeding.');
     });
 
     it('should create a round-robin stage without BYE vs. BYE matches', async () => {

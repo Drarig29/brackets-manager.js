@@ -119,13 +119,23 @@ export class StageCreator {
      * One bracket and optionally a consolation final between semi-final losers.
      */
     private async singleElimination(): Promise<Stage> {
-        if (Array.isArray(this.stage.settings?.seedOrdering) &&
+        if (!this.stage.settings?.manualOrdering && Array.isArray(this.stage.settings?.seedOrdering) &&
             this.stage.settings?.seedOrdering.length !== 1) throw Error('You must specify one seed ordering method.');
 
-        const slots = await this.getSlots();
+        let ordered: ParticipantSlot[];
+
+        if (this.stage.settings?.manualOrdering) {
+            if (this.stage.settings.manualOrdering.length !== 1)
+                throw Error('Manual ordering for an elimination stage must have exactly one group.');
+
+            ordered = await this.getSlots(this.stage.settings.manualOrdering[0]);
+        } else {
+            const slots = await this.getSlots();
+            const method = this.getStandardBracketFirstRoundOrdering();
+            ordered = ordering[method](slots);
+        }
+
         const stage = await this.createStage();
-        const method = this.getStandardBracketFirstRoundOrdering();
-        const ordered = ordering[method](slots);
 
         const { losers } = await this.createStandardBracket(stage.id, 1, ordered);
         await this.createConsolationFinal(stage.id, losers);
@@ -140,13 +150,23 @@ export class StageCreator {
      * between the winner of both bracket, which can be simple or double.
      */
     private async doubleElimination(): Promise<Stage> {
-        if (this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
+        if (!this.stage.settings?.manualOrdering && this.stage.settings && Array.isArray(this.stage.settings.seedOrdering) &&
             this.stage.settings.seedOrdering.length < 1) throw Error('You must specify at least one seed ordering method.');
 
-        const slots = await this.getSlots();
+        let ordered: ParticipantSlot[];
+
+        if (this.stage.settings?.manualOrdering) {
+            if (this.stage.settings.manualOrdering.length !== 1)
+                throw Error('Manual ordering for an elimination stage must have exactly one group.');
+
+            ordered = await this.getSlots(this.stage.settings.manualOrdering[0]);
+        } else {
+            const slots = await this.getSlots();
+            const method = this.getStandardBracketFirstRoundOrdering();
+            ordered = ordering[method](slots);
+        }
+
         const stage = await this.createStage();
-        const method = this.getStandardBracketFirstRoundOrdering();
-        const ordered = ordering[method](slots);
 
         if (this.stage.settings?.skipFirstRound)
             await this.createDoubleEliminationSkipFirstRound(stage.id, ordered);
@@ -513,6 +533,9 @@ export class StageCreator {
             ...this.stage.settings,
             size, // Always set the size.
         };
+
+        if (positions && positions.length !== size)
+            throw Error('Manual ordering does not have the same length as the seeding.');
 
         helpers.ensureNoDuplicates(seeding);
         seeding = helpers.fixSeeding(seeding, size);

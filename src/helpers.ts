@@ -1347,9 +1347,6 @@ export function mapParticipantsToDatabase(prop: 'id' | 'name', seeding: Seeding,
     if (!positions)
         return slots;
 
-    if (positions.length !== slots.length)
-        throw Error('Not enough seeds in at least one group of the manual ordering.');
-
     return positions.map(position => slots[position - 1]); // Because `position` is `i + 1`.
 }
 

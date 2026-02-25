@@ -42,6 +42,45 @@ describe('Create double elimination stage', () => {
         assert.strictEqual((await storage.select('match')).length, 30);
     });
 
+    it('should create a double elimination stage with manual ordering', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: {
+                manualOrdering: [[1, 8, 4, 5, 2, 7, 3, 6]],
+            },
+        });
+
+        const matches = await storage.select('match');
+        assert.strictEqual(matches[0].opponent1.position, 1);
+        assert.strictEqual(matches[0].opponent2.position, 8);
+        assert.strictEqual(matches[1].opponent1.position, 4);
+        assert.strictEqual(matches[1].opponent2.position, 5);
+        assert.strictEqual(matches[2].opponent1.position, 2);
+        assert.strictEqual(matches[2].opponent2.position, 7);
+        assert.strictEqual(matches[3].opponent1.position, 3);
+        assert.strictEqual(matches[3].opponent2.position, 6);
+    });
+
+    it('should throw if manual ordering for double elimination has more than one group', async () => {
+        await assert.isRejected(manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                manualOrdering: [[1, 4], [2, 3]],
+            },
+        }), 'Manual ordering for an elimination stage must have exactly one group.');
+    });
+
     it('should create a double elimination stage with only two participants', async () => {
         // This is an edge case. No lower bracket nor grand final will be created.
         await manager.create.stage({
