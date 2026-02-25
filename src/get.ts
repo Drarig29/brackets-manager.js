@@ -1,4 +1,4 @@
-import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id, RankingItem } from 'brackets-model';
+import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id } from 'brackets-model';
 import { Database, FinalStandingsItem, ParticipantSlot, type RoundRobinFinalStandingsItem, type RoundRobinFinalStandingsOptions } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
@@ -217,9 +217,9 @@ export class Get extends BaseGetter {
      * @param stageId ID of the stage.
      * @param rankingFormula The formula to compute the points for the ranking.
      */
-    public async finalStandings(stageId: Id, roundRobinOptions: RoundRobinFinalStandingsOptions): Promise<RankingItem[]>;
+    public async finalStandings(stageId: Id, roundRobinOptions: RoundRobinFinalStandingsOptions): Promise<RoundRobinFinalStandingsItem[]>;
     // eslint-disable-next-line jsdoc/require-jsdoc
-    public async finalStandings(stageId: Id, roundRobinOptions?: RoundRobinFinalStandingsOptions): Promise<FinalStandingsItem[] | RankingItem[]> {
+    public async finalStandings(stageId: Id, roundRobinOptions?: RoundRobinFinalStandingsOptions): Promise<FinalStandingsItem[] | RoundRobinFinalStandingsItem[]> {
         const stage = await this.storage.select('stage', stageId);
         if (!stage) throw Error('Stage not found.');
 
