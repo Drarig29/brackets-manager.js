@@ -81,6 +81,18 @@ describe('Create double elimination stage', () => {
         }), 'Manual ordering for an elimination stage must have exactly one group.');
     });
 
+    it('should throw if manual ordering for double elimination has wrong length', async () => {
+        await assert.isRejected(manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: {
+                manualOrdering: [[1, 2]],
+            },
+        }), 'Manual ordering does not have the same length as the seeding.');
+    });
+
     it('should create a double elimination stage with only two participants', async () => {
         // This is an edge case. No lower bracket nor grand final will be created.
         await manager.create.stage({
