@@ -721,10 +721,18 @@ describe('Seeding', () => {
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
 
         // In this context, a `null` value is not a BYE, but a TDB (to be determined)
-        // because we consider the tournament might have been started.
-        // If it's not and you prefer BYEs, just recreate the tournament.
+        // because we consider the tournament might not have been started yet.
+        // Use confirmSeeding() to convert TBDs to BYEs.
         assert.strictEqual((await storage.select('match', 1)).opponent1.id, null);
+        assert.strictEqual((await storage.select('match', 1)).opponent2.result, undefined);
         assert.strictEqual((await storage.select('match', 3)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent1.result, undefined);
+
+        // The participants opposite the TBD slots must not be auto-advanced to round 2.
+        assert.strictEqual((await storage.select('match', 4)).opponent1.id, null);
+        assert.strictEqual((await storage.select('match', 4)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 5)).opponent1.id, null);
+        assert.strictEqual((await storage.select('match', 5)).opponent2.id, null);
     });
 
     it('should handle incomplete seeding during seeding update', async () => {
@@ -782,6 +790,38 @@ describe('Seeding', () => {
 
         assert.strictEqual((await storage.select('match', 0)).opponent1.id, null);
         assert.strictEqual((await storage.select('participant')).length, 8); // Participants aren't removed.
+    });
+
+    it('should reset the seeding of a stage after confirmation', async () => {
+        await manager.update.seeding(0, [
+            'Team 1', 'Team 2',
+            null, 'Team 4',
+            'Team 5', null,
+            null, null,
+        ]);
+
+        await manager.update.confirmSeeding(0);
+
+        // After confirmation, BYE-won matches are Locked and BYE winners are propagated.
+        assert.strictEqual((await storage.select('match', 1)).opponent1, null); // BYE.
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Locked);
+        assert.strictEqual((await storage.select('match', 4)).opponent2.id, 2); // Team 4 propagated to round 2.
+        assert.strictEqual((await storage.select('match', 4)).status, Status.Waiting);
+
+        await manager.reset.seeding(0);
+
+        // Participants aren't removed.
+        assert.strictEqual((await storage.select('participant')).length, 4);
+
+        // All matches in every round must be fully reset to TBD, Waiting, and without any result.
+        const matches = await storage.select('match');
+        for (const match of matches) {
+            assert.strictEqual(match.opponent1.id, null, `Match ${match.id} opponent1 should be TBD`);
+            assert.strictEqual(match.opponent1.result, undefined, `Match ${match.id} opponent1 should have no result`);
+            assert.strictEqual(match.opponent2.id, null, `Match ${match.id} opponent2 should be TBD`);
+            assert.strictEqual(match.opponent2.result, undefined, `Match ${match.id} opponent2 should have no result`);
+            assert.strictEqual(match.status, Status.Locked, `Match ${match.id} should be Locked`);
+        }
     });
 
     it('should update the seeding in a stage with participants already', async () => {
@@ -972,20 +1012,27 @@ describe('Seeding', () => {
         ]);
 
         assert.strictEqual((await storage.select('match', 1)).opponent1.id, null); // First, is a TBD.
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Waiting); // TBD vs. someone is Waiting.
         assert.strictEqual((await storage.select('match', 2)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Waiting);
         assert.strictEqual((await storage.select('match', 3)).opponent1.id, null);
         assert.strictEqual((await storage.select('match', 3)).opponent2.id, null);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Locked); // TBD vs. TBD is Locked.
 
         await manager.update.confirmSeeding(0);
 
         assert.strictEqual((await storage.select('participant')).length, 4);
 
         assert.strictEqual((await storage.select('match', 1)).opponent1, null); // Should become a BYE.
+        assert.strictEqual((await storage.select('match', 1)).status, Status.Locked); // Any match with a BYE is Locked.
         assert.strictEqual((await storage.select('match', 2)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 2)).status, Status.Locked);
         assert.strictEqual((await storage.select('match', 3)).opponent1, null);
         assert.strictEqual((await storage.select('match', 3)).opponent2, null);
+        assert.strictEqual((await storage.select('match', 3)).status, Status.Locked);
 
         assert.strictEqual((await storage.select('match', 5)).opponent2, null); // A BYE should be propagated here.
+        assert.strictEqual((await storage.select('match', 5)).status, Status.Locked);
 
         assert.strictEqual((await storage.select('match', 7)).opponent2, null); // All of these too (in loser bracket).
         assert.strictEqual((await storage.select('match', 8)).opponent1, null);

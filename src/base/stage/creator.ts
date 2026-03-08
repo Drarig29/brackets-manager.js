@@ -1,4 +1,4 @@
-import { Group, Id, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage } from 'brackets-model';
+import { Group, Id, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage, Status } from 'brackets-model';
 import { defaultMinorOrdering, ordering } from '../../ordering';
 import { Duel, Storage, OmitId, ParticipantSlot, StandardBracketResults } from '../../types';
 import { BracketsManager } from '../..';
@@ -90,7 +90,7 @@ export class StageCreator {
      * Enables the update mode.
      * 
      * @param stageId ID of the stage.
-     * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding.
+     * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding. Set to `true` when `confirmSeeding()` is called.
      */
     public setExisting(stageId: Id, enableByes: boolean): void {
         this.updateMode = true;
@@ -420,8 +420,10 @@ export class StageCreator {
 
             if (existing) {
                 // Keep the most advanced status when updating a match.
+                // But we intentionally allow transitions between pending statuses (Locked/Waiting/Ready),
+                // e.g. a TBD match (Waiting) becoming a BYE match (Locked) after confirmSeeding().
                 const existingStatus = helpers.getMatchStatus(existing);
-                if (existingStatus > status)
+                if (existingStatus > status && existingStatus >= Status.Running)
                     status = existingStatus;
             }
         }
@@ -545,10 +547,14 @@ export class StageCreator {
 
         this.stage.seeding = seeding;
 
-        if (this.stage.seedingIds !== undefined || helpers.isSeedingWithIds(seeding))
-            return this.getSlotsUsingIds(seeding, positions);
+        const slots = this.stage.seedingIds !== undefined || helpers.isSeedingWithIds(seeding)
+            ? await this.getSlotsUsingIds(seeding, positions)
+            : await this.getSlotsUsingNames(seeding, positions);
 
-        return this.getSlotsUsingNames(seeding, positions);
+        if (this.updateMode && !this.enableByesInUpdate)
+            return slots.map(slot => slot === null ? { id: null } : slot);
+
+        return slots;
     }
 
     /**
