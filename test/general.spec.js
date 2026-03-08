@@ -81,6 +81,33 @@ describe('BYE handling', () => {
         assert.strictEqual((await storage.select('match', 1)).opponent1.id, 1);
         assert.strictEqual((await storage.select('match', 1)).opponent2, null);
     });
+
+    it('should balance BYEs in the seeding with seeding IDs', async () => {
+        storage.insert('participant', [
+            { name: 'Team 1', tournament_id: 0 },
+            { name: 'Team 2', tournament_id: 0 },
+        ]);
+
+        await manager.create.stage({
+            name: 'Example with BYEs',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seedingIds: [
+                0, 1,
+            ],
+            settings: {
+                seedOrdering: ['natural'],
+                balanceByes: true,
+                size: 4,
+            },
+        });
+
+        assert.strictEqual((await storage.select('match', 0)).opponent1.id, 0);
+        assert.strictEqual((await storage.select('match', 0)).opponent2, null);
+
+        assert.strictEqual((await storage.select('match', 1)).opponent1.id, 1);
+        assert.strictEqual((await storage.select('match', 1)).opponent2, null);
+    });
 });
 
 describe('Position checks', () => {
