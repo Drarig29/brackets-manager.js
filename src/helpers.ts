@@ -302,7 +302,7 @@ export function normalizeParticipant(participant: ParticipantResult | null, mapp
  * @param placeholder A placeholder to use to fill the empty space.
  */
 export function setArraySize<T>(array: T[], length: number, placeholder: T): T[] {
-    return Array.from({ length }, (_, i) => array[i] || placeholder);
+    return Array.from({ length }, (_, i) => array[i] ?? placeholder);
 }
 
 /**
