@@ -1544,16 +1544,21 @@ export function getParentMatchResults(storedParent: Match, scores: Scores): Pick
  * @param enableByes Whether to use BYEs or TBDs for `null` values in an input seeding.
  */
 export function getUpdatedMatchResults<T extends MatchResults>(match: T, existing: T, enableByes: boolean): T {
+    const mergeOpponent = (currentOpponent: ParticipantResult | null, existingOpponent: ParticipantResult | null): ParticipantResult | null => {
+        if (currentOpponent === null)
+            return enableByes ? null : { id: null }; // BYE or TBD.
+
+        if (hasBye(existing))
+            return currentOpponent; // Reset old BYE completion state.
+
+        return { ...existingOpponent, ...currentOpponent };
+    };
+
     return {
         ...existing,
         ...match,
-        ...(enableByes ? {
-            opponent1: match.opponent1 === null ? null : { ...existing.opponent1, ...match.opponent1 },
-            opponent2: match.opponent2 === null ? null : { ...existing.opponent2, ...match.opponent2 },
-        } : {
-            opponent1: match.opponent1 === null ? { id: null } : { ...existing.opponent1, ...match.opponent1 },
-            opponent2: match.opponent2 === null ? { id: null } : { ...existing.opponent2, ...match.opponent2 },
-        }),
+        opponent1: mergeOpponent(match.opponent1, existing.opponent1),
+        opponent2: mergeOpponent(match.opponent2, existing.opponent2),
     };
 }
 

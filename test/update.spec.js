@@ -820,7 +820,7 @@ describe('Seeding', () => {
             assert.strictEqual(match.opponent1.result, undefined, `Match ${match.id} opponent1 should have no result`);
             assert.strictEqual(match.opponent2.id, null, `Match ${match.id} opponent2 should be TBD`);
             assert.strictEqual(match.opponent2.result, undefined, `Match ${match.id} opponent2 should have no result`);
-            assert.strictEqual(match.status, Status.Waiting, `Match ${match.id} should be Waiting`);
+            assert.strictEqual(match.status, Status.Locked, `Match ${match.id} should be Locked`);
         }
     });
 
