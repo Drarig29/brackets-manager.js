@@ -7,7 +7,7 @@ on:
 
 permissions:
   id-token: write # To publish on NPM with provenance and to federate tokens
-  contents: read # To read the package.json file
+  contents: write # To make a release on GitHub
 
 jobs:
   # Requires an approval
