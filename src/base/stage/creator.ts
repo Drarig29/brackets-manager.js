@@ -1,4 +1,4 @@
-import { Group, Id, InputStage, Match, MatchGame, Participant, Round, Seeding, SeedOrdering, Stage, Status } from 'brackets-model';
+import { Group, Id, InputStage, Match, MatchGame, Participant, Round, Seed, Seeding, SeedOrdering, Stage, Status } from 'brackets-model';
 import { defaultMinorOrdering, ordering } from '../../ordering';
 import { Duel, Storage, OmitId, ParticipantSlot, StandardBracketResults } from '../../types';
 import { BracketsManager } from '../..';
@@ -521,7 +521,7 @@ export class StageCreator {
      *
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    public async getSlots(positions?: number[]): Promise<ParticipantSlot[]> {
+    public async getSlots(positions?: Seed[]): Promise<ParticipantSlot[]> {
         let seeding = this.stage.seedingIds || this.stage.seeding;
         const size = this.stage.settings?.size || seeding?.length || 0;
         helpers.ensureValidSize(this.stage.type, size);
@@ -563,7 +563,7 @@ export class StageCreator {
      * @param seeding The seeding (names).
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    private async getSlotsUsingNames(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {
+    private async getSlotsUsingNames(seeding: Seeding, positions?: Seed[]): Promise<ParticipantSlot[]> {
         const participants = helpers.extractParticipantsFromSeeding(this.stage.tournamentId, seeding);
 
         if (!await this.registerParticipants(participants))
@@ -582,7 +582,7 @@ export class StageCreator {
      * @param seeding The seeding (IDs).
      * @param positions An optional list of positions (seeds) for a manual ordering.
      */
-    private async getSlotsUsingIds(seeding: Seeding, positions?: number[]): Promise<ParticipantSlot[]> {
+    private async getSlotsUsingIds(seeding: Seeding, positions?: Seed[]): Promise<ParticipantSlot[]> {
         const participants = await this.storage.select('participant', { tournament_id: this.stage.tournamentId });
         if (!participants) throw Error('No available participants.');
 
