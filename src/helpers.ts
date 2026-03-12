@@ -8,6 +8,7 @@ import {
     CustomParticipant,
     Result,
     RoundRobinMode,
+    Seed,
     Seeding,
     SeedOrdering,
     Stage,
@@ -1307,7 +1308,7 @@ export function extractParticipantsFromSeeding(tournamentId: Id, seeding: Seedin
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Participant[], positions?: Seed[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('name', seeding, database, positions);
 }
 
@@ -1318,7 +1319,7 @@ export function mapParticipantsNamesToDatabase(seeding: Seeding, database: Parti
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Participant[], positions?: Seed[]): ParticipantSlot[] {
     return mapParticipantsToDatabase('id', seeding, database, positions);
 }
 
@@ -1330,7 +1331,7 @@ export function mapParticipantsIdsToDatabase(seeding: Seeding, database: Partici
  * @param database The participants stored in the database.
  * @param positions An optional list of positions (seeds) for a manual ordering.
  */
-export function mapParticipantsToDatabase(prop: 'id' | 'name', seeding: Seeding, database: Participant[], positions?: number[]): ParticipantSlot[] {
+export function mapParticipantsToDatabase(prop: 'id' | 'name', seeding: Seeding, database: Participant[], positions?: Seed[]): ParticipantSlot[] {
     const slots = seeding.map((slot, i) => {
         if (slot === null) return null; // BYE.
 
@@ -1347,7 +1348,7 @@ export function mapParticipantsToDatabase(prop: 'id' | 'name', seeding: Seeding,
     if (!positions)
         return slots;
 
-    return positions.map(position => slots[position - 1]); // Because `position` is `i + 1`.
+    return positions.map(position => position === null ? null : slots[position - 1]); // Because `position` is `i + 1`.
 }
 
 /**

@@ -83,6 +83,27 @@ describe('Create single elimination stage', () => {
         }), 'Manual ordering for an elimination stage must have exactly one group.');
     });
 
+    it('should create a single elimination stage with manual ordering and BYEs', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4', 'Team 5', 'Team 6'],
+            settings: {
+                size: 8,
+                manualOrdering: [[1, 2, 3, null, 4, 5, 6, null]],
+            },
+        });
+
+        const matches = await storage.select('match');
+        assert.strictEqual(matches[1].opponent1.id, 2); // Team 3 advances automatically.
+        assert.strictEqual(matches[1].opponent2, null); // BYE.
+        assert.strictEqual(matches[1].status, 0); // Locked (auto-completed).
+        assert.strictEqual(matches[3].opponent1.id, 5); // Team 6 advances automatically.
+        assert.strictEqual(matches[3].opponent2, null); // BYE.
+        assert.strictEqual(matches[3].status, 0); // Locked (auto-completed).
+    });
+
     it('should throw if manual ordering for single elimination has wrong length', async () => {
         await assert.isRejected(manager.create.stage({
             name: 'Example',
