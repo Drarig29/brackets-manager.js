@@ -1065,7 +1065,7 @@ export function getNextSideConsolationFinalDoubleElimination(roundNumber: number
 export type SetNextOpponent = (nextMatch: Match, nextSide: Side, match?: Match, currentSide?: Side) => void;
 
 /**
- * Sets an opponent in the next match he has to go.
+ * Sets an opponent in the next match it has to go.
  *
  * @param nextMatch A match which follows the current one.
  * @param nextSide The side the opponent will be on in the next match.
