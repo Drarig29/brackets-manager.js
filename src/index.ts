@@ -1,19 +1,23 @@
 export { BracketsManager, CallableCreate } from './manager';
 
+// Re-export for backward compatibility
 export {
     CrudInterface,
     Database,
-    Duel,
     OmitId,
+    Table,
+    ValueToArray,
+    DataTypes,
+} from 'brackets-model';
+
+export {
+    Duel,
     OrderingMap,
     ParticipantSlot,
     Scores,
     Side,
     StandardBracketResults,
     Storage,
-    Table,
-    ValueToArray,
-    DataTypes,
     FinalStandingsItem,
     RoundRobinFinalStandingsItem,
     RoundRobinFinalStandingsOptions,

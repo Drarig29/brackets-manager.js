@@ -18,9 +18,11 @@ import {
     Id,
     RankingItem,
     RankingFormula,
+    Database,
+    OmitId,
 } from 'brackets-model';
 
-import { ChildGameResults, Database, DeepPartial, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
+import { ChildGameResults, DeepPartial, Duel, FinalStandingsItem, IdMapping, Nullable, ParitySplit, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
 
 /**

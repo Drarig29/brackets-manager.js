@@ -1,5 +1,5 @@
-import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id } from 'brackets-model';
-import { Database, FinalStandingsItem, ParticipantSlot, type RoundRobinFinalStandingsItem, type RoundRobinFinalStandingsOptions } from './types';
+import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id, Database } from 'brackets-model';
+import { FinalStandingsItem, ParticipantSlot, RoundRobinFinalStandingsItem, RoundRobinFinalStandingsOptions } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
 

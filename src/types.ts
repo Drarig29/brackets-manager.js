@@ -1,14 +1,9 @@
-import { Group, Id, Match, MatchGame, Participant, Round, SeedOrdering, Stage, RankingFormula, RankingItem } from 'brackets-model';
+import { CrudInterface, DataTypes, Id, RankingFormula, RankingItem, SeedOrdering, Table } from 'brackets-model';
 
 /**
  * Type of an object implementing every ordering method.
  */
 export type OrderingMap = Record<SeedOrdering, <T>(array: T[], ...args: number[]) => T[]>;
-
-/**
- * Omits the `id` property of a type.
- */
-export type OmitId<T> = Omit<T, 'id'>;
 
 /**
  * Defines a T which can be null.
@@ -97,35 +92,6 @@ export type DeepPartial<T> = T extends object ? {
 } : T;
 
 /**
- * Converts all value types to array types.
- */
-export type ValueToArray<T> = {
-    [K in keyof T]: Array<T[K]>;
-};
-
-/**
- * Data type associated to each database table.
- */
-export interface DataTypes {
-    stage: Stage,
-    group: Group,
-    round: Round,
-    match: Match,
-    match_game: MatchGame,
-    participant: Participant,
-}
-
-/**
- * The types of table in the storage.
- */
-export type Table = keyof DataTypes;
-
-/**
- * Format of the data in a database.
- */
-export type Database = ValueToArray<DataTypes>;
-
-/**
  * An item in the final standings of an elimination stage. Each item represents a {@link Participant}.
  */
 export interface FinalStandingsItem {
@@ -175,83 +141,6 @@ export interface StandardBracketResults {
      * The winner of the bracket.
      */
     winner: ParticipantSlot,
-}
-
-/**
- * This CRUD interface is used by the manager to abstract storage.
- */
-export interface CrudInterface {
-    /**
-     * Inserts a value in the database and returns its id.
-     *
-     * @param table Where to insert.
-     * @param value What to insert.
-     */
-    insert<T extends Table>(table: T, value: OmitId<DataTypes[T]>): Promise<number>
-
-    /**
-     * Inserts multiple values in the database.
-     *
-     * @param table Where to insert.
-     * @param values What to insert.
-     */
-    insert<T extends Table>(table: T, values: OmitId<DataTypes[T]>[]): Promise<boolean>
-
-    /**
-     * Gets all data from a table in the database.
-     *
-     * @param table Where to get from.
-     */
-    select<T extends Table>(table: T): Promise<Array<DataTypes[T]> | null>
-
-    /**
-     * Gets specific data from a table in the database.
-     *
-     * @param table Where to get from.
-     * @param id What to get.
-     */
-    select<T extends Table>(table: T, id: Id): Promise<DataTypes[T] | null>
-
-    /**
-     * Gets data from a table in the database with a filter.
-     *
-     * @param table Where to get from.
-     * @param filter An object to filter data.
-     */
-    select<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<Array<DataTypes[T]> | null>
-
-    /**
-     * Updates data in a table.
-     *
-     * @param table Where to update.
-     * @param id What to update.
-     * @param value How to update.
-     */
-    update<T extends Table>(table: T, id: Id, value: DataTypes[T]): Promise<boolean>
-
-    /**
-     * Updates data in a table.
-     *
-     * @param table Where to update.
-     * @param filter An object to filter data.
-     * @param value How to update.
-     */
-    update<T extends Table>(table: T, filter: Partial<DataTypes[T]>, value: Partial<DataTypes[T]>): Promise<boolean>
-
-    /**
-     * Empties a table completely.
-     * 
-     * @param table Where to delete everything.
-     */
-    delete<T extends Table>(table: T): Promise<boolean>
-
-    /**
-     * Delete data in a table, based on a filter.
-     *
-     * @param table Where to delete in.
-     * @param filter An object to filter data.
-     */
-    delete<T extends Table>(table: T, filter: Partial<DataTypes[T]>): Promise<boolean>
 }
 
 export interface Storage extends CrudInterface {
