@@ -337,22 +337,27 @@ export class Get extends BaseGetter {
         const final = matches.filter(match => match.group_id === singleBracket.id).pop();
         if (!final) throw Error('Final not found.');
 
-        // 1st place: Final winner.
-        grouped[0] = [helpers.findParticipant(participants, getFinalWinnerIfDefined(final))];
+        const finalDoubleForfeitParticipants = getDoubleForfeitParticipants(participants, final);
+
+        // 1st place: Final winner, or both finalists when the final is a double forfeit.
+        grouped[0] = finalDoubleForfeitParticipants || [helpers.findParticipant(participants, getFinalWinnerIfDefined(final))];
 
         // Rest: every loser in reverse order.
         const losers = helpers.getLosers(participants, matches.filter(match => match.group_id === singleBracket.id));
-        grouped.push(...losers.reverse());
+        grouped.push(...losers.reverse().filter(group => group.length > 0));
 
         if (stage.settings?.consolationFinal) {
             const consolationFinal = matches.filter(match => match.group_id === finalGroup.id).pop();
             if (!consolationFinal) throw Error('Consolation final not found.');
 
-            const consolationFinalWinner = helpers.findParticipant(participants, getFinalWinnerIfDefined(consolationFinal));
-            const consolationFinalLoser = helpers.findParticipant(participants, helpers.getLoser(consolationFinal));
+            const consolationFinalDoubleForfeitParticipants = getDoubleForfeitParticipants(participants, consolationFinal);
+            const consolationFinalGroups = consolationFinalDoubleForfeitParticipants ? [consolationFinalDoubleForfeitParticipants] : [
+                [helpers.findParticipant(participants, getFinalWinnerIfDefined(consolationFinal))],
+                [helpers.findParticipant(participants, helpers.getLoser(consolationFinal))],
+            ];
 
             // Overwrite semi-final losers with the consolation final results.
-            grouped.splice(2, 1, [consolationFinalWinner], [consolationFinalLoser]);
+            grouped.splice(finalDoubleForfeitParticipants ? 1 : 2, 1, ...consolationFinalGroups);
         }
 
         return helpers.makeFinalStandings(grouped);
@@ -377,25 +382,35 @@ export class Get extends BaseGetter {
             const finalLB = matches.filter(match => match.group_id === loserBracket.id).pop();
             if (!finalLB) throw Error('LB final not found.');
 
-            // 1st place: WB Final winner.
-            grouped[0] = [helpers.findParticipant(participants, getFinalWinnerIfDefined(finalWB))];
+            const finalWBDoubleForfeitParticipants = getDoubleForfeitParticipants(participants, finalWB);
 
-            // 2nd place: LB Final winner.
-            grouped[1] = [helpers.findParticipant(participants, getFinalWinnerIfDefined(finalLB))];
+            // 1st place: WB Final winner, or both finalists when the WB Final is a double forfeit.
+            grouped[0] = finalWBDoubleForfeitParticipants || [helpers.findParticipant(participants, getFinalWinnerIfDefined(finalWB))];
+
+            const finalLBDoubleForfeitParticipants = getDoubleForfeitParticipants(participants, finalLB);
+
+            // 2nd place: LB Final winner, or both finalists when the LB Final is a double forfeit.
+            grouped[1] = finalLBDoubleForfeitParticipants || [helpers.findParticipant(participants, getFinalWinnerIfDefined(finalLB))];
         } else {
             const grandFinalMatches = matches.filter(match => match.group_id === finalGroup.id);
             const decisiveMatch = helpers.getGrandFinalDecisiveMatch(stage.settings?.grandFinal || 'none', grandFinalMatches);
+            const grandFinalDoubleForfeitParticipants = getDoubleForfeitParticipants(participants, decisiveMatch);
 
-            // 1st place: Grand Final winner.
-            grouped[0] = [helpers.findParticipant(participants, getFinalWinnerIfDefined(decisiveMatch))];
+            if (grandFinalDoubleForfeitParticipants) {
+                // 1st place: Both grand finalists; the final creates no loser.
+                grouped[0] = grandFinalDoubleForfeitParticipants;
+            } else {
+                // 1st place: Grand Final winner.
+                grouped[0] = [helpers.findParticipant(participants, getFinalWinnerIfDefined(decisiveMatch))];
 
-            // 2nd place: Grand Final loser.
-            grouped[1] = [helpers.findParticipant(participants, helpers.getLoser(decisiveMatch))];
+                // 2nd place: Grand Final loser.
+                grouped[1] = [helpers.findParticipant(participants, helpers.getLoser(decisiveMatch))];
+            }
         }
 
         // Rest: every loser in reverse order.
         const losers = helpers.getLosers(participants, matches.filter(match => match.group_id === loserBracket.id));
-        grouped.push(...losers.reverse());
+        grouped.push(...losers.reverse().filter(group => group.length > 0));
 
         return helpers.makeFinalStandings(grouped);
     }
@@ -435,4 +450,14 @@ const getFinalWinnerIfDefined = (match: Match): ParticipantSlot => {
     const winner = helpers.getWinner(match);
     if (!winner) throw Error('The final match does not have a winner.');
     return winner;
+};
+
+const getDoubleForfeitParticipants = (participants: Participant[], match: Match): Participant[] | null => {
+    if (!helpers.isDoubleForfeitCompleted(match))
+        return null;
+
+    return [
+        helpers.findParticipant(participants, match.opponent1),
+        helpers.findParticipant(participants, match.opponent2),
+    ];
 };
