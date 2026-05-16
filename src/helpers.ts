@@ -20,7 +20,7 @@ import {
     RankingFormula,
 } from 'brackets-model';
 
-import { Database, DeepPartial, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
+import { ChildGameResults, Database, DeepPartial, Duel, FinalStandingsItem, IdMapping, Nullable, OmitId, ParitySplit, ParticipantSlot, Scores, Side } from './types';
 import { ordering } from './ordering';
 
 /**
@@ -467,6 +467,8 @@ export function getLoser(match: MatchResults): ParticipantSlot {
     return match[getOtherSide(winnerSide)];
 }
 
+export type MatchOutcome = Side | 'double_forfeit' | null;
+
 /**
  * Returns the pre-computed winner for a match because of BYEs.
  *
@@ -517,8 +519,21 @@ export function byeLoser(opponents: Duel, index: number): ParticipantSlot {
  * @param match A match's results.
  */
 export function getMatchResult(match: MatchResults): Side | null {
+    const outcome = getMatchOutcome(match);
+    return outcome === 'double_forfeit' ? null : outcome;
+}
+
+/**
+ * Returns the outcome of a match, including the case of a double forfeit.
+ *
+ * @param match A match's results.
+ */
+export function getMatchOutcome(match: MatchResults): MatchOutcome {
     if (!isMatchCompleted(match))
         return null;
+
+    if (isDoubleForfeitCompleted(match))
+        return 'double_forfeit';
 
     if (isMatchDrawCompleted(match))
         return null;
@@ -654,6 +669,15 @@ export function isMatchForfeitCompleted(match: DeepPartial<MatchResults>): boole
 }
 
 /**
+ * Checks if both opponents forfeited.
+ *
+ * @param match Partial match results.
+ */
+export function isDoubleForfeitCompleted(match: DeepPartial<MatchResults>): boolean {
+    return match.opponent1?.forfeit === true && match.opponent2?.forfeit === true;
+}
+
+/**
  * Checks if a match is completed because of a either a draw or a win.
  * 
  * @param match Partial match results.
@@ -700,7 +724,8 @@ export function isMatchByeCompleted(match: DeepPartial<MatchResults>): boolean {
  * @param match The match to check.
  */
 export function isMatchUpdateLocked(match: MatchResults): boolean {
-    return match.status === Status.Locked || match.status === Status.Waiting || match.status === Status.Archived || isMatchByeCompleted(match);
+    return match.status === Status.Locked || match.status === Status.Waiting || match.status === Status.Archived
+        || match.status === Status.GameCancelled || isMatchByeCompleted(match);
 }
 
 /**
@@ -790,12 +815,12 @@ export function setMatchResults(stored: MatchResults, match: DeepPartial<MatchRe
 
     if (completed && currentlyCompleted) {
         // Ensure everything is good.
-        setCompleted(stored, match, inRoundRobin);
+        setCompleted(stored, match);
         return { statusChanged: false, resultChanged: true };
     }
 
     if (completed && !currentlyCompleted) {
-        setCompleted(stored, match, inRoundRobin);
+        setCompleted(stored, match);
         return { statusChanged: true, resultChanged: true };
     }
 
@@ -1057,6 +1082,17 @@ export function setNextOpponent(nextMatch: Match, nextSide: Side, match?: Match,
 }
 
 /**
+ * Sets a BYE in the next match.
+ *
+ * @param nextMatch A match which follows the current one.
+ * @param nextSide The side the BYE will be on in the next match.
+ */
+export function setNextOpponentToBye(nextMatch: Match, nextSide: Side): void {
+    nextMatch[nextSide] = null;
+    nextMatch.status = getMatchStatus(nextMatch);
+}
+
+/**
  * Resets an opponent in the match following the current one.
  *
  * @param nextMatch A match which follows the current one.
@@ -1177,14 +1213,13 @@ export function getInferredResult(opponent1: ParticipantSlot, opponent2: Partici
  *
  * @param stored A reference to what will be updated in the storage.
  * @param match Input of the update.
- * @param inRoundRobin Indicates whether the match is in a round-robin stage.
  */
-export function setCompleted(stored: MatchResults, match: DeepPartial<MatchResults>, inRoundRobin: boolean): void {
+export function setCompleted(stored: MatchResults, match: DeepPartial<MatchResults>): void {
     stored.status = Status.Completed;
 
-    setResults(stored, match, 'win', 'loss', inRoundRobin);
-    setResults(stored, match, 'loss', 'win', inRoundRobin);
-    setResults(stored, match, 'draw', 'draw', inRoundRobin);
+    setResults(stored, match, 'win', 'loss');
+    setResults(stored, match, 'loss', 'win');
+    setResults(stored, match, 'draw', 'draw');
 
     const { opponent1, opponent2 } = getInferredResult(stored.opponent1, stored.opponent2);
 
@@ -1203,18 +1238,14 @@ export function setCompleted(stored: MatchResults, match: DeepPartial<MatchResul
  * @param match Input of the update.
  * @param check A result to check in each opponent.
  * @param change A result to set in each other opponent if `check` is correct.
- * @param inRoundRobin Indicates whether the match is in a round-robin stage.
  */
-export function setResults(stored: MatchResults, match: DeepPartial<MatchResults>, check: Result, change: Result, inRoundRobin: boolean): void {
+export function setResults(stored: MatchResults, match: DeepPartial<MatchResults>, check: Result, change: Result): void {
     if (match.opponent1 && match.opponent2) {
         if (match.opponent1.result === 'win' && match.opponent2.result === 'win')
             throw Error('There are two winners.');
 
         if (match.opponent1.result === 'loss' && match.opponent2.result === 'loss')
             throw Error('There are two losers.');
-
-        if (!inRoundRobin && match.opponent1.forfeit === true && match.opponent2.forfeit === true)
-            throw Error('There are two forfeits.');
     }
 
     if (match.opponent1?.result === check) {
@@ -1241,27 +1272,49 @@ export function setResults(stored: MatchResults, match: DeepPartial<MatchResults
  * @param match Input of the update.
  */
 export function setForfeits(stored: MatchResults, match: DeepPartial<MatchResults>): void {
-    if (match.opponent1?.forfeit === true && match.opponent2?.forfeit === true) {
-        if (stored.opponent1) stored.opponent1.forfeit = true;
-        if (stored.opponent2) stored.opponent2.forfeit = true;
+    const opponent1Forfeits = (match.opponent1?.forfeit === true || stored.opponent1?.forfeit === true);
+    const opponent2Forfeits = (match.opponent2?.forfeit === true || stored.opponent2?.forfeit === true);
+    const doubleForfeit = opponent1Forfeits && opponent2Forfeits;
+
+    const forfeit = (side: Side): void => {
+        const opponent = stored[side];
+        if (!opponent)
+            return;
+
+        // Keep the score but reset the result.
+        delete opponent.result;
+        opponent.forfeit = true;
+    };
+
+    if (doubleForfeit) {
+        forfeit('opponent1');
+        forfeit('opponent2');
 
         // Don't set any result (win/draw/loss) with a double forfeit 
-        // so that it doesn't count any point in the ranking.
+        // so that it doesn't count any point in round-robin ranking.
         return;
     }
 
-    if (match.opponent1?.forfeit === true) {
-        if (stored.opponent1) stored.opponent1.forfeit = true;
+    const winDueToForfeit = (side: Side): void => {
+        const opponent = stored[side];
+        if (!opponent) {
+            stored[side] = { id: null, result: 'win' };
+            return;
+        }
 
-        if (stored.opponent2) stored.opponent2.result = 'win';
-        else stored.opponent2 = { id: null, result: 'win' };
+        // Since we aren't in double-forfeit case, reset the forfeit value.
+        delete opponent.forfeit;
+        opponent.result = 'win';
+    };
+
+    if (match.opponent1?.forfeit === true) {
+        forfeit('opponent1');
+        winDueToForfeit('opponent2');
     }
 
     if (match.opponent2?.forfeit === true) {
-        if (stored.opponent2) stored.opponent2.forfeit = true;
-
-        if (stored.opponent1) stored.opponent1.result = 'win';
-        else stored.opponent1 = { id: null, result: 'win' };
+        forfeit('opponent2');
+        winDueToForfeit('opponent1');
     }
 }
 
@@ -1488,29 +1541,64 @@ export function transitionToMinor(previousDuels: Duel[], losers: ParticipantSlot
  * Sets the parent match to a completed status if all its child games are completed.
  *
  * @param parent The partial parent match to update.
+ * @param childResults The cumulated results of this parent match's child games.
  * @param childCount Child count of this parent match.
  * @param inRoundRobin Indicates whether the parent match is in a round-robin stage.
  */
-export function setParentMatchCompleted(parent: Pick<MatchResults, 'opponent1' | 'opponent2'>, childCount: number, inRoundRobin: boolean): void {
+export function setParentMatchCompleted(parent: Pick<MatchResults, 'opponent1' | 'opponent2'>, childResults: ChildGameResults, childCount: number, inRoundRobin: boolean): void {
     if (parent.opponent1?.score === undefined || parent.opponent2?.score === undefined)
         throw Error('Either opponent1, opponent2 or their scores are falsy.');
 
     const minToWin = minScoreToWinBestOfX(childCount);
+    const minToWinWithCancellations = Math.max(1, minToWin - childResults.spent);
 
-    if (parent.opponent1.score >= minToWin) {
+    // A cancelled child game can explicitly double-forfeit the parent, or spent games can consume
+    // enough of the series that no opponent can still reach the original win threshold.
+    if (childResults.doubleForfeit || childResults.spent >= minToWin) {
+        parent.opponent1.forfeit = true;
+        parent.opponent2.forfeit = true;
+        return;
+    }
+
+    // Spent games shorten the series, so both opponents can reach the adjusted win threshold at once.
+    if (parent.opponent1.score >= minToWinWithCancellations && parent.opponent2.score >= minToWinWithCancellations) {
+        if (inRoundRobin) {
+            parent.opponent1.result = 'draw';
+            parent.opponent2.result = 'draw';
+            return;
+        }
+
+        // Unlike the earlier double-forfeit cases, this tie emerges only after every available child game
+        // has been resolved and at least one of them was spent by cancellation.
+        if (childResults.spent > 0) {
+            parent.opponent1.forfeit = true;
+            parent.opponent2.forfeit = true;
+            return;
+        }
+
+        throw Error('Match games result in a tie for the parent match.');
+    }
+
+    if (parent.opponent1.score >= minToWinWithCancellations) {
         parent.opponent1.result = 'win';
         return;
     }
 
-    if (parent.opponent2.score >= minToWin) {
+    if (parent.opponent2.score >= minToWinWithCancellations) {
         parent.opponent2.result = 'win';
         return;
     }
 
-    if (parent.opponent1.score === parent.opponent2.score && parent.opponent1.score + parent.opponent2.score > childCount - 1) {
+    if (parent.opponent1.score === parent.opponent2.score && parent.opponent1.score + parent.opponent2.score + childResults.spent > childCount - 1) {
         if (inRoundRobin) {
             parent.opponent1.result = 'draw';
             parent.opponent2.result = 'draw';
+            return;
+        }
+
+        if (childResults.spent > 0) {
+            parent.opponent1.forfeit = true;
+            parent.opponent2.forfeit = true;
             return;
         }
 
@@ -1568,13 +1656,24 @@ export function getUpdatedMatchResults<T extends MatchResults>(match: T, existin
  *
  * @param games The child games to process.
  */
-export function getChildGamesResults(games: MatchGame[]): Scores {
-    const scores = {
+export function getChildGamesResults(games: MatchGame[]): ChildGameResults {
+    const scores: ChildGameResults = {
         opponent1: 0,
         opponent2: 0,
+        spent: 0,
+        doubleForfeit: false,
     };
 
     for (const game of games) {
+        if (game.status === Status.GameCancelled) {
+            if (isDoubleForfeitCompleted(game))
+                scores.doubleForfeit = true;
+            else
+                scores.spent++;
+
+            continue;
+        }
+
         const result = getMatchResult(game);
         if (result === 'opponent1') scores.opponent1++;
         else if (result === 'opponent2') scores.opponent2++;

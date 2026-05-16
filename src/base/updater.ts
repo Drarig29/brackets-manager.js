@@ -89,10 +89,10 @@ export class BaseUpdater extends BaseGetter {
         const games = await this.storage.select('match_game', { parent_id: parentId });
         if (!games) throw Error('No match games.');
 
-        const parentScores = helpers.getChildGamesResults(games);
-        const parent = helpers.getParentMatchResults(storedParent, parentScores);
+        const childResults = helpers.getChildGamesResults(games);
+        const parent = helpers.getParentMatchResults(storedParent, childResults);
 
-        helpers.setParentMatchCompleted(parent, storedParent.child_count, inRoundRobin);
+        helpers.setParentMatchCompleted(parent, childResults, storedParent.child_count, inRoundRobin);
 
         await this.updateMatch(storedParent, parent, true);
     }
@@ -157,6 +157,9 @@ export class BaseUpdater extends BaseGetter {
      * @param force Whether to force update locked matches.
      */
     protected async updateMatch(stored: Match, match: DeepPartial<Match>, force?: boolean): Promise<void> {
+        if (match.status === Status.GameCancelled)
+            throw Error('This status can only be used on match games with cancelMatchGame().');
+
         if (!force && helpers.isMatchUpdateLocked(stored))
             throw Error('The match is locked.');
 
@@ -171,7 +174,7 @@ export class BaseUpdater extends BaseGetter {
         // Don't update related matches if it's a simple score update.
         if (!statusChanged && !resultChanged) return;
 
-        if (!helpers.isRoundRobin(stage))
+        if (!inRoundRobin)
             await this.updateRelatedMatches(stored, statusChanged, resultChanged);
     }
 
@@ -182,6 +185,9 @@ export class BaseUpdater extends BaseGetter {
      * @param game Input of the update.
      */
     protected async updateMatchGame(stored: MatchGame, game: DeepPartial<MatchGame>): Promise<void> {
+        if (game.status === Status.GameCancelled)
+            throw Error('Use cancelMatchGame() to cancel a match game with the right mode.');
+
         if (helpers.isMatchUpdateLocked(stored))
             throw Error('The match game is locked.');
 
@@ -189,6 +195,15 @@ export class BaseUpdater extends BaseGetter {
         if (!stage) throw Error('Stage not found.');
 
         const inRoundRobin = helpers.isRoundRobin(stage);
+
+        const parent = await this.storage.select('match', stored.parent_id);
+        if (!parent) throw Error('Parent not found.');
+
+        if (helpers.isMatchUpdateLocked(parent))
+            throw Error('The parent match of this match game is locked.');
+
+        if (!inRoundRobin && game.opponent1?.forfeit === true && game.opponent2?.forfeit === true)
+            throw Error('Use cancelMatchGame() to double-forfeit a match game.');
 
         helpers.setMatchResults(stored, game, inRoundRobin);
 
@@ -288,11 +303,13 @@ export class BaseUpdater extends BaseGetter {
             return;
         }
 
-        const winnerSide = helpers.getMatchResult(match);
+        const outcome = helpers.getMatchOutcome(match);
         const actualRoundNumber = (stage.settings.skipFirstRound && matchLocation === 'winner_bracket') ? roundNumber + 1 : roundNumber;
 
-        if (winnerSide)
-            await this.applyToNextMatches(helpers.setNextOpponent, match, matchLocation, actualRoundNumber, roundCount, nextMatches, winnerSide);
+        if (outcome === 'double_forfeit')
+            await this.applyToNextMatches(helpers.setNextOpponentToBye, match, matchLocation, actualRoundNumber, roundCount, nextMatches);
+        else if (outcome)
+            await this.applyToNextMatches(helpers.setNextOpponent, match, matchLocation, actualRoundNumber, roundCount, nextMatches, outcome);
         else
             await this.applyToNextMatches(helpers.resetNextOpponent, match, matchLocation, actualRoundNumber, roundCount, nextMatches);
     }

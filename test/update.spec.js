@@ -276,12 +276,21 @@ describe('Update matches', () => {
         }), 'There are two losers.');
     });
 
-    it('should throw if two forfeits', async () => {
-        await assert.isRejected(manager.update.match({
+    it('should allow double forfeits', async () => {
+        await manager.update.match({
             id: 3,
             opponent1: { forfeit: true },
             opponent2: { forfeit: true },
-        }), 'There are two forfeits.');
+        });
+
+        const after = await storage.select('match', 3);
+        assert.isAtLeast(after.status, Status.Completed);
+        assert.strictEqual(after.opponent1.forfeit, true);
+        assert.strictEqual(after.opponent2.forfeit, true);
+        assert.notExists(after.opponent1.result);
+        assert.notExists(after.opponent2.result);
+
+        await manager.reset.matchResults(3);
     });
 
     it('should throw if draws in elimination stage', async () => {
@@ -304,7 +313,7 @@ describe('Update matches', () => {
         }), 'Having a draw is forbidden in an elimination tournament.');
     });
 
-    it('should throw if one forfeit then the other without resetting the match between', async () => {
+    it('should allow double forfeit when they are set one after the other', async () => {
         await manager.update.match({
             id: 4,
             opponent1: { forfeit: true },
@@ -314,10 +323,256 @@ describe('Update matches', () => {
         assert.strictEqual(after.opponent1.forfeit, true);
         assert.notExists(after.opponent2.forfeit);
 
-        manager.update.match({
+        await manager.update.match({
             id: 4,
             opponent2: { forfeit: true },
         });
+
+        after = await storage.select('match', 4);
+        assert.strictEqual(after.opponent1.forfeit, true);
+        assert.strictEqual(after.opponent2.forfeit, true);
+
+        await manager.reset.matchResults(4);
+    });
+
+    it('forfeit should reset result', async () => {
+        await manager.update.match({
+            id: 4,
+            opponent1: { result: 'win' },
+        });
+
+        let after = await storage.select('match', 4);
+        assert.strictEqual(after.opponent1.result, 'win');
+        assert.strictEqual(after.opponent2.result, 'loss');
+
+        await manager.update.match({
+            id: 4,
+            opponent1: { forfeit: true },
+        });
+
+        after = await storage.select('match', 4);
+        assert.strictEqual(after.opponent1.forfeit, true);
+        assert.strictEqual(after.opponent1.result, undefined);
+        assert.strictEqual(after.opponent2.forfeit, undefined);
+        assert.strictEqual(after.opponent2.result, 'win');
+
+        await manager.update.match({
+            id: 4,
+            opponent2: { forfeit: true },
+        });
+
+        after = await storage.select('match', 4);
+        assert.strictEqual(after.opponent1.forfeit, true);
+        assert.strictEqual(after.opponent1.result, undefined);
+        assert.strictEqual(after.opponent2.forfeit, true);
+        assert.strictEqual(after.opponent2.result, undefined);
+
+        await manager.reset.matchResults(4);
+    });
+});
+
+describe('Match game cancellation', () => {
+
+    beforeEach(() => {
+        storage.reset();
+    });
+
+    it('should reject GameCancelled status on parent matches and direct match game updates', async () => {
+        await manager.create.stage({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+            settings: { matchesChildCount: 1 },
+        });
+
+        await assert.isRejected(manager.update.match({ id: 0, status: Status.GameCancelled }), 'This status can only be used on match games with cancelMatchGame().');
+        await assert.isRejected(manager.update.matchGame({ id: 0, status: Status.GameCancelled }), 'Use cancelMatchGame() to cancel a match game with the right mode.');
+    });
+
+    it('should turn a spent BO1 cancellation into a parent double forfeit', async () => {
+        await manager.create.stage({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 1 },
+        });
+
+        await manager.update.cancelMatchGame(0, { mode: 'spent_game' });
+
+        const game = await storage.select('match_game', 0);
+        assert.strictEqual(game.status, Status.GameCancelled);
+        assert.notExists(game.opponent1.forfeit);
+        assert.notExists(game.opponent2.forfeit);
+
+        const match = await storage.select('match', 0);
+        assert.strictEqual(match.status, Status.Completed);
+        assert.strictEqual(match.opponent1.forfeit, true);
+        assert.strictEqual(match.opponent2.forfeit, true);
+        assert.notExists(match.opponent1.result);
+        assert.notExists(match.opponent2.result);
+
+        const final = await storage.select('match', 2);
+        assert.strictEqual(final.opponent1, null);
+    });
+
+    it('should make a BO3 effectively BO1 after a spent cancellation', async () => {
+        await manager.create.stage({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.cancelMatchGame(0, { mode: 'spent_game' });
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
+
+        await manager.update.matchGame({ id: 1, opponent2: { result: 'win' } });
+
+        const match = await storage.select('match', 0);
+        assert.strictEqual(match.status, Status.Completed);
+        assert.strictEqual(match.opponent1.score, 0);
+        assert.strictEqual(match.opponent2.score, 1);
+        assert.strictEqual(match.opponent2.result, 'win');
+
+        const games = await storage.select('match_game', { parent_id: 0 });
+        assert.strictEqual(games[0].status, Status.GameCancelled);
+        assert.strictEqual(games[1].status, Status.Completed);
+        assert.strictEqual(games[2].status, Status.Ready);
+    });
+
+    it('should resolve BO3 score 1-0 plus a spent cancellation for the leading opponent', async () => {
+        await manager.create.stage({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.cancelMatchGame(1, { mode: 'spent_game' });
+
+        const match = await storage.select('match', 0);
+        assert.strictEqual(match.status, Status.Completed);
+        assert.strictEqual(match.opponent1.score, 1);
+        assert.strictEqual(match.opponent2.score, 0);
+        assert.strictEqual(match.opponent1.result, 'win');
+
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
+    });
+
+    it('should double-forfeit BO3 score 1-1 plus a spent final-game cancellation', async () => {
+        await manager.create.stage({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent2: { result: 'win' } });
+        await manager.update.cancelMatchGame(2, { mode: 'spent_game' });
+
+        const match = await storage.select('match', 0);
+        assert.strictEqual(match.status, Status.Completed);
+        assert.strictEqual(match.opponent1.score, 1);
+        assert.strictEqual(match.opponent2.score, 1);
+        assert.strictEqual(match.opponent1.forfeit, true);
+        assert.strictEqual(match.opponent2.forfeit, true);
+        assert.notExists(match.opponent1.result);
+        assert.notExists(match.opponent2.result);
+    });
+
+    it('should double-forfeit the parent from explicit child cancellation mode', async () => {
+        await manager.create.stage({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.cancelMatchGame(1, { mode: 'double_forfeit' });
+
+        const game = await storage.select('match_game', 1);
+        assert.strictEqual(game.status, Status.GameCancelled);
+        assert.strictEqual(game.opponent1.forfeit, true);
+        assert.strictEqual(game.opponent2.forfeit, true);
+
+        const match = await storage.select('match', 0);
+        assert.strictEqual(match.status, Status.Completed);
+        assert.strictEqual(match.opponent1.forfeit, true);
+        assert.strictEqual(match.opponent2.forfeit, true);
+        assert.notExists(match.opponent1.result);
+        assert.notExists(match.opponent2.result);
+    });
+
+    it('should leave unplayed games available when a child game result is reset', async () => {
+        await manager.create.stage({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { matchesChildCount: 3 },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
+
+        await manager.reset.matchGameResults(1);
+
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Running);
+        assert.strictEqual((await storage.select('match_game', 2)).status, Status.Ready);
+    });
+});
+
+describe('Double forfeit propagation', () => {
+
+    beforeEach(() => {
+        storage.reset();
+    });
+
+    it('should create BYEs in final and consolation final for single elimination', async () => {
+        await manager.create.stage({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { consolationFinal: true },
+        });
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { forfeit: true },
+            opponent2: { forfeit: true },
+        });
+
+        assert.strictEqual((await storage.select('match', 2)).opponent1, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent1, null);
+    });
+
+    it('should create BYEs in winner and loser brackets for double elimination', async () => {
+        await manager.create.stage({
+            tournamentId: 0,
+            name: 'Example',
+            type: 'double_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+        });
+
+        await manager.update.match({
+            id: 0,
+            opponent1: { forfeit: true },
+            opponent2: { forfeit: true },
+        });
+
+        assert.strictEqual((await storage.select('match', 2)).opponent1, null);
+        assert.strictEqual((await storage.select('match', 3)).opponent1, null);
     });
 });
 
@@ -571,7 +826,6 @@ describe('Update match games', () => {
 
         await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
         await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
-        await manager.update.matchGame({ id: 2, opponent2: { result: 'win' } });
 
         assert.strictEqual(
             (await storage.select('match', 2)).opponent1.id, // Should be determined automatically.
