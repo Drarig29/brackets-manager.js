@@ -8,6 +8,11 @@ const { JsonDatabase } = require('brackets-json-db');
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
 
+const makeStandingsItem = (participants, slot, rank) => {
+    const participant = participants.find(participant => participant.id === slot.id);
+    return { id: participant.id, name: participant.name, rank };
+};
+
 describe('Get child games', () => {
 
     beforeEach(() => {
@@ -132,6 +137,72 @@ describe('Get final standings', () => {
         ]);
     });
 
+    it('should get shared first place for a single elimination final double forfeit', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+        });
+
+        await manager.update.match({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.match({ id: 1, opponent1: { result: 'win' } });
+
+        const semiFinals = await storage.select('match', { round_id: 0 });
+        const final = await storage.select('match', 2);
+
+        await manager.update.match({
+            id: final.id,
+            opponent1: { forfeit: true },
+            opponent2: { forfeit: true },
+        });
+
+        const participants = await storage.select('participant', { tournament_id: 0 });
+        const finalStandings = await manager.get.finalStandings(0);
+
+        assert.deepEqual(finalStandings, [
+            makeStandingsItem(participants, final.opponent1, 1),
+            makeStandingsItem(participants, final.opponent2, 1),
+            makeStandingsItem(participants, semiFinals[0].opponent2, 2),
+            makeStandingsItem(participants, semiFinals[1].opponent2, 2),
+        ]);
+    });
+
+    it('should keep consolation final ranks after a single elimination final double forfeit', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2', 'Team 3', 'Team 4'],
+            settings: { consolationFinal: true },
+        });
+
+        await manager.update.match({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.match({ id: 1, opponent1: { result: 'win' } });
+
+        const groups = await storage.select('group', { stage_id: 0 });
+        const final = (await storage.select('match', { group_id: groups[0].id })).pop();
+        const consolationFinal = (await storage.select('match', { group_id: groups[1].id })).pop();
+
+        await manager.update.match({ id: consolationFinal.id, opponent1: { result: 'win' } });
+
+        await manager.update.match({
+            id: final.id,
+            opponent1: { forfeit: true },
+            opponent2: { forfeit: true },
+        });
+
+        const participants = await storage.select('participant', { tournament_id: 0 });
+        const finalStandings = await manager.get.finalStandings(0);
+
+        assert.deepEqual(finalStandings, [
+            makeStandingsItem(participants, final.opponent1, 1),
+            makeStandingsItem(participants, final.opponent2, 1),
+            makeStandingsItem(participants, consolationFinal.opponent1, 2),
+            makeStandingsItem(participants, consolationFinal.opponent2, 3),
+        ]);
+    });
+
     it('should get the final standings for a double elimination stage with a grand final', async () => {
         await manager.create.stage({
             name: 'Example',
@@ -163,6 +234,44 @@ describe('Get final standings', () => {
             { id: 7, name: 'Team 8', rank: 6 },
             { id: 2, name: 'Team 3', rank: 6 },
         ]);
+    });
+
+    it('should get shared first place for a double elimination grand final double forfeit', async () => {
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: [
+                'Team 1', 'Team 2', 'Team 3', 'Team 4',
+            ],
+            settings: { grandFinal: 'simple' },
+        });
+
+        const groups = await storage.select('group', { stage_id: 0 });
+        const grandFinal = (await storage.select('match', { group_id: groups[2].id }))[0];
+        const matches = (await storage.select('match', { stage_id: 0 }))
+            .filter(match => match.id !== grandFinal.id)
+            .sort((a, b) => a.id - b.id);
+
+        for (const match of matches)
+            await manager.update.match({ id: match.id, opponent1: { result: 'win' } });
+
+        const final = await storage.select('match', grandFinal.id);
+
+        await manager.update.match({
+            id: final.id,
+            opponent1: { forfeit: true },
+            opponent2: { forfeit: true },
+        });
+
+        const participants = await storage.select('participant', { tournament_id: 0 });
+        const finalStandings = await manager.get.finalStandings(0);
+
+        assert.deepEqual(finalStandings.slice(0, 2), [
+            makeStandingsItem(participants, final.opponent1, 1),
+            makeStandingsItem(participants, final.opponent2, 1),
+        ]);
+        assert.strictEqual(finalStandings[2].rank, 2);
     });
 
     it('should get the final standings for a double elimination stage without a grand final', async () => {
