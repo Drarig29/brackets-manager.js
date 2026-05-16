@@ -92,7 +92,7 @@ export type DeepPartial<T> = T extends object ? {
 } : T;
 
 /**
- * An item in the final standings of an elimination stage. Each item represents a {@link Participant}.
+ * An item in the final standings of an elimination stage. Each item represents a participant.
  */
 export interface FinalStandingsItem {
     id: Id,
@@ -101,7 +101,7 @@ export interface FinalStandingsItem {
 }
 
 /**
- * An item in the final standings of a round-robin stage. Each item represents a {@link Participant}.
+ * An item in the final standings of a round-robin stage. Each item represents a participant.
  */
 export interface RoundRobinFinalStandingsItem extends RankingItem {
     groupId: Id,
