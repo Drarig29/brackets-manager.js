@@ -41,9 +41,37 @@ export type Side = 'opponent1' | 'opponent2';
 export type Scores = { opponent1: number, opponent2: number };
 
 /**
+ * The cumulated results of a match's child games.
+ */
+export interface ChildGameResults extends Scores {
+    /**
+     * The count of match games cancelled as spent games.
+     */
+    spent: number,
+
+    /**
+     * Whether a match game cancelled the whole parent match as a double forfeit.
+     */
+    doubleForfeit: boolean,
+}
+
+/**
  * The possible levels of data to which we can update the child games count.
  */
 export type ChildCountLevel = 'stage' | 'group' | 'round' | 'match';
+
+/**
+ * Options for cancelling a match game.
+ */
+export interface MatchGameCancellationOptions {
+    /**
+     * How cancelling a match game should affect its parent match.
+     *
+     * - `spent_game`: Consumes one Best-of-X game without awarding it to either opponent.
+     * - `double_forfeit`: Disqualifies both opponents from the parent match.
+     */
+    mode: 'spent_game' | 'double_forfeit',
+}
 
 /**
  * Positional information about a round.

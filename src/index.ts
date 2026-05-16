@@ -23,6 +23,8 @@ export {
     Nullable,
     DeepPartial,
     ChildCountLevel,
+    ChildGameResults,
+    MatchGameCancellationOptions,
 } from './types';
 
 export * as helpers from './helpers';

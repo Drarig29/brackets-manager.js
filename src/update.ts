@@ -1,7 +1,7 @@
 import { Id, IdSeeding, Match, MatchGame, Round, Seeding, SeedOrdering, Status } from 'brackets-model';
 import { ordering } from './ordering';
 import { BaseUpdater } from './base/updater';
-import { ChildCountLevel, DeepPartial } from './types';
+import { ChildCountLevel, DeepPartial, MatchGameCancellationOptions } from './types';
 import * as helpers from './helpers';
 
 export class Update extends BaseUpdater {
@@ -34,6 +34,60 @@ export class Update extends BaseUpdater {
         const stored = await this.findMatchGame(game);
 
         await this.updateMatchGame(stored, game);
+    }
+
+    /**
+     * Cancels a match game.
+     *
+     * @param gameId ID of the match game.
+     * @param options Options for cancelling a match game.
+     */
+    public async cancelMatchGame(gameId: Id, options: MatchGameCancellationOptions): Promise<void> {
+        const stored = await this.storage.select('match_game', gameId);
+        if (!stored) throw Error('Match game not found.');
+
+        if (!options || options.mode !== 'spent_game' && options.mode !== 'double_forfeit')
+            throw Error('Invalid match game cancellation mode.');
+
+        if (helpers.isMatchUpdateLocked(stored))
+            throw Error('The match game is locked.');
+
+        const parent = await this.storage.select('match', stored.parent_id);
+        if (!parent) throw Error('Parent not found.');
+        if (parent.status === Status.Archived || helpers.isDoubleForfeitCompleted(parent))
+            throw Error('The match game is locked.');
+
+        stored.status = Status.GameCancelled;
+
+        if (stored.opponent1) {
+            delete stored.opponent1.score;
+            delete stored.opponent1.result;
+            if (options.mode === 'double_forfeit') stored.opponent1.forfeit = true;
+            else delete stored.opponent1.forfeit;
+        }
+
+        if (stored.opponent2) {
+            delete stored.opponent2.score;
+            delete stored.opponent2.result;
+            if (options.mode === 'double_forfeit') stored.opponent2.forfeit = true;
+            else delete stored.opponent2.forfeit;
+        }
+
+        if (!await this.storage.update('match_game', stored.id, stored))
+            throw Error('Could not update the match game.');
+
+        if (options.mode === 'double_forfeit') {
+            await this.updateMatch(parent, {
+                opponent1: { forfeit: true },
+                opponent2: { forfeit: true },
+            }, true);
+            return;
+        }
+
+        const stage = await this.storage.select('stage', stored.stage_id);
+        if (!stage) throw Error('Stage not found.');
+
+        await this.updateParentMatch(stored.parent_id, helpers.isRoundRobin(stage));
     }
 
     /**
