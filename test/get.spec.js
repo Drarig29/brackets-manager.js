@@ -59,6 +59,38 @@ describe('Get child games', () => {
     });
 });
 
+describe('Get current round', () => {
+
+    beforeEach(() => {
+        storage.reset();
+    });
+
+    it('should skip a round decided by BYEs when getting the current round', async () => {
+        const stage = await manager.create.stage({
+            name: 'Some Title',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['P1', 'P2', 'P3', null],
+            settings: {
+                grandFinal: 'simple',
+                balanceByes: true,
+                matchesChildCount: 3,
+            },
+        });
+
+        assert.strictEqual((await manager.get.currentRound(stage.id)).number, 1);
+        assert.deepEqual((await manager.get.currentMatches(stage.id)).map(match => match.round_id), [0]);
+
+        await manager.update.match({ id: 1, opponent1: { result: 'win' } });
+
+        const currentRound = await manager.get.currentRound(stage.id);
+        const currentMatches = await manager.get.currentMatches(stage.id);
+
+        assert.strictEqual(currentRound.number, 2);
+        assert.deepEqual(currentMatches.map(match => match.round_id), [currentRound.id]);
+    });
+});
+
 describe('Get final standings', () => {
 
     beforeEach(() => {
