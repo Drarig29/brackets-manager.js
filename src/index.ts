@@ -29,6 +29,8 @@ export {
     ChildCountLevel,
     ChildGameResults,
     MatchGameCancellationOptions,
+    EntityChangeMethod,
+    EntityChangedEvent,
 } from './types';
 
 export * as helpers from './helpers';
