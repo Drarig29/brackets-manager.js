@@ -62,6 +62,16 @@ describe('Unit - get', () => {
                 { stage_id: 2, id: 1 },
             ],
             [
+                'two rounds, with 1st round decided by completed matches and BYEs',
+                [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
+                [
+                    { stage_id: 2, round_id: 0, status: Status.Locked, opponent1: { id: 0 }, opponent2: null },
+                    { stage_id: 2, round_id: 0, status: Status.Completed },
+                    { stage_id: 2, round_id: 1, status: Status.Ready },
+                ],
+                { stage_id: 2, id: 1 },
+            ],
+            [
                 'two stages, with all matches completed',
                 [{ stage_id: 2, id: 0 }, { stage_id: 2, id: 1 }],
                 [{ stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 0, status: Status.Completed }, { stage_id: 2, round_id: 1, status: Status.Completed }],
