@@ -169,6 +169,35 @@ describe('Create double elimination stage', () => {
 
         assert.strictEqual((await storage.select('match', 15)).number, 2); // Consolation final is number 2 of its round (arbitrary).
     });
+
+    it('should create a consolation final in the final group without grand final', async () => {
+        await manager.create.stage({
+            name: 'Example with consolation final',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding: [
+                'Team 1', 'Team 2',
+                'Team 3', 'Team 4',
+                'Team 5', 'Team 6',
+                'Team 7', 'Team 8',
+            ],
+            settings: {
+                grandFinal: 'none',
+                consolationFinal: true,
+                seedOrdering: ['natural'],
+            },
+        });
+
+        assert.deepEqual(await storage.select('group'), [
+            { id: 0, stage_id: 0, number: 1 },
+            { id: 1, stage_id: 0, number: 2 },
+            { id: 2, stage_id: 0, number: 3 }, // Final group.
+        ]);
+
+        assert.strictEqual((await storage.select('round')).length, 3 + 4 + 1 /* consolation final */);
+        assert.strictEqual((await storage.select('match')).length, 14);
+        assert.strictEqual((await storage.select('match', 13)).number, 2); // Consolation final is number 2 of its round (arbitrary).
+    });
 });
 
 describe('Previous and next match update in double elimination stage', () => {
