@@ -48,16 +48,22 @@ export const ordering: OrderingMap = {
     },
     'groups.seed_optimized': <T>(array: T[], groupCount: number) => {
         const groups = Array.from({ length: groupCount }, (_): T[] => []);
+        const minGroupSize = Math.floor(array.length / groupCount);
+        const extraGroups = array.length % groupCount;
+        const groupSizes = groups.map((_, group) => minGroupSize + (group < extraGroups ? 1 : 0));
+        let index = 0;
 
-        for (let run = 0; run < array.length / groupCount; run++) {
-            if (run % 2 === 0) {
-                for (let group = 0; group < groupCount; group++)
-                    groups[group].push(array[run * groupCount + group]);
+        for (let run = 0; index < array.length; run++) {
+            const groupOrder = run % 2 === 0
+                ? groups.map((_, group) => group)
+                : groups.map((_, group) => groupCount - group - 1);
 
-            } else {
-                for (let group = 0; group < groupCount; group++)
-                    groups[groupCount - group - 1].push(array[run * groupCount + group]);
+            for (const group of groupOrder) {
+                if (index >= array.length) break;
+                if (groups[group].length >= groupSizes[group]) continue;
 
+                groups[group].push(array[index]);
+                index++;
             }
         }
 
@@ -120,7 +126,8 @@ export const ordering: OrderingMap = {
         for (let i = 0; i < pairCount; i++) {
             const base = baseGroupForPair(i);
             const aIndex = positions[2 * i] - 1; // convert to 0-based
-            groups[base].push(array[aIndex]);
+            if (aIndex < array.length)
+                groups[base].push(array[aIndex]);
         }
 
         // Then, distribute the second element of each pair to the opposite
@@ -128,7 +135,8 @@ export const ordering: OrderingMap = {
         for (let i = 0; i < pairCount; i++) {
             const base = baseGroupForPair(i);
             const bIndex = positions[2 * i + 1] - 1; // convert to 0-based
-            groups[(base + halfGroupCount) % groupCount].push(array[bIndex]);
+            if (bIndex < array.length)
+                groups[(base + halfGroupCount) % groupCount].push(array[bIndex]);
         }
 
         // Sort each group by original seed order so the strongest seed of the

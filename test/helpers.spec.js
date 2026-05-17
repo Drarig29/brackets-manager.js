@@ -10,6 +10,12 @@ describe('Helpers', () => {
             assert.deepStrictEqual(makeGroups([1, 2, 3, 4, 5], 2), [[1, 2, 3], [4, 5]]);
             assert.deepStrictEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 2), [[1, 2, 3, 4], [5, 6, 7, 8]]);
             assert.deepStrictEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8], 3), [[1, 2, 3], [4, 5, 6], [7, 8]]);
+            assert.deepStrictEqual(makeGroups([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 4), [
+                [1, 2, 3, 4],
+                [5, 6, 7, 8],
+                [9, 10, 11],
+                [12, 13, 14],
+            ]);
         });
 
         it('should make the rounds for a round-robin group', () => {
@@ -17,6 +23,17 @@ describe('Helpers', () => {
             assertRoundRobin([1, 2, 3, 4], makeRoundRobinMatches([1, 2, 3, 4]));
             assertRoundRobin([1, 2, 3, 4, 5], makeRoundRobinMatches([1, 2, 3, 4, 5]));
             assertRoundRobin([1, 2, 3, 4, 5, 6], makeRoundRobinMatches([1, 2, 3, 4, 5, 6]));
+        });
+
+        it('should mirror the same round order for a double round-robin group', () => {
+            assert.deepStrictEqual(makeRoundRobinMatches([1, 2, 3, 4], 'double'), [
+                [[1, 4], [3, 2]],
+                [[2, 4], [1, 3]],
+                [[3, 4], [2, 1]],
+                [[4, 1], [2, 3]],
+                [[4, 2], [3, 1]],
+                [[4, 3], [1, 2]],
+            ]);
         });
     });
 
@@ -150,6 +167,15 @@ describe('Helpers', () => {
             ]);
         });
 
+        it('should make a snake ordering for uneven groups', () => {
+            assert.deepStrictEqual(ordering['groups.seed_optimized']([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], 4), [
+                1, 8, 9, 14,  // 1st group
+                2, 7, 10, 13, // 2nd group
+                3, 6, 11,     // 3rd group
+                4, 5, 12,     // 4th group
+            ]);
+        });
+
         it('should make a bracket-optimized ordering for groups (8 seeds, 4 groups)', () => {
             const seeds = [1, 2, 3, 4, 5, 6, 7, 8];
             const result = ordering['groups.bracket_optimized'](seeds, 4);
@@ -220,6 +246,15 @@ describe('Helpers', () => {
                 [3, 5, 10, 16],
                 [4, 6, 9, 15],
             ]);
+        });
+
+        it('should make a bracket-optimized ordering for groups without missing seeds', () => {
+            const seeds = Array.from({ length: 14 }, (_, i) => i + 1);
+            const result = ordering['groups.bracket_optimized'](seeds, 4);
+
+            assert.strictEqual(result.length, 14);
+            assert.isFalse(result.includes(undefined));
+            assert.deepStrictEqual(makeGroups(result, 4).map(group => group.length), [4, 4, 3, 3]);
         });
     });
 

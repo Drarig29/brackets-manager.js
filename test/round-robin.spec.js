@@ -9,6 +9,18 @@ const { Status } = require('brackets-model');
 const storage = new JsonDatabase();
 const manager = new BracketsManager(storage);
 
+const getGroupPositions = async () => {
+    const groups = await storage.select('group');
+
+    return Promise.all(groups.map(async group => {
+        const matches = await storage.select('match', { group_id: group.id });
+        const positions = matches.flatMap(match => [match.opponent1?.position, match.opponent2?.position])
+            .filter(position => typeof position === 'number');
+
+        return [...new Set(positions)].sort((a, b) => a - b);
+    }));
+};
+
 describe('Create a round-robin stage', () => {
 
     beforeEach(() => {
@@ -75,6 +87,28 @@ describe('Create a round-robin stage', () => {
         }
     });
 
+    it('should preserve uneven manual seeding groups', async () => {
+        const manualOrdering = [
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+            [9, 10, 11],
+            [12, 13, 14],
+        ];
+
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'round_robin',
+            seeding: Array.from({ length: 14 }, (_, i) => `Team ${i + 1}`),
+            settings: {
+                groupCount: 4,
+                manualOrdering,
+            },
+        });
+
+        assert.deepStrictEqual(await getGroupPositions(), manualOrdering);
+    });
+
     it('should throw if manual ordering has invalid counts', async () => {
         await assert.isRejected(manager.create.stage({
             name: 'Example',
@@ -132,6 +166,32 @@ describe('Create a round-robin stage', () => {
 
         // One match must be missing.
         assert.strictEqual((await storage.select('match')).length, 11);
+    });
+
+    it('should balance group sizes when participant count is not divisible by group count', async () => {
+        const seedOrderings = [
+            undefined,
+            'groups.effort_balanced',
+            'groups.seed_optimized',
+            'groups.bracket_optimized',
+        ];
+
+        for (const seedOrdering of seedOrderings) {
+            storage.reset();
+
+            await manager.create.stage({
+                name: 'Example',
+                tournamentId: 0,
+                type: 'round_robin',
+                seeding: Array.from({ length: 14 }, (_, i) => `Team ${i + 1}`),
+                settings: {
+                    groupCount: 4,
+                    ...(seedOrdering ? { seedOrdering: [seedOrdering] } : {}),
+                },
+            });
+
+            assert.deepStrictEqual((await getGroupPositions()).map(group => group.length), [4, 4, 3, 3]);
+        }
     });
 
     it('should create a round-robin stage with to be determined participants', async () => {
