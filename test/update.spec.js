@@ -709,7 +709,7 @@ describe('Update match games', () => {
         await manager.update.matchGame({ parent_id: 2, number: 2, opponent1: { result: 'win' } });
 
         finalMatchStatus = (await storage.select('match', 2)).status;
-        assert.strictEqual(finalMatchStatus, Status.Archived);
+        assert.strictEqual(finalMatchStatus, Status.Completed);
         assert.strictEqual(finalMatchStatus, (await storage.select('match_game', 4)).status);
 
         const semi1Status = (await storage.select('match', 0)).status;
@@ -749,6 +749,53 @@ describe('Update match games', () => {
         assert.strictEqual(secondChildReset.status, Status.Running);
         assert.strictEqual(secondChildReset.opponent1.score, 1);
         assert.strictEqual(secondChildReset.opponent2.score, 0);
+    });
+
+    it('should allow correcting child games of a terminal final', async () => {
+        await manager.create.stage({
+            name: 'With match games',
+            tournamentId: 0,
+            type: 'single_elimination',
+            seeding: ['Team 1', 'Team 2'],
+            settings: {
+                matchesChildCount: 3,
+            },
+        });
+
+        await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
+        await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
+
+        let parent = await storage.select('match', 0);
+        assert.strictEqual(parent.status, Status.Completed);
+        assert.strictEqual(parent.opponent1.result, 'win');
+
+        await manager.update.matchGame({
+            id: 0,
+            opponent1: { score: 21, result: 'win' },
+            opponent2: { score: 19 },
+        });
+
+        let correctedGame = await storage.select('match_game', 0);
+        assert.strictEqual(correctedGame.status, Status.Completed);
+        assert.strictEqual(correctedGame.opponent1.result, 'win');
+        assert.strictEqual(correctedGame.opponent1.score, 21);
+        assert.strictEqual(correctedGame.opponent2.score, 19);
+
+        await manager.update.matchGame({ id: 1, opponent2: { result: 'win' } });
+
+        parent = await storage.select('match', 0);
+        assert.strictEqual(parent.status, Status.Running);
+        assert.notExists(parent.opponent1.result);
+        assert.notExists(parent.opponent2.result);
+        assert.strictEqual(parent.opponent1.score, 1);
+        assert.strictEqual(parent.opponent2.score, 1);
+
+        await manager.update.matchGame({ id: 2, opponent2: { result: 'win' } });
+
+        parent = await storage.select('match', 0);
+        assert.strictEqual(parent.status, Status.Completed);
+        assert.strictEqual(parent.opponent1.result, 'loss');
+        assert.strictEqual(parent.opponent2.result, 'win');
     });
 
     it('should throw if trying to update a locked match game', async () => {
@@ -886,7 +933,7 @@ describe('Update match games', () => {
 
         await manager.update.matchGame({ id: 0, opponent1: { result: 'win' } });
         await manager.update.matchGame({ id: 1, opponent1: { result: 'win' } });
-        assert.strictEqual((await storage.select('match', 0)).status, Status.Archived); // Completed, but single match in the stage.
+        assert.strictEqual((await storage.select('match', 0)).status, Status.Completed);
 
         await manager.reset.matchGameResults(0);
         assert.strictEqual((await storage.select('match', 0)).status, Status.Running);

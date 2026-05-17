@@ -385,7 +385,18 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         assert.strictEqual((await storage.select('match', 5)).status, Status.Archived); // Grand final (round 1)
-        assert.strictEqual((await storage.select('match', 6)).status, Status.Archived); // Grand final (round 2)
+        assert.strictEqual((await storage.select('match', 6)).status, Status.Completed); // Grand final (round 2)
+
+        await manager.update.match({
+            id: 6, // Grand Final round 2
+            opponent1: { score: 10 },
+            opponent2: { score: 16, result: 'win' },
+        });
+
+        const grandFinal = await storage.select('match', 6);
+        assert.strictEqual(grandFinal.status, Status.Completed);
+        assert.strictEqual(grandFinal.opponent1.result, 'loss');
+        assert.strictEqual(grandFinal.opponent2.result, 'win');
     });
 
     it('should determine matches in grand final (with consolation final)', async () => {
@@ -467,7 +478,7 @@ describe('Previous and next match update in double elimination stage', () => {
         });
 
         assert.strictEqual((await storage.select('match', 5)).status, Status.Archived); // Grand final (round 1)
-        assert.strictEqual((await storage.select('match', 6)).status, Status.Archived); // Grand final (round 2)
+        assert.strictEqual((await storage.select('match', 6)).status, Status.Completed); // Grand final (round 2)
     });
 
     it('should determine next matches and reset them', async () => {
