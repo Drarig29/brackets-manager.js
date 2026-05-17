@@ -885,8 +885,10 @@ export class StageCreator {
     private async createConsolationFinal(stageId: Id, losers: ParticipantSlot[][], overrides: ConsolationFinalOverrides = {}): Promise<void> {
         if (!this.stage.settings?.consolationFinal) return;
 
+        const finalGroupNumber = this.stage.type === 'double_elimination' ? 3 : 2;
         const semiFinalLosers = losers[losers.length - 2] as Duel;
-        await this.createUniqueMatchBracket(stageId, 2, [semiFinalLosers], overrides);
+
+        await this.createUniqueMatchBracket(stageId, finalGroupNumber, [semiFinalLosers], overrides);
     }
 
     /**
