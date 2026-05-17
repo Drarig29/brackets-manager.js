@@ -150,6 +150,9 @@ export class BaseGetter {
      * @param roundNumber Number of the current round.
      */
     private async getPreviousMatchesFinalDoubleElimination(match: Match, roundNumber: number): Promise<Match[]> {
+        if (match.number === 2) // Consolation final
+            return this.getPreviousMatchesConsolationFinalDoubleElimination(match);
+
         if (roundNumber > 1) // Double grand final
             return [await this.findMatch(match.group_id, roundNumber - 1, 1)];
 
@@ -178,6 +181,44 @@ export class BaseGetter {
             throw Error('Match not found.');
 
         return [winnerBracketFinalMatch, loserBracketFinalMatch];
+    }
+
+    /**
+     * Gets the matches leading to the consolation final in a double elimination stage.
+     *
+     * @param match The current match.
+     */
+    private async getPreviousMatchesConsolationFinalDoubleElimination(match: Match): Promise<Match[]> {
+        const loserBracket = await this.getLoserBracket(match.stage_id);
+        if (!loserBracket)
+            throw Error('Loser bracket not found.');
+
+        const lastRound = await this.getLastRound(loserBracket.id);
+        const matches: Match[] = [];
+
+        for (const roundNumber of [lastRound.number - 1, lastRound.number]) {
+            if (roundNumber < 1)
+                continue;
+
+            const round = await this.storage.selectFirst('round', {
+                group_id: loserBracket.id,
+                number: roundNumber,
+            });
+
+            if (!round)
+                throw Error('Round not found.');
+
+            const roundMatches = await this.storage.select('match', {
+                round_id: round.id,
+            });
+
+            if (!roundMatches)
+                throw Error('Error getting loser bracket matches.');
+
+            matches.push(...roundMatches);
+        }
+
+        return matches;
     }
 
     /**

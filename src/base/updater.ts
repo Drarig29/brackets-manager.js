@@ -295,11 +295,6 @@ export class BaseUpdater extends BaseGetter {
     protected async updateNext(match: Match, matchLocation: GroupType, stage: Stage, roundNumber: number, roundCount: number): Promise<void> {
         const nextMatches = await this.getNextMatches(match, matchLocation, stage, roundNumber, roundCount);
         if (nextMatches.length === 0) {
-            // Archive match if it doesn't have following matches and is completed.
-            // When the stage is fully complete, all matches should be archived.
-            if (match.status === Status.Completed)
-                await this.archiveMatches([match]);
-
             return;
         }
 
