@@ -1429,25 +1429,25 @@ export function convertSlotsToSeeding(slots: ParticipantSlot[]): Seeding {
 }
 
 /**
- * Sorts the seeding with the BYEs in the correct position.
+ * Sorts the seeding with empty seed slots (TBD or BYE) in the correct position.
  *
  * @param slots A list of slots to sort.
  */
 export function sortSeeding(slots: ParticipantSlot[]): ParticipantSlot[] {
-    const withoutByes = slots.filter(v => v !== null);
+    const positionedSlots = slots.filter(v => v !== null && (v.id !== null || v.position !== undefined));
 
     // a and b are not null because of the filter.
     // The slots are from seeding slots, thus they have a position.
-    withoutByes.sort((a, b) => a!.position! - b!.position!);
+    positionedSlots.sort((a, b) => a!.position! - b!.position!);
 
-    if (withoutByes.length === slots.length)
-        return withoutByes;
+    if (positionedSlots.length === slots.length)
+        return positionedSlots;
 
     // Same for v and position.
-    const placed = Object.fromEntries(withoutByes.map(v => [v!.position! - 1, v]));
-    const sortedWithByes = Array.from({ length: slots.length }, (_, i) => placed[i] || null);
+    const placed = Object.fromEntries(positionedSlots.map(v => [v!.position! - 1, v]));
+    const sorted = Array.from({ length: slots.length }, (_, i) => placed[i] || null);
 
-    return sortedWithByes;
+    return sorted;
 }
 
 /**

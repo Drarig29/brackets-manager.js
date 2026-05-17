@@ -1320,6 +1320,30 @@ describe('Seeding', () => {
     });
 });
 
+describe('Seeding (custom setup)', () => {
+
+    beforeEach(() => {
+        storage.reset();
+    });
+
+    it('seeding order is preserved', async () => {
+        const seeding = ['Team 1', 'Team 2', 'Team 3', null];
+        const expected = [{ id: 0, position: 1 }, { id: 1, position: 2 }, { id: 2, position: 3 }, null];
+        await manager.create.stage({
+            name: 'Example',
+            tournamentId: 0,
+            type: 'double_elimination',
+            seeding,
+        });
+
+        assert.deepEqual(await manager.get.seeding(0), expected);
+        await manager.update.seeding(0, seeding);
+        assert.deepEqual(await manager.get.seeding(0), expected);
+        await manager.update.confirmSeeding(0);
+        assert.deepEqual(await manager.get.seeding(0), expected);
+    });
+});
+
 describe('Match games status', () => {
 
     beforeEach(() => {
