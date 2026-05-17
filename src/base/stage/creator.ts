@@ -663,8 +663,14 @@ export class StageCreator {
 
             const positions = this.stage.settings?.manualOrdering.flat();
             const slots = await this.getSlots(positions);
+            let cursor = 0;
 
-            return helpers.makeGroups(slots, this.stage.settings.groupCount);
+            return this.stage.settings.manualOrdering.map(group => {
+                const slotsGroup = slots.slice(cursor, cursor + group.length);
+                cursor += group.length;
+
+                return slotsGroup;
+            });
         }
 
         if (Array.isArray(this.stage.settings.seedOrdering) && this.stage.settings.seedOrdering.length !== 1)

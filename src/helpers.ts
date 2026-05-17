@@ -83,8 +83,10 @@ export function makeRoundRobinMatches<T>(participants: T[], mode: RoundRobinMode
     if (mode === 'simple')
         return distribution;
 
-    // Reverse rounds and their content.
-    const symmetry = distribution.map(round => [...round].reverse()).reverse();
+    // Mirror the same rounds with inverted home/away sides.
+    const symmetry = distribution.map(round =>
+        round.map(([opponent1, opponent2]) => [opponent2, opponent1] as [T, T]),
+    );
 
     return [...distribution, ...symmetry];
 }
@@ -173,14 +175,16 @@ export function assertRoundRobin(input: number[], output: [number, number][][]):
  * @param groupCount The group count.
  */
 export function makeGroups<T>(elements: T[], groupCount: number): T[][] {
-    const groupSize = Math.ceil(elements.length / groupCount);
     const result: T[][] = [];
+    const minGroupSize = Math.floor(elements.length / groupCount);
+    const extraGroups = elements.length % groupCount;
+    let cursor = 0;
 
-    for (let i = 0; i < elements.length; i++) {
-        if (i % groupSize === 0)
-            result.push([]);
+    for (let i = 0; i < groupCount; i++) {
+        const groupSize = minGroupSize + (i < extraGroups ? 1 : 0);
+        result.push(elements.slice(cursor, cursor + groupSize));
 
-        result[result.length - 1].push(elements[i]);
+        cursor += groupSize;
     }
 
     return result;
