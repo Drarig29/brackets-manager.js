@@ -1,4 +1,4 @@
-import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id, Database } from 'brackets-model';
+import { Stage, Group, Round, Match, MatchGame, Participant, Status, Id, Database, type DataTypes } from 'brackets-model';
 import { FinalStandingsItem, ParticipantSlot, RoundRobinFinalStandingsItem, RoundRobinFinalStandingsOptions } from './types';
 import { BaseGetter } from './base/getter';
 import * as helpers from './helpers';
@@ -51,6 +51,65 @@ export class Get extends BaseGetter {
             match_game: stagesData.reduce((acc, data) => [...acc, ...data.matchGames], [] as MatchGame[]),
             participant: participants,
         };
+    }
+
+    /**
+     * Wrapper around `storage.select('group')`.
+     * 
+     * Read more about the structure of a stage: https://drarig29.github.io/brackets-docs/user-guide/structure/
+     *
+     * @param filter Filter for the groups.
+     * @example
+     * ```js
+     * for (const group of await manager.get.groups({ stage_id: stageId })) {
+     *     const rounds = await manager.get.rounds({ group_id: group.id });
+     *     console.log(rounds.length);
+     * }
+     * ```
+     */
+    public async groups(filter: DataTypes['group']): Promise<Group[]> {
+        const groups = await this.storage.select('group', filter);
+        if (!groups) throw Error('Error getting groups.');
+        return groups;
+    }
+
+    /**
+     * Wrapper around `storage.select('round')`.
+     *
+     * Read more about the structure of a stage: https://drarig29.github.io/brackets-docs/user-guide/structure/
+     * 
+     * @param filter Filter for the rounds.
+     * @example
+     * ```js
+     * for (const round of await manager.get.rounds({ stage_id: stageId })) {
+     *     const matches = await manager.get.matches({ round_id: round.id });
+     *     console.log(matches.length);
+     * }
+     * ```
+     */
+    public async rounds(filter: DataTypes['round']): Promise<Round[]> {
+        const rounds = await this.storage.select('round', filter);
+        if (!rounds) throw Error('Error getting rounds.');
+        return rounds;
+    }
+
+    /**
+     * Wrapper around `storage.select('match')`.
+     *
+     * Read more about the structure of a stage: https://drarig29.github.io/brackets-docs/user-guide/structure/
+     *
+     * @param filter Filter for the matches.
+     * @example
+     * ```js
+     * for (const match of await manager.get.matches({ round_id: round.id })) {
+     *     console.log(match.id);
+     * }
+     * ```
+     */
+    public async matches(filter: DataTypes['match']): Promise<Match[]> {
+        const matches = await this.storage.select('match', filter);
+        if (!matches) throw Error('Error getting matches.');
+        return matches;
     }
 
     /**
