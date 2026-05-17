@@ -1,5 +1,6 @@
-import { CrudInterface, Database, InputStage, Stage } from 'brackets-model';
-import { Storage } from './types';
+import { EventEmitter } from 'events';
+import { CrudInterface, Database, InputStage, Stage, Table } from 'brackets-model';
+import { EntityChangedEvent, EntityChangeMethod, Storage } from './types';
 import { Create } from './create';
 import { Get } from './get';
 import { Update } from './update';
@@ -19,13 +20,17 @@ export interface CallableCreate extends Create {
     (stage: InputStage): Promise<Stage>
 }
 
-type CrudMethod = (table: string, ...args: unknown[]) => Promise<unknown>;
+type CrudMethod = (table: Table, ...args: unknown[]) => Promise<unknown>;
 type AbstractStorage = Record<string, CrudMethod>;
+
+export interface BracketsManager {
+    on(eventName: 'entity.changed', listener: (event: EntityChangedEvent) => void): this
+}
 
 /**
  * A class to handle tournament management at those levels: `stage`, `group`, `round`, `match` and `match_game`.
  */
-export class BracketsManager {
+export class BracketsManager extends EventEmitter {
 
     public verbose = false;
     public storage: Storage;
@@ -44,6 +49,8 @@ export class BracketsManager {
      * @param verbose Whether to log CRUD operations.
      */
     constructor(storageInterface: CrudInterface, verbose?: boolean) {
+        super();
+
         this.verbose = verbose ?? false;
 
         this.storage = storageInterface as Storage;
@@ -161,37 +168,76 @@ export class BracketsManager {
      */
     private instrumentStorage(): void {
         const storage = this.storage as unknown as AbstractStorage;
-        const instrumentedMethods: Array<keyof CrudInterface> = ['insert', 'select', 'update', 'delete'];
+        const instrumentedMethods = ['insert', 'select', 'update', 'delete'];
 
         for (const method of Object.getOwnPropertyNames(Object.getPrototypeOf(storage))) {
-            if (!(instrumentedMethods as string[]).includes(method))
+            if (!instrumentedMethods.includes(method))
                 continue;
 
             const originalMethod = storage[method].bind(storage);
 
-            storage[method] = async (table: string, ...args: unknown[]): Promise<unknown> => {
+            storage[method] = async (table: Table, ...args: unknown[]): Promise<unknown> => {
                 const verbose = this.verbose;
-                let id: string;
-                let start: number;
+                const mutationMethod = isStorageMutation(method) ? method : undefined;
+                const shouldEmit = mutationMethod !== undefined && this.listenerCount('entity.changed') > 0;
+                const shouldTrack = verbose || shouldEmit;
+                let id: string | undefined;
+                let start: number | undefined;
 
-                if (verbose) {
+                if (shouldTrack) {
                     id = uuidv4();
                     start = Date.now();
-                    console.log(`${id} ${method.toUpperCase()} "${table}" args: ${JSON.stringify(args)}`);
                 }
+
+                if (verbose)
+                    console.log(`${id!} ${method.toUpperCase()} "${table}" args: ${JSON.stringify(args)}`);
 
                 const result = await originalMethod(table, ...args);
 
-                if (verbose) {
-                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+                if (shouldTrack) {
                     const duration = Date.now() - start!;
 
-                    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-                    console.log(`${id!} ${duration}ms - Returned ${JSON.stringify(result)}`);
+                    if (shouldEmit && isSuccessfulStorageMutation(mutationMethod, result))
+                        emitStorageMutationEvent(this, { id: id!, method: mutationMethod, table, args, result, duration });
+
+                    if (verbose)
+                        console.log(`${id!} ${duration}ms - Returned ${JSON.stringify(result)}`);
                 }
 
                 return result;
             };
         }
     }
+}
+
+/**
+ * Emits a storage mutation through the public manager events.
+ *
+ * @param manager Brackets manager.
+ * @param event Storage mutation event.
+ */
+function emitStorageMutationEvent(manager: BracketsManager, event: EntityChangedEvent): void {
+    manager.emit('entity.changed', event);
+}
+
+/**
+ * Checks whether a storage mutation succeeded.
+ *
+ * @param method Storage method.
+ * @param result Storage method result.
+ */
+function isSuccessfulStorageMutation(method: EntityChangeMethod, result: unknown): boolean {
+    if (method === 'insert')
+        return result !== false && result !== -1;
+
+    return result === true;
+}
+
+/**
+ * Checks whether a storage method mutates entities.
+ *
+ * @param method Storage method.
+ */
+function isStorageMutation(method: string): method is EntityChangeMethod {
+    return method === 'insert' || method === 'update' || method === 'delete';
 }

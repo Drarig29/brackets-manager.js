@@ -50,6 +50,14 @@ await manager.update.match({
 });
 ```
 
+The manager emits events when storage mutation operations succeed:
+
+```js
+manager.on('entity.changed', event => {
+  // Any successful insert, update or delete operation.
+});
+```
+
 Rendered with the [viewer](https://github.com/Drarig29/brackets-viewer.js):
 
 <img width="581" alt="image" src="https://user-images.githubusercontent.com/9317502/232905749-195c4f40-527c-4f17-a639-82f639432ed9.png">

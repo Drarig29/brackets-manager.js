@@ -92,6 +92,23 @@ export type DeepPartial<T> = T extends object ? {
 } : T;
 
 /**
+ * The storage methods which can mutate entities.
+ */
+export type EntityChangeMethod = 'insert' | 'update' | 'delete';
+
+/**
+ * An event emitted after a storage mutation succeeds.
+ */
+export interface EntityChangedEvent<T extends Table = Table> {
+    id: string,
+    method: EntityChangeMethod,
+    table: T,
+    args: unknown[],
+    result: unknown,
+    duration: number,
+}
+
+/**
  * An item in the final standings of an elimination stage. Each item represents a participant.
  */
 export interface FinalStandingsItem {
