@@ -56,7 +56,7 @@
         "url": "git+https://github.com/Drarig29/brackets-manager.js.git"
     },
     "author": "Corentin Girard",
-    "license": "ISC",
+    "license": "MIT",
     "bugs": {
         "url": "https://github.com/Drarig29/brackets-manager.js/issues"
     },
