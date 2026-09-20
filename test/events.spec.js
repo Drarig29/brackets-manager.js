@@ -61,7 +61,56 @@ function normalizeEvents(events) {
     }));
 }
 
+/**
+ * Creates a storage adapter with its CRUD methods on the object itself.
+ */
+function makeObjectStorage() {
+    const storage = new InMemoryDatabase();
+    return {
+        insert: storage.insert.bind(storage),
+        select: storage.select.bind(storage),
+        update: storage.update.bind(storage),
+        delete: storage.delete.bind(storage),
+    };
+}
+
 describe('Events', () => {
+    for (const [name, makeStorage] of [
+        ['inherited methods', () => new (class extends InMemoryDatabase {})()],
+        ['own methods', makeObjectStorage],
+        ['null prototype', () => Object.assign(Object.create(null), makeObjectStorage())],
+    ]) {
+        it(`should emit mutation events for storage adapters with ${name}`, async () => {
+            const manager = new BracketsManager(makeStorage());
+            const events = [];
+            manager.on('entity.changed', event => events.push(event));
+
+            const participant = { tournament_id: 0, name: 'Team 1' };
+            const id = await manager.storage.insert('participant', participant);
+            const updated = { ...participant, id, name: 'Renamed team' };
+            assert.strictEqual(id, 0);
+            assert.isTrue(await manager.storage.update('participant', id, updated));
+            assert.deepEqual(await manager.storage.select('participant', id), updated);
+            assert.isTrue(await manager.storage.delete('participant', { id }));
+            assert.deepEqual(await manager.storage.select('participant'), []);
+
+            assert.deepEqual(normalizeEvents(events), [
+                {
+                    id: 'string', method: 'insert', table: 'participant',
+                    args: [participant], result: id, duration: 'number',
+                },
+                {
+                    id: 'string', method: 'update', table: 'participant',
+                    args: [id, updated], result: true, duration: 'number',
+                },
+                {
+                    id: 'string', method: 'delete', table: 'participant',
+                    args: [{ id }], result: true, duration: 'number',
+                },
+            ]);
+        });
+    }
+
     it('should emit entity.changed when a match update succeeds', async () => {
         const manager = makeManager({ stage: [stage], match: [match] });
         const entityEvents = [];

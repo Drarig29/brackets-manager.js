@@ -170,10 +170,7 @@ export class BracketsManager extends EventEmitter {
         const storage = this.storage as unknown as AbstractStorage;
         const instrumentedMethods = ['insert', 'select', 'update', 'delete'];
 
-        for (const method of Object.getOwnPropertyNames(Object.getPrototypeOf(storage))) {
-            if (!instrumentedMethods.includes(method))
-                continue;
-
+        for (const method of instrumentedMethods) {
             const originalMethod = storage[method].bind(storage);
 
             storage[method] = async (table: Table, ...args: unknown[]): Promise<unknown> => {
